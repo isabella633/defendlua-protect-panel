@@ -1,14 +1,42 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import AuthForm from "@/components/AuthForm";
+import ScriptProtector from "@/components/ScriptProtector";
+import OwnerPanel from "@/components/OwnerPanel";
+
+type AppState = 'auth' | 'protector' | 'owner';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  const [appState, setAppState] = useState<AppState>('auth');
+  const [currentScriptId, setCurrentScriptId] = useState<string>('');
+
+  const handleLogin = () => {
+    setAppState('protector');
+  };
+
+  const handleOwnerPanel = (scriptId: string) => {
+    setCurrentScriptId(scriptId);
+    setAppState('owner');
+  };
+
+  const handleBack = () => {
+    setAppState('protector');
+  };
+
+  const handleLogout = () => {
+    setAppState('auth');
+    setCurrentScriptId('');
+  };
+
+  switch (appState) {
+    case 'auth':
+      return <AuthForm onLogin={handleLogin} />;
+    case 'protector':
+      return <ScriptProtector onOwnerPanel={handleOwnerPanel} onLogout={handleLogout} />;
+    case 'owner':
+      return <OwnerPanel scriptId={currentScriptId} onBack={handleBack} onLogout={handleLogout} />;
+    default:
+      return <AuthForm onLogin={handleLogin} />;
+  }
 };
 
 export default Index;
