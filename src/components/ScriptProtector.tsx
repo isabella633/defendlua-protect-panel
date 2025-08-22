@@ -3,15 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, Code, AlertTriangle, LogOut } from "lucide-react";
+import { Shield, Code, AlertTriangle, LogOut, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScriptProtectorProps {
   onOwnerPanel: (scriptId: string) => void;
   onLogout: () => void;
+  onBack: () => void;
 }
 
-const ScriptProtector = ({ onOwnerPanel, onLogout }: ScriptProtectorProps) => {
+const ScriptProtector = ({ onOwnerPanel, onLogout, onBack }: ScriptProtectorProps) => {
   const [luaCode, setLuaCode] = useState("");
   const [isProtecting, setIsProtecting] = useState(false);
   const { toast } = useToast();
@@ -45,9 +46,15 @@ const ScriptProtector = ({ onOwnerPanel, onLogout }: ScriptProtectorProps) => {
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Shield className="w-8 h-8 text-security-primary" />
-            <h1 className="text-2xl font-bold text-security-primary">DefendLua</h1>
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Dashboard
+            </Button>
+            <div className="flex items-center space-x-3">
+              <Shield className="w-8 h-8 text-security-primary" />
+              <h1 className="text-2xl font-bold text-security-primary">DefendLua</h1>
+            </div>
           </div>
           <Button variant="ghost" onClick={onLogout} className="text-muted-foreground hover:text-foreground">
             <LogOut className="w-4 h-4 mr-2" />

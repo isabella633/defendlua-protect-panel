@@ -100,7 +100,7 @@ protectedFunction()`);
           <div className="flex items-center space-x-4">
             <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              Dashboard
             </Button>
             <div className="flex items-center space-x-3">
               <Shield className="w-8 h-8 text-security-primary" />
