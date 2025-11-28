@@ -194,7 +194,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Current Subscription</CardTitle>
-                  <CardDescription>Your active plan and status</CardDescription>
+                  <CardDescription>Your active plan and benefits</CardDescription>
                 </div>
                 <Badge 
                   variant={subscription?.plan === 'pro' || subscription?.plan === 'enterprise' ? 'default' : 'secondary'}
@@ -205,28 +205,99 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 text-sm">
-                {subscription?.plan === 'free' || !subscription?.plan ? (
-                  <>
-                    <p className="text-muted-foreground">• 3 scripts maximum</p>
-                    <p className="text-muted-foreground">• 10 HWIDs per script</p>
-                    <p className="text-muted-foreground">• Community support</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-foreground">• Unlimited scripts</p>
-                    <p className="text-foreground">• Up to 100 HWIDs per script</p>
-                    <p className="text-foreground">• Priority support & analytics</p>
-                    {subscription?.expires_at && (
-                      <p className="text-muted-foreground mt-3">
-                        Expires: {new Date(subscription.expires_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </p>
+              <div className="grid gap-4">
+                {/* Script Benefits */}
+                <div>
+                  <h4 className="font-semibold mb-2 text-sm">Script Protection</h4>
+                  <div className="space-y-1 text-sm">
+                    {subscription?.plan === 'free' || !subscription?.plan ? (
+                      <>
+                        <p className="text-muted-foreground">• 3 scripts maximum</p>
+                        <p className="text-muted-foreground">• 10 HWIDs per script</p>
+                        <p className="text-muted-foreground">• Basic protection</p>
+                      </>
+                    ) : subscription?.plan === 'pro' ? (
+                      <>
+                        <p className="text-foreground">• Unlimited scripts</p>
+                        <p className="text-foreground">• Up to 100 HWIDs per script</p>
+                        <p className="text-foreground">• Advanced protection</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-foreground">• Unlimited scripts</p>
+                        <p className="text-foreground">• Unlimited HWIDs per script</p>
+                        <p className="text-foreground">• Enterprise-grade protection</p>
+                        <p className="text-foreground">• Custom branding</p>
+                      </>
                     )}
-                  </>
+                  </div>
+                </div>
+
+                {/* AI Benefits */}
+                <div>
+                  <h4 className="font-semibold mb-2 text-sm">AI Assistant</h4>
+                  <div className="space-y-1 text-sm">
+                    {subscription?.plan === 'free' || !subscription?.plan ? (
+                      <>
+                        <p className="text-muted-foreground">• 5 AI messages per session</p>
+                        <p className="text-muted-foreground">• Standard response speed</p>
+                        <p className="text-muted-foreground">• Basic responses (150 tokens)</p>
+                      </>
+                    ) : subscription?.plan === 'pro' ? (
+                      <>
+                        <p className="text-foreground">• 100 AI messages per session</p>
+                        <p className="text-foreground">• Priority response speed</p>
+                        <p className="text-foreground">• Detailed responses (2000 tokens)</p>
+                        <p className="text-foreground">• Advanced support</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-foreground">• Unlimited AI messages</p>
+                        <p className="text-foreground">• Instant response speed</p>
+                        <p className="text-foreground">• Comprehensive responses (4000 tokens)</p>
+                        <p className="text-foreground">• Premium support</p>
+                        <p className="text-foreground">• Custom AI training</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Support */}
+                <div>
+                  <h4 className="font-semibold mb-2 text-sm">Support & Analytics</h4>
+                  <div className="space-y-1 text-sm">
+                    {subscription?.plan === 'free' || !subscription?.plan ? (
+                      <>
+                        <p className="text-muted-foreground">• Community support</p>
+                        <p className="text-muted-foreground">• Basic analytics</p>
+                      </>
+                    ) : subscription?.plan === 'pro' ? (
+                      <>
+                        <p className="text-foreground">• Priority email support</p>
+                        <p className="text-foreground">• Advanced analytics</p>
+                        <p className="text-foreground">• Usage insights</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-foreground">• 24/7 dedicated support</p>
+                        <p className="text-foreground">• Real-time analytics</p>
+                        <p className="text-foreground">• Custom reporting</p>
+                        <p className="text-foreground">• SLA guarantee</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {subscription?.expires_at && (
+                  <div className="pt-3 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Plan expires: {new Date(subscription.expires_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -423,46 +494,149 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
             </TabsContent>
 
             <TabsContent value="settings">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Account Settings</CardTitle>
-                  <CardDescription>Manage your account preferences</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input value={userEmail} disabled className="bg-muted" />
-                  </div>
+              <div className="grid gap-6">
+                {/* Account Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Account Information</CardTitle>
+                    <CardDescription>Your account details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input value={userEmail} disabled className="bg-muted" />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label>User ID</Label>
-                    <Input value={userId} disabled className="bg-muted font-mono text-xs" />
-                  </div>
+                    <div className="space-y-2">
+                      <Label>User ID</Label>
+                      <Input value={userId} disabled className="bg-muted font-mono text-xs" />
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  <div className="pt-4 border-t">
-                    <h3 className="font-semibold mb-4">Current Subscription</h3>
-                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                {/* Subscription Details */}
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
                       <div>
-                        <Badge 
-                          variant={subscription?.plan === 'pro' || subscription?.plan === 'enterprise' ? 'default' : 'secondary'}
-                        >
-                          {subscription?.plan?.toUpperCase() || 'FREE'} PLAN
-                        </Badge>
-                        {subscription?.expires_at && (
-                          <p className="text-sm text-muted-foreground mt-2">
-                            Expires: {new Date(subscription.expires_at).toLocaleDateString()}
-                          </p>
-                        )}
+                        <CardTitle>Subscription Plan</CardTitle>
+                        <CardDescription>Your current plan and all benefits</CardDescription>
                       </div>
-                      {subscription?.plan === 'free' && (
-                        <Button variant="hero" onClick={() => window.location.href = '/pricing'}>
-                          Upgrade Plan
-                        </Button>
+                      <Badge 
+                        variant={subscription?.plan === 'pro' || subscription?.plan === 'enterprise' ? 'default' : 'secondary'}
+                        className={subscription?.plan === 'pro' || subscription?.plan === 'enterprise' ? 'bg-primary text-primary-foreground' : ''}
+                      >
+                        {subscription?.plan?.toUpperCase() || 'FREE'} PLAN
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-6">
+                      {/* Script Benefits */}
+                      <div>
+                        <h4 className="font-semibold mb-3">Script Protection</h4>
+                        <div className="space-y-2 text-sm">
+                          {subscription?.plan === 'free' || !subscription?.plan ? (
+                            <>
+                              <p className="text-muted-foreground">• 3 scripts maximum</p>
+                              <p className="text-muted-foreground">• 10 HWIDs per script</p>
+                              <p className="text-muted-foreground">• Basic protection</p>
+                            </>
+                          ) : subscription?.plan === 'pro' ? (
+                            <>
+                              <p className="text-foreground">• Unlimited scripts</p>
+                              <p className="text-foreground">• Up to 100 HWIDs per script</p>
+                              <p className="text-foreground">• Advanced protection</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-foreground">• Unlimited scripts</p>
+                              <p className="text-foreground">• Unlimited HWIDs per script</p>
+                              <p className="text-foreground">• Enterprise-grade protection</p>
+                              <p className="text-foreground">• Custom branding</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* AI Benefits */}
+                      <div className="pt-4 border-t">
+                        <h4 className="font-semibold mb-3">AI Assistant Limits</h4>
+                        <div className="space-y-2 text-sm">
+                          {subscription?.plan === 'free' || !subscription?.plan ? (
+                            <>
+                              <p className="text-muted-foreground">• <strong>5 AI messages</strong> per session</p>
+                              <p className="text-muted-foreground">• Standard response speed</p>
+                              <p className="text-muted-foreground">• Basic responses (150 tokens max)</p>
+                            </>
+                          ) : subscription?.plan === 'pro' ? (
+                            <>
+                              <p className="text-foreground">• <strong>100 AI messages</strong> per session</p>
+                              <p className="text-foreground">• Priority response speed</p>
+                              <p className="text-foreground">• Detailed responses (2000 tokens max)</p>
+                              <p className="text-foreground">• Advanced technical support</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-foreground">• <strong>Unlimited AI messages</strong></p>
+                              <p className="text-foreground">• Instant response speed</p>
+                              <p className="text-foreground">• Comprehensive responses (4000 tokens max)</p>
+                              <p className="text-foreground">• Premium support</p>
+                              <p className="text-foreground">• Custom AI training available</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Support */}
+                      <div className="pt-4 border-t">
+                        <h4 className="font-semibold mb-3">Support & Analytics</h4>
+                        <div className="space-y-2 text-sm">
+                          {subscription?.plan === 'free' || !subscription?.plan ? (
+                            <>
+                              <p className="text-muted-foreground">• Community support</p>
+                              <p className="text-muted-foreground">• Basic analytics</p>
+                            </>
+                          ) : subscription?.plan === 'pro' ? (
+                            <>
+                              <p className="text-foreground">• Priority email support</p>
+                              <p className="text-foreground">• Advanced analytics dashboard</p>
+                              <p className="text-foreground">• Usage insights & reports</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-foreground">• 24/7 dedicated support team</p>
+                              <p className="text-foreground">• Real-time analytics</p>
+                              <p className="text-foreground">• Custom reporting & insights</p>
+                              <p className="text-foreground">• SLA guarantee (99.9% uptime)</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {subscription?.expires_at && (
+                        <div className="pt-4 border-t">
+                          <p className="text-sm font-medium">
+                            Plan expires: <span className="text-muted-foreground">{new Date(subscription.expires_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}</span>
+                          </p>
+                        </div>
+                      )}
+
+                      {(subscription?.plan === 'free' || !subscription?.plan) && (
+                        <div className="pt-4">
+                          <Button variant="hero" className="w-full" onClick={() => window.location.href = '/pricing'}>
+                            Upgrade to Pro or Enterprise
+                          </Button>
+                        </div>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
