@@ -1,270 +1,167 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Shield, 
-  Code, 
-  Link, 
-  Copy, 
-  Save, 
-  Eye, 
-  Settings, 
-  Download,
-  ArrowLeft,
-  CheckCircle,
-  Globe
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { User, Trash2, Shield, X } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OwnerPanelProps {
   scriptId: string;
-  onBack: () => void;
+  scriptName: string;
+  onClose: () => void;
 }
 
-const OwnerPanel = ({ scriptId, onBack }: OwnerPanelProps) => {
-  const [scriptName, setScriptName] = useState(`DefendScript_${scriptId.slice(-6)}`);
-  const [sourceCode, setSourceCode] = useState(`-- Protected Lua Script (${scriptId})
-function protectedFunction()
-    print("This script is protected by DefendLua")
-    -- Your original code would be here, obfuscated
-end
-
-protectedFunction()`);
-  const [rawLink, setRawLink] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
+const OwnerPanel = ({ scriptId, scriptName, onClose }: OwnerPanelProps) => {
+  const [hwids, setHwids] = useState<string[]>([]);
+  const [newHwid, setNewHwid] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Generate raw link
-    const baseUrl = window.location.origin;
-    setRawLink(`${baseUrl}/api/raw/${scriptId}`);
+    loadScript();
   }, [scriptId]);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    
-    // Simulate saving
-    setTimeout(() => {
-      setIsSaving(false);
-      toast({
-        title: "Script Saved",
-        description: "Your changes have been successfully saved.",
-      });
-    }, 1000);
-  };
-
-  const copyToClipboard = async (text: string, type: string) => {
+  const loadScript = async () => {
     try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: "Copied!",
-        description: `${type} copied to clipboard.`,
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to copy to clipboard.",
-        variant: "destructive",
-      });
+      const { data, error } = await supabase
+        .from('scripts')
+        .select('hwid_list')
+        .eq('id', scriptId)
+        .single();
+
+      if (error) throw error;
+      setHwids(data?.hwid_list || []);
+    } catch (error: any) {
+      toast.error("Failed to load script data");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const downloadScript = () => {
-    const blob = new Blob([sourceCode], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${scriptName}.lua`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const addHwid = async () => {
+    if (!newHwid) {
+      toast.error("Please enter a HWID");
+      return;
+    }
     
-    toast({
-      title: "Download Started",
-      description: "Your script file is being downloaded.",
-    });
+    if (hwids.includes(newHwid)) {
+      toast.error("HWID already exists");
+      return;
+    }
+    
+    try {
+      const updatedHwids = [...hwids, newHwid];
+      
+      const { error } = await supabase
+        .from('scripts')
+        .update({ hwid_list: updatedHwids })
+        .eq('id', scriptId);
+
+      if (error) throw error;
+
+      setHwids(updatedHwids);
+      setNewHwid("");
+      toast.success("HWID added successfully!");
+    } catch (error: any) {
+      toast.error("Failed to add HWID");
+    }
   };
 
+  const removeHwid = async (hwid: string) => {
+    try {
+      const updatedHwids = hwids.filter(h => h !== hwid);
+      
+      const { error } = await supabase
+        .from('scripts')
+        .update({ hwid_list: updatedHwids })
+        .eq('id', scriptId);
+
+      if (error) throw error;
+
+      setHwids(updatedHwids);
+      toast.success("HWID removed successfully!");
+    } catch (error: any) {
+      toast.error("Failed to remove HWID");
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="animate-fade-in">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center p-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Dashboard
+    <Card className="animate-fade-in">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="h-6 w-6 text-primary" />
+            <div>
+              <CardTitle>{scriptName}</CardTitle>
+              <CardDescription>Manage HWID whitelist</CardDescription>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
           </Button>
-          <div className="flex items-center space-x-3">
-            <Shield className="w-8 h-8 text-primary" />
-            <h1 className="text-2xl font-bold text-primary">DefendLua</h1>
-            <Badge variant="secondary" className="bg-primary/10 text-primary">
-              Owner Panel
-            </Badge>
-          </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2">Script Management</h2>
-            <p className="text-muted-foreground">
-              Manage your protected Lua script and access raw links
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Script Info Card */}
-            <Card className="lg:col-span-1">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Settings className="w-5 h-5 text-primary" />
-                  <span>Script Info</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Script Name</label>
-                  <Input
-                    value={scriptName}
-                    onChange={(e) => setScriptName(e.target.value)}
-                    placeholder="Enter script name"
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Script ID</label>
-                  <div className="flex items-center space-x-2">
-                    <Input value={scriptId} readOnly className="bg-muted/50" />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => copyToClipboard(scriptId, "Script ID")}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <Alert className="border-primary/20 bg-primary/5">
-                  <CheckCircle className="h-4 w-4 text-primary" />
-                  <AlertDescription className="text-primary">
-                    Script is protected and ready to use!
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-
-            {/* Main Editor */}
-            <Card className="lg:col-span-2">
-              <Tabs defaultValue="editor" className="w-full">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center space-x-2">
-                      <Code className="w-5 h-5 text-primary" />
-                      <span>Script Editor</span>
-                    </CardTitle>
-                    <TabsList>
-                      <TabsTrigger value="editor">
-                        <Eye className="w-4 h-4 mr-2" />
-                        Editor
-                      </TabsTrigger>
-                      <TabsTrigger value="raw-link">
-                        <Globe className="w-4 h-4 mr-2" />
-                        Raw Link
-                      </TabsTrigger>
-                    </TabsList>
-                  </div>
-                </CardHeader>
-                
-                <TabsContent value="editor">
-                  <CardContent className="space-y-4">
-                    <CardDescription>
-                      Edit your protected script source code. Changes are automatically obfuscated.
-                    </CardDescription>
-                    
-                    <Textarea
-                      value={sourceCode}
-                      onChange={(e) => setSourceCode(e.target.value)}
-                      className="min-h-[400px] font-mono text-sm bg-muted/30 border-border/50"
-                      placeholder="-- Edit your Lua code here"
-                    />
-                    
-                    <div className="flex items-center space-x-3">
-                      <Button
-                        onClick={handleSave}
-                        variant="primary"
-                        disabled={isSaving}
-                      >
-                        <Save className="w-4 h-4 mr-2" />
-                        {isSaving ? "Saving..." : "Save Changes"}
-                      </Button>
-                      
-                      <Button variant="outline" onClick={downloadScript}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Download
-                      </Button>
-                    </div>
-                  </CardContent>
-                </TabsContent>
-                
-                <TabsContent value="raw-link">
-                  <CardContent className="space-y-4">
-                    <CardDescription>
-                      Use this raw link to access your protected script directly.
-                    </CardDescription>
-                    
-                    <Alert className="border-accent/20 bg-accent/5">
-                      <Link className="h-4 w-4 text-accent" />
-                      <AlertDescription className="text-accent">
-                        This link provides direct access to your protected Lua script.
-                      </AlertDescription>
-                    </Alert>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Raw Link URL</label>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          value={rawLink}
-                          readOnly
-                          className="bg-muted/50 font-mono text-sm"
-                        />
-                        <Button
-                          variant="outline"
-                          onClick={() => copyToClipboard(rawLink, "Raw link")}
-                        >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                      <h4 className="font-medium mb-2">Usage Examples:</h4>
-                      <div className="space-y-2 text-sm font-mono text-muted-foreground">
-                        <div>
-                          <span className="text-primary">Lua:</span> loadstring(game:HttpGet("{rawLink}"))()
-                        </div>
-                        <div>
-                          <span className="text-primary">cURL:</span> curl -s "{rawLink}"
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </TabsContent>
-              </Tabs>
-            </Card>
-          </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Enter HWID"
+            value={newHwid}
+            onChange={(e) => setNewHwid(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addHwid()}
+          />
+          <Button onClick={addHwid}>Add</Button>
         </div>
-      </main>
-    </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Whitelisted HWIDs</span>
+            <Badge variant="secondary">{hwids.length} total</Badge>
+          </div>
+          
+          {hwids.length === 0 ? (
+            <div className="text-center py-8">
+              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No HWIDs whitelisted yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {hwids.map((hwid) => (
+                <div
+                  key={hwid}
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-primary" />
+                    <p className="font-mono text-sm">{hwid}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeHwid(hwid)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
