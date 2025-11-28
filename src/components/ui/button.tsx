@@ -9,18 +9,18 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md transition-all",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border-2 border-border bg-card hover:bg-secondary hover:border-primary/30 transition-all",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        ghost: "hover:bg-secondary hover:text-foreground transition-all",
         link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-gradient-to-r from-security-primary to-security-secondary text-white hover:shadow-lg hover:scale-105 transition-all duration-300",
-        protect: "bg-security-primary text-white hover:bg-security-primary/90 shadow-md hover:shadow-lg transition-all duration-300",
-        danger: "bg-security-danger text-white hover:bg-security-danger/90",
+        hero: "bg-gradient-to-r from-primary to-accent text-white hover:shadow-lg hover:scale-[1.02] transition-all duration-300 font-semibold",
+        gentle: "bg-card border-2 border-border text-foreground hover:border-primary hover:shadow-md transition-all",
+        primary: "bg-primary text-primary-foreground hover:opacity-90 shadow-sm hover:shadow-md transition-all",
       },
       size: {
         default: "h-10 px-4 py-2",
