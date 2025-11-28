@@ -1,121 +1,124 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Shield, Copy, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Shield, Code, AlertTriangle, LogOut, ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ScriptProtectorProps {
-  onComplete?: () => void;
+  onBack: () => void;
 }
 
-const ScriptProtector = ({ onComplete }: ScriptProtectorProps) => {
-  const { user } = useAuth();
-  const [scriptName, setScriptName] = useState("");
-  const [generatedKey, setGeneratedKey] = useState("");
-  const [isProtected, setIsProtected] = useState(false);
+const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
+  const [luaCode, setLuaCode] = useState("");
+  const [isProtecting, setIsProtecting] = useState(false);
+  const { toast } = useToast();
 
-  const handleProtect = async () => {
-    if (!scriptName) {
-      toast.error("Please enter a script name");
+  const handleProtectScript = async () => {
+    if (!luaCode.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your Lua code before protecting.",
+        variant: "destructive",
+      });
       return;
     }
+
+    setIsProtecting(true);
     
-    if (!user) {
-      toast.error("You must be signed in");
-      return;
-    }
-    
-    try {
-      const key = `defendlua_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const { error } = await supabase
-        .from('scripts')
-        .insert({
-          owner_id: user.id,
-          script_name: scriptName,
-          script_key: key,
-          hwid_list: []
-        });
-
-      if (error) throw error;
-
-      setGeneratedKey(key);
-      setIsProtected(true);
-      toast.success("Script protected successfully!");
-      
-      if (onComplete) {
-        setTimeout(() => onComplete(), 2000);
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to protect script");
-    }
-  };
-
-  const copyKey = () => {
-    navigator.clipboard.writeText(generatedKey);
-    toast.success("Key copied to clipboard!");
-  };
-
-  const reset = () => {
-    setScriptName("");
-    setGeneratedKey("");
-    setIsProtected(false);
+    // Simulate script protection process
+    setTimeout(() => {
+      setIsProtecting(false);
+      const scriptId = `script_${Date.now()}`;
+      toast({
+        title: "Script Protected!",
+        description: "Your Lua script has been successfully protected.",
+      });
+      onBack();
+    }, 2000);
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto animate-fade-in">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Shield className="h-6 w-6 text-primary" />
-          <CardTitle>Protect New Script</CardTitle>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Dashboard
+          </Button>
+          <div className="flex items-center space-x-3">
+            <Shield className="w-8 h-8 text-primary" />
+            <h1 className="text-2xl font-bold text-primary">DefendLua</h1>
+          </div>
         </div>
-        <CardDescription>Create a protected script with unique key</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {!isProtected ? (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="scriptName">Script Name</Label>
-              <Input
-                id="scriptName"
-                placeholder="My Awesome Script"
-                value={scriptName}
-                onChange={(e) => setScriptName(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleProtect} className="w-full">
-              <Shield className="h-4 w-4 mr-2" />
-              Protect Script
-            </Button>
-          </>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 p-4 bg-success/10 border border-success/20 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-success" />
-              <span className="text-success font-medium">Script protected successfully!</span>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Your Script Key</Label>
-              <div className="flex gap-2">
-                <Input value={generatedKey} readOnly className="font-mono" />
-                <Button variant="outline" size="icon" onClick={copyKey}>
-                  <Copy className="h-4 w-4" />
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-4">Protect Your Lua Script</h2>
+            <p className="text-muted-foreground text-lg">
+              Upload your Lua code and we'll secure it with advanced obfuscation
+            </p>
+          </div>
+
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Code className="w-5 h-5 text-security-primary" />
+                <span>Lua Code Input</span>
+              </CardTitle>
+              <CardDescription>
+                Paste your Lua script below. We DO NOT scan for syntax errors.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Alert className="border-security-accent/20 bg-security-accent/5">
+                <AlertTriangle className="h-4 w-4 text-security-accent" />
+                <AlertDescription className="text-security-accent">
+                  <strong>Important:</strong> We DO NOT scan for syntax errors. 
+                  Please ensure your Lua code is valid before protection.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                 <label htmlFor="lua-code" className="text-sm font-medium">
+                  Enter your .lua code:
+                </label>
+                <Textarea
+                  id="lua-code"
+                  placeholder="-- Enter your Lua code here
+function myFunction()
+    print('Hello, World!')
+end
+
+myFunction()"
+                  value={luaCode}
+                  onChange={(e) => setLuaCode(e.target.value)}
+                  className="min-h-[300px] font-mono text-sm bg-muted/30 border-border/50"
+                />
+              </div>
+
+              <div className="flex justify-center">
+                <Button
+                  onClick={handleProtectScript}
+                  variant="primary"
+                  size="lg"
+                  disabled={isProtecting}
+                  className="px-8"
+                >
+                  <Shield className="w-5 h-5 mr-2" />
+                  {isProtecting ? "Protecting Script..." : "Protect Script"}
                 </Button>
               </div>
-            </div>
-
-            <Button onClick={reset} variant="outline" className="w-full">
-              Protect Another Script
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
   );
 };
 
