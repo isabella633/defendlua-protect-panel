@@ -7,12 +7,10 @@ import { Shield, Code, AlertTriangle, LogOut, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScriptProtectorProps {
-  onOwnerPanel: (scriptId: string) => void;
-  onLogout: () => void;
   onBack: () => void;
 }
 
-const ScriptProtector = ({ onOwnerPanel, onLogout, onBack }: ScriptProtectorProps) => {
+const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
   const [luaCode, setLuaCode] = useState("");
   const [isProtecting, setIsProtecting] = useState(false);
   const { toast } = useToast();
@@ -37,7 +35,7 @@ const ScriptProtector = ({ onOwnerPanel, onLogout, onBack }: ScriptProtectorProp
         title: "Script Protected!",
         description: "Your Lua script has been successfully protected.",
       });
-      onOwnerPanel(scriptId);
+      onBack();
     }, 2000);
   };
 
@@ -46,20 +44,14 @@ const ScriptProtector = ({ onOwnerPanel, onLogout, onBack }: ScriptProtectorProp
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Dashboard
-            </Button>
-            <div className="flex items-center space-x-3">
-              <Shield className="w-8 h-8 text-security-primary" />
-              <h1 className="text-2xl font-bold text-security-primary">DefendLua</h1>
-            </div>
-          </div>
-          <Button variant="ghost" onClick={onLogout} className="text-muted-foreground hover:text-foreground">
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
+          <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Dashboard
           </Button>
+          <div className="flex items-center space-x-3">
+            <Shield className="w-8 h-8 text-primary" />
+            <h1 className="text-2xl font-bold text-primary">DefendLua</h1>
+          </div>
         </div>
       </header>
 
@@ -93,7 +85,7 @@ const ScriptProtector = ({ onOwnerPanel, onLogout, onBack }: ScriptProtectorProp
               </Alert>
 
               <div className="space-y-2">
-                <label htmlFor="lua-code" className="text-sm font-medium">
+                 <label htmlFor="lua-code" className="text-sm font-medium">
                   Enter your .lua code:
                 </label>
                 <Textarea
@@ -113,7 +105,7 @@ myFunction()"
               <div className="flex justify-center">
                 <Button
                   onClick={handleProtectScript}
-                  variant="protect"
+                  variant="primary"
                   size="lg"
                   disabled={isProtecting}
                   className="px-8"

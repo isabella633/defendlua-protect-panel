@@ -84,9 +84,9 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout }: ScriptDashboar
 
   const getStatusColor = (status: Script['status']) => {
     switch (status) {
-      case 'protected': return 'bg-security-primary/10 text-security-primary';
-      case 'processing': return 'bg-security-secondary/10 text-security-secondary';
-      case 'error': return 'bg-security-danger/10 text-security-danger';
+      case 'protected': return 'bg-primary/10 text-primary';
+      case 'processing': return 'bg-accent/10 text-accent';
+      case 'error': return 'bg-destructive/10 text-destructive';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -107,9 +107,9 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout }: ScriptDashboar
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Shield className="w-8 h-8 text-security-primary" />
-            <h1 className="text-2xl font-bold text-security-primary">DefendLua</h1>
-            <Badge variant="secondary" className="bg-security-primary/10 text-security-primary">
+            <Shield className="w-8 h-8 text-primary" />
+            <h1 className="text-2xl font-bold text-primary">DefendLua</h1>
+            <Badge variant="secondary" className="bg-primary/10 text-primary">
               Dashboard
             </Badge>
           </div>
@@ -155,7 +155,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout }: ScriptDashboar
             <Card>
               <CardContent className="p-6">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-security-primary">{scripts.length}</div>
+                  <div className="text-2xl font-bold text-primary">{scripts.length}</div>
                   <div className="text-sm text-muted-foreground">Total Scripts</div>
                 </div>
               </CardContent>
@@ -164,7 +164,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout }: ScriptDashboar
             <Card>
               <CardContent className="p-6">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-security-primary">
+                  <div className="text-2xl font-bold text-primary">
                     {scripts.filter(s => s.status === 'protected').length}
                   </div>
                   <div className="text-sm text-muted-foreground">Protected</div>
@@ -224,7 +224,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout }: ScriptDashboar
                       <div className="flex items-center space-x-2">
                         <Button
                           onClick={() => onViewScript(script.id)}
-                          variant="protect"
+                          variant="primary"
                           size="sm"
                           className="flex-1"
                         >
@@ -236,7 +236,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout }: ScriptDashboar
                           onClick={() => deleteScript(script.id)}
                           variant="outline"
                           size="sm"
-                          className="text-security-danger hover:text-security-danger hover:border-security-danger"
+                          className="text-destructive hover:text-destructive hover:border-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

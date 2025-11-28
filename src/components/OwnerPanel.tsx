@@ -24,10 +24,9 @@ import { useToast } from "@/hooks/use-toast";
 interface OwnerPanelProps {
   scriptId: string;
   onBack: () => void;
-  onLogout: () => void;
 }
 
-const OwnerPanel = ({ scriptId, onBack, onLogout }: OwnerPanelProps) => {
+const OwnerPanel = ({ scriptId, onBack }: OwnerPanelProps) => {
   const [scriptName, setScriptName] = useState(`DefendScript_${scriptId.slice(-6)}`);
   const [sourceCode, setSourceCode] = useState(`-- Protected Lua Script (${scriptId})
 function protectedFunction()
@@ -97,22 +96,17 @@ protectedFunction()`);
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Dashboard
-            </Button>
-            <div className="flex items-center space-x-3">
-              <Shield className="w-8 h-8 text-security-primary" />
-              <h1 className="text-2xl font-bold text-security-primary">DefendLua</h1>
-              <Badge variant="secondary" className="bg-security-primary/10 text-security-primary">
-                Owner Panel
-              </Badge>
-            </div>
-          </div>
-          <Button variant="ghost" onClick={onLogout} className="text-muted-foreground hover:text-foreground">
-            Logout
+          <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Dashboard
           </Button>
+          <div className="flex items-center space-x-3">
+            <Shield className="w-8 h-8 text-primary" />
+            <h1 className="text-2xl font-bold text-primary">DefendLua</h1>
+            <Badge variant="secondary" className="bg-primary/10 text-primary">
+              Owner Panel
+            </Badge>
+          </div>
         </div>
       </header>
 
@@ -131,7 +125,7 @@ protectedFunction()`);
             <Card className="lg:col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Settings className="w-5 h-5 text-security-primary" />
+                  <Settings className="w-5 h-5 text-primary" />
                   <span>Script Info</span>
                 </CardTitle>
               </CardHeader>
@@ -159,9 +153,9 @@ protectedFunction()`);
                   </div>
                 </div>
 
-                <Alert className="border-security-primary/20 bg-security-primary/5">
-                  <CheckCircle className="h-4 w-4 text-security-primary" />
-                  <AlertDescription className="text-security-primary">
+                <Alert className="border-primary/20 bg-primary/5">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-primary">
                     Script is protected and ready to use!
                   </AlertDescription>
                 </Alert>
@@ -174,7 +168,7 @@ protectedFunction()`);
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center space-x-2">
-                      <Code className="w-5 h-5 text-security-primary" />
+                      <Code className="w-5 h-5 text-primary" />
                       <span>Script Editor</span>
                     </CardTitle>
                     <TabsList>
@@ -206,7 +200,7 @@ protectedFunction()`);
                     <div className="flex items-center space-x-3">
                       <Button
                         onClick={handleSave}
-                        variant="protect"
+                        variant="primary"
                         disabled={isSaving}
                       >
                         <Save className="w-4 h-4 mr-2" />
@@ -227,9 +221,9 @@ protectedFunction()`);
                       Use this raw link to access your protected script directly.
                     </CardDescription>
                     
-                    <Alert className="border-security-secondary/20 bg-security-secondary/5">
-                      <Link className="h-4 w-4 text-security-secondary" />
-                      <AlertDescription className="text-security-secondary">
+                    <Alert className="border-accent/20 bg-accent/5">
+                      <Link className="h-4 w-4 text-accent" />
+                      <AlertDescription className="text-accent">
                         This link provides direct access to your protected Lua script.
                       </AlertDescription>
                     </Alert>
@@ -256,10 +250,10 @@ protectedFunction()`);
                       <h4 className="font-medium mb-2">Usage Examples:</h4>
                       <div className="space-y-2 text-sm font-mono text-muted-foreground">
                         <div>
-                          <span className="text-security-primary">Lua:</span> loadstring(game:HttpGet("{rawLink}"))()
+                          <span className="text-primary">Lua:</span> loadstring(game:HttpGet("{rawLink}"))()
                         </div>
                         <div>
-                          <span className="text-security-primary">cURL:</span> curl -s "{rawLink}"
+                          <span className="text-primary">cURL:</span> curl -s "{rawLink}"
                         </div>
                       </div>
                     </div>

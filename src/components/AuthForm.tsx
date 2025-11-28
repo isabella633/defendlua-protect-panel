@@ -8,10 +8,11 @@ import { Shield, Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthFormProps {
-  onLogin: () => void;
+  onSuccess: () => void;
+  onBack: () => void;
 }
 
-const AuthForm = ({ onLogin }: AuthFormProps) => {
+const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -26,7 +27,7 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
         title: type === 'login' ? "Welcome back!" : "Account created!",
         description: `You have successfully ${type === 'login' ? 'logged in' : 'signed up'} to DefendLua.`,
       });
-      onLogin();
+      onSuccess();
     }, 1500);
   };
 
@@ -34,9 +35,12 @@ const AuthForm = ({ onLogin }: AuthFormProps) => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
+          <button onClick={onBack} className="mb-4 text-muted-foreground hover:text-foreground transition-colors text-sm">
+            ← Back to home
+          </button>
           <div className="flex items-center justify-center mb-4">
-            <Shield className="w-12 h-12 text-security-primary mr-3" />
-            <h1 className="text-3xl font-bold text-security-primary">DefendLua</h1>
+            <Shield className="w-12 h-12 text-primary mr-3" />
+            <h1 className="text-3xl font-bold text-primary">DefendLua</h1>
           </div>
           <p className="text-muted-foreground">
             Secure your Lua scripts with advanced protection
