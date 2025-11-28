@@ -9,7 +9,8 @@ const HowItWorks = () => {
       icon: Upload,
       number: "01",
       title: "Upload Your Script",
-      description: "Simply paste your Lua script or upload the file to our secure platform. Your code is encrypted and stored safely.",
+      description:
+        "Simply paste your Lua script or upload the file to our secure platform. Your code is encrypted and stored safely.",
       code: `-- Your original script
 local myScript = "Hello World"
 print(myScript)`,
@@ -18,7 +19,8 @@ print(myScript)`,
       icon: Key,
       number: "02",
       title: "Get Your Script Key",
-      description: "Instantly receive a unique script key and integration code. Copy the verification snippet to add protection.",
+      description:
+        "Instantly receive a unique script key and integration code. Copy the verification snippet to add protection.",
       code: `-- Add this to your script
 local DefendLua = loadstring(game:HttpGet("https://api.defendlua.com/verify"))()
 DefendLua.verify("YOUR_SCRIPT_KEY")`,
@@ -27,7 +29,8 @@ DefendLua.verify("YOUR_SCRIPT_KEY")`,
       icon: Shield,
       number: "03",
       title: "Manage Access",
-      description: "Control who can use your script through our dashboard. Add or remove HWIDs, monitor usage, and track analytics in real-time.",
+      description:
+        "Control who can use your script through our dashboard. Add or remove HWIDs, monitor usage, and track analytics in real-time.",
       code: `-- Protected script runs
 if DefendLua.isVerified() then
   -- Your protected code here
@@ -47,11 +50,21 @@ end`,
               <span className="text-2xl font-bold gradient-text">DefendLua</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
-              <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">Features</Link>
-              <Link to="/how-it-works" className="text-soft-blue-dark font-medium">How It Works</Link>
-              <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
-              <Link to="/docs" className="text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
-              <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
+              <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">
+                Features
+              </Link>
+              <Link to="/how-it-works" className="text-soft-blue-dark font-medium">
+                How It Works
+              </Link>
+              <Link to="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+                Pricing
+              </Link>
+              <Link to="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
+                Docs
+              </Link>
+              <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
+                Contact
+              </Link>
             </div>
             <Link to="/">
               <Button>Get Started</Button>
@@ -116,9 +129,12 @@ end`,
             {[
               { icon: CheckCircle, title: "Simple Setup", desc: "Get started in under 5 minutes" },
               { icon: Shield, title: "Bank-Level Security", desc: "Military-grade encryption" },
-              { icon: Key, title: "Full Control", desc: "Manage access your way" }
+              { icon: Key, title: "Full Control", desc: "Manage access your way" },
             ].map((benefit, i) => (
-              <Card key={i} className="p-6 text-center border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all">
+              <Card
+                key={i}
+                className="p-6 text-center border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all"
+              >
                 <benefit.icon className="h-12 w-12 text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-bold mb-2">{benefit.title}</h3>
                 <p className="text-muted-foreground">{benefit.desc}</p>
@@ -131,11 +147,9 @@ end`,
       {/* CTA Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
-          <div className="max-w-3xl mx-auto bg-gradient-to-r from-soft-blue to-soft-purple p-12 rounded-2xl text-white">
+          <div className="max-w-3xl mx-auto bg-gradient-to-r from-soft-blue to-soft-purple p-12 rounded-2xl text-black">
             <h2 className="text-4xl font-bold mb-4">Start Protecting Your Scripts Today</h2>
-            <p className="text-lg mb-8 opacity-90">
-              Join thousands of developers who trust DefendLua
-            </p>
+            <p className="text-lg mb-8 opacity-90">Join thousands of developers who trust DefendLua</p>
             <Link to="/">
               <Button size="lg" variant="secondary" className="font-semibold">
                 Get Started Free
