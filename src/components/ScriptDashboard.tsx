@@ -224,28 +224,62 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
+          {/* Subscription Status */}
+          <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Current Subscription</CardTitle>
+                  <CardDescription>Your active plan and status</CardDescription>
+                </div>
+                <Badge 
+                  variant={subscription?.plan === 'pro' || subscription?.plan === 'enterprise' ? 'default' : 'secondary'}
+                  className={subscription?.plan === 'pro' || subscription?.plan === 'enterprise' ? 'bg-primary text-primary-foreground' : ''}
+                >
+                  {subscription?.plan?.toUpperCase() || 'FREE'} PLAN
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                {subscription?.plan === 'free' || !subscription?.plan ? (
+                  <>
+                    <p className="text-muted-foreground">• 3 scripts maximum</p>
+                    <p className="text-muted-foreground">• 10 HWIDs per script</p>
+                    <p className="text-muted-foreground">• Community support</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-foreground">• Unlimited scripts</p>
+                    <p className="text-foreground">• Up to 100 HWIDs per script</p>
+                    <p className="text-foreground">• Priority support & analytics</p>
+                    {subscription?.expires_at && (
+                      <p className="text-muted-foreground mt-3">
+                        Expires: {new Date(subscription.expires_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Pro Plan Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Activation Code Card */}
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Key className="w-5 h-5" />
-                      Activate Pro Plan
-                    </CardTitle>
-                    <CardDescription>
-                      Enter your activation code
-                    </CardDescription>
-                  </div>
-                  {subscription && subscription.plan !== 'free' && (
-                    <Badge className="bg-primary">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      {subscription.plan.toUpperCase()}
-                    </Badge>
-                  )}
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="w-5 h-5" />
+                  Activate Pro Plan
+                </CardTitle>
+                <CardDescription>
+                  Enter your activation code
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-3">
@@ -268,11 +302,6 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                     {isActivating ? "..." : "Activate"}
                   </Button>
                 </div>
-                {subscription && subscription.expires_at && (
-                  <p className="text-sm text-muted-foreground mt-3">
-                    Expires: {new Date(subscription.expires_at).toLocaleDateString()}
-                  </p>
-                )}
               </CardContent>
             </Card>
 
