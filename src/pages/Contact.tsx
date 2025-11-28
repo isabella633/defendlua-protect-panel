@@ -1,10 +1,32 @@
+import { useState, useEffect } from "react";
 import { Shield, Mail, MessageSquare, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import AIChatWidget from "@/components/AIChatWidget";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
+  const [user, setUser] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+
+  useEffect(() => {
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (user) {
+        // Fetch subscription
+        supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle()
+          .then(({ data }) => setSubscription(data));
+      }
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-blue/20 via-white to-soft-purple/20">
       {/* Navigation */}
@@ -56,11 +78,17 @@ const Contact = () => {
 
             <Card className="p-8 text-center border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all">
               <MessageSquare className="h-12 w-12 text-primary mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Live Chat</h3>
-              <p className="text-muted-foreground mb-4">Available 9AM - 6PM EST</p>
-              <Button variant="outline" className="w-full" onClick={() => {
-                alert('Live chat coming soon! For now, please email us at support@defendlua.com');
-              }}>Start Chat</Button>
+              <h3 className="text-xl font-bold mb-2">AI Live Chat</h3>
+              <p className="text-muted-foreground mb-4">
+                {subscription?.plan === 'enterprise' 
+                  ? 'Instant AI + Human Support'
+                  : subscription?.plan === 'pro' 
+                  ? 'Unlimited AI Support'
+                  : 'AI Support (5 msg/day)'}
+              </p>
+              <Button variant="outline" className="w-full">
+                Chat Now
+              </Button>
             </Card>
 
             <Card className="p-8 text-center border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all">
@@ -120,6 +148,12 @@ const Contact = () => {
           </Accordion>
         </div>
       </section>
+
+      {/* AI Chat Widget */}
+      <AIChatWidget 
+        userPlan={subscription?.plan || 'free'}
+        userId={user?.id}
+      />
     </div>
   );
 };
