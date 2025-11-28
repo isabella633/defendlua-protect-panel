@@ -1,32 +1,10 @@
-import { Shield, Mail, MessageSquare, HelpCircle, Send } from "lucide-react";
+import { Shield, Mail, MessageSquare, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router-dom";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const Contact = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: "Message Sent!",
-      description: "We'll get back to you as soon as possible.",
-    });
-    
-    setIsSubmitting(false);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-blue/20 via-white to-soft-purple/20">
       {/* Navigation */}
@@ -66,132 +44,80 @@ const Contact = () => {
       {/* Contact Section */}
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-5xl">
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            {[
-              {
-                icon: Mail,
-                title: "Email Us",
-                description: "support@defendlua.com",
-                action: "Send Email"
-              },
-              {
-                icon: MessageSquare,
-                title: "Live Chat",
-                description: "Available 9AM - 6PM EST",
-                action: "Start Chat"
-              },
-              {
-                icon: HelpCircle,
-                title: "Help Center",
-                description: "Browse our FAQ and guides",
-                action: "Visit Help Center"
-              }
-            ].map((method, i) => (
-              <Card key={i} className="p-6 text-center border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all">
-                <method.icon className="h-12 w-12 text-primary mx-auto mb-4" />
-                <h3 className="text-xl font-bold mb-2">{method.title}</h3>
-                <p className="text-muted-foreground mb-4">{method.description}</p>
-                <Button variant="outline" className="w-full">{method.action}</Button>
-              </Card>
-            ))}
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="p-8 text-center border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all">
+              <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h3 className="text-xl font-bold mb-2">Email Us</h3>
+              <p className="text-muted-foreground mb-4">support@defendlua.com</p>
+              <a href="mailto:support@defendlua.com">
+                <Button variant="outline" className="w-full">Send Email</Button>
+              </a>
+            </Card>
+
+            <Card className="p-8 text-center border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all">
+              <MessageSquare className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h3 className="text-xl font-bold mb-2">Live Chat</h3>
+              <p className="text-muted-foreground mb-4">Available 9AM - 6PM EST</p>
+              <Button variant="outline" className="w-full" onClick={() => {
+                alert('Live chat coming soon! For now, please email us at support@defendlua.com');
+              }}>Start Chat</Button>
+            </Card>
+
+            <Card className="p-8 text-center border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all">
+              <HelpCircle className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h3 className="text-xl font-bold mb-2">Help Center</h3>
+              <p className="text-muted-foreground mb-4">Browse our FAQ and guides</p>
+              <Link to="/docs">
+                <Button variant="outline" className="w-full">Visit Help Center</Button>
+              </Link>
+            </Card>
           </div>
-
-          {/* Contact Form */}
-          <Card className="p-8 md:p-12 border-soft-blue/20 bg-white/80 backdrop-blur-sm">
-            <h2 className="text-3xl font-bold mb-6 gradient-text text-center">Send us a Message</h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input 
-                    id="name" 
-                    placeholder="Your name" 
-                    required 
-                    className="mt-2"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    placeholder="your@email.com" 
-                    required 
-                    className="mt-2"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <Input 
-                  id="subject" 
-                  placeholder="How can we help?" 
-                  required 
-                  className="mt-2"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="message">Message</Label>
-                <Textarea 
-                  id="message" 
-                  placeholder="Tell us more about your question or issue..." 
-                  rows={6}
-                  required 
-                  className="mt-2"
-                />
-              </div>
-
-              <Button 
-                type="submit" 
-                size="lg" 
-                className="w-full md:w-auto"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  "Sending..."
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Send Message
-                  </>
-                )}
-              </Button>
-            </form>
-          </Card>
         </div>
       </section>
 
       {/* FAQ Section */}
       <section className="py-20 px-4 bg-white/50">
-        <div className="container mx-auto max-w-3xl">
+        <div className="container mx-auto max-w-4xl">
           <h2 className="text-4xl font-bold text-center mb-12 gradient-text">Common Questions</h2>
-          <div className="space-y-6">
+          <Accordion type="single" collapsible className="space-y-4">
             {[
               {
                 q: "What's your average response time?",
-                a: "We typically respond to all inquiries within 24 hours during business days."
+                a: "We typically respond to all inquiries within 24 hours during business days. For urgent issues, Enterprise customers have access to priority support with faster response times."
               },
               {
                 q: "Do you offer phone support?",
-                a: "Phone support is available for Enterprise plan customers. Contact us to learn more."
+                a: "Phone support is available for Enterprise plan customers. Contact us at support@defendlua.com to learn more about our Enterprise offerings and schedule a call."
               },
               {
                 q: "Can I schedule a demo?",
-                a: "Yes! Enterprise customers can schedule personalized demos. Use the contact form to request one."
+                a: "Yes! Enterprise customers can schedule personalized demos to see how DefendLua can protect their scripts. Email us at support@defendlua.com to request a demo."
               },
               {
                 q: "Where can I find technical documentation?",
-                a: "Visit our Docs page for comprehensive technical documentation and API references."
+                a: "Visit our Docs page for comprehensive technical documentation, API references, integration guides, and code examples. You can also find video tutorials and best practices."
+              },
+              {
+                q: "What payment methods do you accept?",
+                a: "We accept all major credit cards, PayPal, and bank transfers for Enterprise customers. All payments are processed securely through our payment provider."
+              },
+              {
+                q: "How do I report a bug or issue?",
+                a: "Email us at support@defendlua.com with details about the issue, including error messages, steps to reproduce, and your script configuration. We'll investigate and respond promptly."
               }
             ].map((faq, i) => (
-              <Card key={i} className="p-6 border-soft-blue/20 bg-white/80 backdrop-blur-sm">
-                <h3 className="text-lg font-semibold mb-2">{faq.q}</h3>
-                <p className="text-muted-foreground">{faq.a}</p>
+              <Card key={i} className="border-soft-blue/20 bg-white/80 backdrop-blur-sm">
+                <AccordionItem value={`item-${i}`} className="border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-soft-blue/5">
+                    <span className="text-lg font-bold text-left">{faq.q}</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4 text-muted-foreground">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
               </Card>
             ))}
-          </div>
+          </Accordion>
         </div>
       </section>
     </div>
