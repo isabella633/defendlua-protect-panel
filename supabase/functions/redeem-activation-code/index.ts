@@ -28,26 +28,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Auth header present, creating client');
+    console.log('Auth header present, creating admin client');
 
-    // Create client with service role for auth verification and data access
+    // Create admin client with service role
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Create client for user verification with their JWT
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: { headers: { Authorization: authHeader } },
-        auth: { persistSession: false }
-      }
-    );
-
-    console.log('Getting user from JWT');
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    console.log('Verifying user JWT');
+    // Extract and verify JWT token using admin client
+    const jwt = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwt);
     
     if (userError || !user) {
       console.log('User verification failed:', userError?.message);
