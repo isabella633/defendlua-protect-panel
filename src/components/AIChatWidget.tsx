@@ -35,9 +35,9 @@ const AIChatWidget = ({ userPlan = 'free', userId }: AIChatWidgetProps) => {
   const { toast } = useToast();
 
   const limits = {
-    free: { maxMessages: 5, responseTime: 'Standard' },
-    pro: { maxMessages: Infinity, responseTime: 'Priority' },
-    enterprise: { maxMessages: Infinity, responseTime: 'Instant' }
+    free: { maxMessages: 5, responseTime: 'Standard', label: '5 msgs' },
+    pro: { maxMessages: 100, responseTime: 'Priority', label: '100 msgs' },
+    enterprise: { maxMessages: Infinity, responseTime: 'Instant', label: 'Unlimited' }
   };
 
   useEffect(() => {
@@ -49,11 +49,13 @@ const AIChatWidget = ({ userPlan = 'free', userId }: AIChatWidgetProps) => {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    // Check message limits for free tier
-    if (userPlan === 'free' && messageCount >= limits.free.maxMessages) {
+    // Check message limits
+    if (messageCount >= limits[userPlan].maxMessages) {
       toast({
         title: "Message Limit Reached",
-        description: "Upgrade to Pro for unlimited messages!",
+        description: userPlan === 'free' 
+          ? "Upgrade to Pro for 100 messages per session!"
+          : "Upgrade to Enterprise for unlimited messages!",
         variant: "destructive",
       });
       return;
@@ -164,11 +166,12 @@ const AIChatWidget = ({ userPlan = 'free', userId }: AIChatWidgetProps) => {
         <Badge variant={userPlan === 'free' ? 'secondary' : 'default'}>
           {userPlan.toUpperCase()} Plan
         </Badge>
-        {userPlan === 'free' && (
-          <span className="text-xs text-muted-foreground">
-            {messageCount}/{limits.free.maxMessages} messages
-          </span>
-        )}
+        <span className="text-xs text-muted-foreground">
+          {userPlan === 'enterprise' 
+            ? 'Unlimited messages' 
+            : `${messageCount}/${limits[userPlan].maxMessages} messages`
+          }
+        </span>
       </div>
 
       {/* Messages */}
@@ -214,24 +217,26 @@ const AIChatWidget = ({ userPlan = 'free', userId }: AIChatWidgetProps) => {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
             placeholder={
-              userPlan === 'free' && messageCount >= limits.free.maxMessages
+              messageCount >= limits[userPlan].maxMessages
                 ? 'Upgrade to continue...'
                 : 'Type your message...'
             }
-            disabled={isLoading || (userPlan === 'free' && messageCount >= limits.free.maxMessages)}
+            disabled={isLoading || messageCount >= limits[userPlan].maxMessages}
             className="flex-1"
           />
           <Button
             onClick={sendMessage}
-            disabled={isLoading || !input.trim() || (userPlan === 'free' && messageCount >= limits.free.maxMessages)}
+            disabled={isLoading || !input.trim() || messageCount >= limits[userPlan].maxMessages}
             size="icon"
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        {userPlan === 'free' && messageCount >= limits.free.maxMessages && (
+        {messageCount >= limits[userPlan].maxMessages && (
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Upgrade to Pro for unlimited messages!
+            {userPlan === 'free' 
+              ? 'Upgrade to Pro for 100 messages!'
+              : 'Upgrade to Enterprise for unlimited!'}
           </p>
         )}
       </div>

@@ -88,7 +88,7 @@ Provide expert-level guidance and proactively suggest solutions.`
           ...messages
         ],
         temperature: 0.7,
-        max_tokens: userPlan === 'free' ? 150 : userPlan === 'pro' ? 500 : 1000,
+        max_tokens: userPlan === 'free' ? 150 : userPlan === 'pro' ? 2000 : 4000,
       }),
     });
 
