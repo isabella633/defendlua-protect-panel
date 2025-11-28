@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Shield, Lock, Code, Users, CheckCircle, Zap, ArrowRight, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 import AuthForm from "@/components/AuthForm";
 import ScriptDashboard from "@/components/ScriptDashboard";
 import ScriptProtector from "@/components/ScriptProtector";
@@ -13,11 +15,34 @@ type View = 'landing' | 'auth' | 'dashboard' | 'protect' | 'owner';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>('landing');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [currentScriptId, setCurrentScriptId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        setCurrentView('dashboard');
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user && currentView === 'auth') {
+        setCurrentView('dashboard');
+      } else if (!session?.user && currentView !== 'landing') {
+        setCurrentView('landing');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
     setCurrentView('dashboard');
   };
 
@@ -31,30 +56,39 @@ const Index = () => {
     setCurrentScriptId(null);
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentView('landing');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Shield className="w-12 h-12 text-primary animate-pulse" />
+      </div>
+    );
+  }
 
   if (currentView === 'auth') {
     return <AuthForm onSuccess={handleAuthSuccess} onBack={() => setCurrentView('landing')} />;
   }
 
-  if (currentView === 'dashboard' && isAuthenticated) {
+  if (currentView === 'dashboard' && user) {
     return (
       <ScriptDashboard
         onNewScript={() => setCurrentView('protect')}
         onViewScript={handleViewScript}
         onLogout={handleLogout}
+        userId={user.id}
       />
     );
   }
 
-  if (currentView === 'protect' && isAuthenticated) {
+  if (currentView === 'protect' && user) {
     return <ScriptProtector onBack={handleBackToDashboard} />;
   }
 
-  if (currentView === 'owner' && isAuthenticated && currentScriptId) {
+  if (currentView === 'owner' && user && currentScriptId) {
     return <OwnerPanel scriptId={currentScriptId} onBack={handleBackToDashboard} />;
   }
 
