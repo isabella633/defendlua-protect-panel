@@ -1,7 +1,8 @@
 import { Shield, BookOpen, Code, Terminal, Key, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const Docs = () => {
   const sections = [
@@ -9,31 +10,56 @@ const Docs = () => {
       icon: BookOpen,
       title: "Getting Started",
       description: "Quick start guide to protect your first script",
-      topics: ["Creating an account", "Understanding the dashboard", "Your first protected script", "Testing protection"]
+      topics: [
+        { name: "Creating an account", content: "Sign up for DefendLua by clicking 'Get Started' and filling out the registration form. Verify your email to activate your account and access the dashboard." },
+        { name: "Understanding the dashboard", content: "The dashboard is your central hub for managing scripts. Here you'll find an overview of all your protected scripts, active HWIDs, and recent activity logs." },
+        { name: "Your first protected script", content: "Create a new script by clicking 'Add Script', give it a name, and copy the generated script key. You'll use this key to integrate protection into your Lua code." },
+        { name: "Testing protection", content: "Test your protected script by running it in a safe environment. The verification system will check the HWID and script key before allowing execution." }
+      ]
     },
     {
       icon: Code,
       title: "API Reference",
       description: "Complete API documentation with examples",
-      topics: ["Authentication", "Script verification", "HWID management", "Webhook integration"]
+      topics: [
+        { name: "Authentication", content: "All API requests require authentication using your API key. Include it in the Authorization header: 'Authorization: Bearer YOUR_API_KEY'" },
+        { name: "Script verification", content: "The verify endpoint checks if a script key and HWID combination is authorized. Returns success status and user information on valid requests." },
+        { name: "HWID management", content: "Manage hardware IDs through the API. Add, remove, or list HWIDs associated with your scripts. Each script can have multiple authorized HWIDs." },
+        { name: "Webhook integration", content: "Set up webhooks to receive real-time notifications about script usage, unauthorized access attempts, and HWID changes." }
+      ]
     },
     {
       icon: Terminal,
       title: "Integration Guide",
       description: "Step-by-step integration tutorials",
-      topics: ["Lua script integration", "Custom loaders", "Error handling", "Best practices"]
+      topics: [
+        { name: "Lua script integration", content: "Add DefendLua protection to your Lua scripts by including the verification code at the start of your script. The loader will handle HWID checking and authorization." },
+        { name: "Custom loaders", content: "Create custom loaders for specific platforms or use cases. Loaders handle the verification process and can be customized to fit your workflow." },
+        { name: "Error handling", content: "Implement proper error handling for verification failures. Show user-friendly messages and log errors for debugging purposes." },
+        { name: "Best practices", content: "Keep your script keys secure, never hardcode them in public code. Use environment variables and regularly rotate keys for sensitive scripts." }
+      ]
     },
     {
       icon: Key,
       title: "Security",
       description: "Learn about our security measures",
-      topics: ["Encryption methods", "HWID binding", "Key rotation", "Access control"]
+      topics: [
+        { name: "Encryption methods", content: "All script keys and HWIDs are encrypted using AES-256 encryption. Communication between your script and our servers uses TLS 1.3 for maximum security." },
+        { name: "HWID binding", content: "Hardware ID binding ensures scripts only run on authorized devices. Each HWID is uniquely identified and validated against your whitelist." },
+        { name: "Key rotation", content: "Regularly rotate your script keys to maintain security. The dashboard makes it easy to generate new keys and update your scripts." },
+        { name: "Access control", content: "Implement role-based access control for team members. Control who can create scripts, manage HWIDs, and view analytics." }
+      ]
     },
     {
       icon: Users,
       title: "Advanced Features",
       description: "Unlock the full potential of DefendLua",
-      topics: ["Custom branding", "Analytics API", "Bulk operations", "White-label setup"]
+      topics: [
+        { name: "Custom branding", content: "White-label the verification experience with your own branding. Customize error messages, loader screens, and user-facing text." },
+        { name: "Analytics API", content: "Access detailed analytics through our API. Track script usage, identify trends, and monitor user behavior across all your protected scripts." },
+        { name: "Bulk operations", content: "Manage multiple scripts and HWIDs at once using bulk operations. Import/export HWID lists and perform batch updates efficiently." },
+        { name: "White-label setup", content: "Enterprise plans include full white-labeling capabilities. Use your own domain, branding, and customize the entire user experience." }
+      ]
     }
   ];
 
@@ -78,18 +104,27 @@ const Docs = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {sections.map((section, index) => (
-              <Card key={index} className="p-8 border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
-                <section.icon className="h-12 w-12 text-primary mb-4" />
-                <h3 className="text-2xl font-bold mb-3 text-foreground">{section.title}</h3>
-                <p className="text-muted-foreground mb-6">{section.description}</p>
-                <ul className="space-y-2">
-                  {section.topics.map((topic, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      {topic}
-                    </li>
-                  ))}
-                </ul>
+              <Card key={index} className="border-soft-blue/20 bg-white/80 backdrop-blur-sm hover:shadow-lg transition-all duration-300">
+                <CardContent className="p-8">
+                  <section.icon className="h-12 w-12 text-primary mb-4" />
+                  <h3 className="text-2xl font-bold mb-3 text-foreground">{section.title}</h3>
+                  <p className="text-muted-foreground mb-6">{section.description}</p>
+                  <Accordion type="single" collapsible className="w-full">
+                    {section.topics.map((topic, i) => (
+                      <AccordionItem key={i} value={`item-${i}`}>
+                        <AccordionTrigger className="text-sm hover:text-primary">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            {topic.name}
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground pl-4">
+                          {topic.content}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </CardContent>
               </Card>
             ))}
           </div>
