@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     if (!hwid) {
       return new Response(
-        '-- Error: Hardware ID (HWID) required\n-- Usage: ?key=YOUR_HWID',
+        '-- ACCESS DENIED\n-- This script is protected and requires authorization\n-- Add ?key=YOUR_HWID to access',
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     if (!isWhitelisted) {
       console.log('HWID not whitelisted:', { scriptId, hwid, allowedCount: hwidList.length });
       return new Response(
-        '-- Error: Access denied - HWID not whitelisted\n-- Contact the script owner to whitelist your HWID',
+        '-- ACCESS DENIED\n-- Your HWID is not authorized for this script\n-- Contact the script owner to request access',
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
