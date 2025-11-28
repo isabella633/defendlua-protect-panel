@@ -40,9 +40,10 @@ protectedFunction()`);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Generate raw link
-    const baseUrl = window.location.origin;
-    setRawLink(`${baseUrl}/api/raw/${scriptId}`);
+    // Generate raw link pointing to edge function
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const projectId = supabaseUrl?.split('//')[1]?.split('.')[0];
+    setRawLink(`https://${projectId}.supabase.co/functions/v1/serve-raw-script/${scriptId}?key=YOUR_HWID`);
   }, [scriptId]);
 
   const handleSave = async () => {
@@ -246,14 +247,23 @@ protectedFunction()`);
                       </div>
                     </div>
                     
-                    <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
-                      <h4 className="font-medium mb-2">Usage Examples:</h4>
-                      <div className="space-y-2 text-sm font-mono text-muted-foreground">
-                        <div>
-                          <span className="text-primary">Lua:</span> loadstring(game:HttpGet("{rawLink}"))()
-                        </div>
-                        <div>
-                          <span className="text-primary">cURL:</span> curl -s "{rawLink}"
+                    <div className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-3">
+                      <div>
+                        <h4 className="font-medium mb-2 text-accent">🔒 HWID Protection Enabled</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Replace <code className="text-primary">YOUR_HWID</code> with the whitelisted hardware ID.
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium mb-2">Usage Examples:</h4>
+                        <div className="space-y-2 text-sm font-mono text-muted-foreground break-all">
+                          <div>
+                            <span className="text-primary">Lua:</span> loadstring(game:HttpGet("{rawLink}"))()
+                          </div>
+                          <div>
+                            <span className="text-primary">cURL:</span> curl -s "{rawLink}"
+                          </div>
                         </div>
                       </div>
                     </div>
