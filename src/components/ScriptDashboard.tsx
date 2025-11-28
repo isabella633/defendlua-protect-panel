@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Shield, 
   Plus, 
@@ -16,10 +17,12 @@ import {
   Key,
   CheckCircle,
   ShoppingCart,
-  ExternalLink
+  ExternalLink,
+  Settings
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import AIChatWidget from "./AIChatWidget";
 
 interface Script {
   id: string;
@@ -43,12 +46,19 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
   const [activationCode, setActivationCode] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
+  const [userEmail, setUserEmail] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
     fetchSubscription();
     fetchScripts();
+    fetchUserEmail();
   }, [userId]);
+
+  const fetchUserEmail = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) setUserEmail(user.email);
+  };
 
   const fetchSubscription = async () => {
     const { data, error } = await supabase
@@ -168,6 +178,16 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
+          <Tabs defaultValue="scripts" className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="scripts">Scripts</TabsTrigger>
+              <TabsTrigger value="settings">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="scripts" className="space-y-6">
           {/* Subscription Status */}
           <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
             <CardHeader>
@@ -400,8 +420,58 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
               ))}
             </div>
           )}
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Settings</CardTitle>
+                  <CardDescription>Manage your account preferences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input value={userEmail} disabled className="bg-muted" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>User ID</Label>
+                    <Input value={userId} disabled className="bg-muted font-mono text-xs" />
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <h3 className="font-semibold mb-4">Current Subscription</h3>
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div>
+                        <Badge 
+                          variant={subscription?.plan === 'pro' || subscription?.plan === 'enterprise' ? 'default' : 'secondary'}
+                        >
+                          {subscription?.plan?.toUpperCase() || 'FREE'} PLAN
+                        </Badge>
+                        {subscription?.expires_at && (
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Expires: {new Date(subscription.expires_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                      {subscription?.plan === 'free' && (
+                        <Button variant="hero" onClick={() => window.location.href = '/pricing'}>
+                          Upgrade Plan
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
+
+      <AIChatWidget 
+        userPlan={subscription?.plan || 'free'} 
+        userId={userId} 
+      />
     </div>
   );
 };
