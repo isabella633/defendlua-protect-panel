@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthFormProps {
   onSuccess: () => void;
@@ -16,19 +17,58 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent, type: 'login' | 'signup') => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>, type: 'login' | 'signup') => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate authentication
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: type === 'login' ? "Welcome back!" : "Account created!",
-        description: `You have successfully ${type === 'login' ? 'logged in' : 'signed up'} to DefendLua.`,
-      });
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    
+    try {
+      if (type === 'signup') {
+        const name = formData.get('name') as string;
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              full_name: name,
+            }
+          }
+        });
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Account created!",
+          description: "You have successfully signed up to DefendLua.",
+        });
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully logged in to DefendLua.",
+        });
+      }
+      
       onSuccess();
-    }, 1500);
+    } catch (error: any) {
+      toast({
+        title: "Authentication Error",
+        description: error.message || "An error occurred during authentication.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -69,6 +109,7 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="email"
+                        name="email"
                         type="email"
                         placeholder="your@email.com"
                         className="pl-10"
@@ -82,10 +123,12 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="password"
+                        name="password"
                         type="password"
                         placeholder="Enter your password"
                         className="pl-10"
                         required
+                        minLength={6}
                       />
                     </div>
                   </div>
@@ -116,6 +159,7 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                       <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="name"
+                        name="name"
                         type="text"
                         placeholder="John Doe"
                         className="pl-10"
@@ -129,6 +173,7 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signup-email"
+                        name="email"
                         type="email"
                         placeholder="your@email.com"
                         className="pl-10"
@@ -142,10 +187,12 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signup-password"
+                        name="password"
                         type="password"
                         placeholder="Create a strong password"
                         className="pl-10"
                         required
+                        minLength={6}
                       />
                     </div>
                   </div>

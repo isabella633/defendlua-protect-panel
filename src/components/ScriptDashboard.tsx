@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Shield, 
   Plus, 
@@ -12,9 +13,11 @@ import {
   Eye, 
   Trash2,
   LogOut,
-  Settings
+  Key,
+  CheckCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Script {
   id: string;
@@ -29,12 +32,108 @@ interface ScriptDashboardProps {
   onNewScript: () => void;
   onViewScript: (scriptId: string) => void;
   onLogout: () => void;
+  userId: string;
 }
 
-const ScriptDashboard = ({ onNewScript, onViewScript, onLogout }: ScriptDashboardProps) => {
+const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: ScriptDashboardProps) => {
   const [scripts, setScripts] = useState<Script[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activationCode, setActivationCode] = useState("");
+  const [isActivating, setIsActivating] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchSubscription();
+  }, [userId]);
+
+  const fetchSubscription = async () => {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (data) setSubscription(data);
+  };
+
+  const handleActivateCode = async () => {
+    if (!activationCode.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an activation code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsActivating(true);
+    
+    try {
+      // Check if code exists and is valid
+      const { data: codeData, error: codeError } = await supabase
+        .from('activation_codes')
+        .select('*')
+        .eq('code', activationCode.trim())
+        .maybeSingle();
+
+      if (codeError || !codeData) {
+        throw new Error("Invalid activation code");
+      }
+
+      if (!codeData.is_active) {
+        throw new Error("This activation code has been deactivated");
+      }
+
+      if (codeData.used_count >= codeData.max_uses) {
+        throw new Error("This activation code has already been used");
+      }
+
+      if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
+        throw new Error("This activation code has expired");
+      }
+
+      // Update or create subscription
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + codeData.duration_days);
+
+      const { error: subError } = await supabase
+        .from('subscriptions')
+        .upsert({
+          user_id: userId,
+          plan: codeData.plan,
+          status: 'active',
+          activated_at: new Date().toISOString(),
+          expires_at: expiresAt.toISOString(),
+        });
+
+      if (subError) throw subError;
+
+      // Increment code usage
+      const { error: updateError } = await supabase
+        .from('activation_codes')
+        .update({ used_count: codeData.used_count + 1 })
+        .eq('code', activationCode.trim());
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Activation Successful!",
+        description: `Your ${codeData.plan} plan has been activated for ${codeData.duration_days} days.`,
+      });
+
+      setActivationCode("");
+      fetchSubscription();
+    } catch (error: any) {
+      toast({
+        title: "Activation Failed",
+        description: error.message || "Failed to activate code. Please check and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsActivating(false);
+    }
+  };
 
   useEffect(() => {
     // Simulate loading existing scripts
@@ -123,6 +222,55 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout }: ScriptDashboar
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
+          {/* Activation Code Section */}
+          <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="w-5 h-5" />
+                    Activate Pro Plan
+                  </CardTitle>
+                  <CardDescription>
+                    Enter your activation code to unlock premium features
+                  </CardDescription>
+                </div>
+                {subscription && subscription.plan !== 'free' && (
+                  <Badge className="bg-primary">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    {subscription.plan.toUpperCase()} Active
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <Label htmlFor="activation-code" className="sr-only">Activation Code</Label>
+                  <Input
+                    id="activation-code"
+                    placeholder="Enter your activation code"
+                    value={activationCode}
+                    onChange={(e) => setActivationCode(e.target.value)}
+                    disabled={isActivating}
+                  />
+                </div>
+                <Button 
+                  onClick={handleActivateCode}
+                  disabled={isActivating || !activationCode.trim()}
+                  variant="hero"
+                >
+                  {isActivating ? "Activating..." : "Activate"}
+                </Button>
+              </div>
+              {subscription && subscription.expires_at && (
+                <p className="text-sm text-muted-foreground mt-3">
+                  Current plan expires: {new Date(subscription.expires_at).toLocaleDateString()}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl font-bold mb-2">Your Protected Scripts</h2>
