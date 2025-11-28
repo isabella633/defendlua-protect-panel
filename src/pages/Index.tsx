@@ -265,6 +265,77 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 bg-card/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge variant="secondary" className="mb-4">
+              Simple Pricing
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Choose Your Plan
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Start free and scale as you grow. All plans include core protection features.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {[
+              {
+                name: "Free",
+                price: "$0",
+                period: "forever",
+                features: ["1 protected script", "Up to 5 HWIDs", "Basic analytics", "Community support"]
+              },
+              {
+                name: "Pro",
+                price: "$9.99",
+                period: "per month",
+                features: ["Unlimited scripts", "Up to 100 HWIDs", "Advanced analytics", "Priority support"],
+                popular: true
+              },
+              {
+                name: "Enterprise",
+                price: "Custom",
+                period: "contact us",
+                features: ["Unlimited everything", "Dedicated support", "Custom integrations", "SLA guarantee"]
+              }
+            ].map((plan, index) => (
+              <Card key={index} className={`border-2 ${plan.popular ? 'border-primary shadow-xl' : 'hover:border-primary/50'} transition-all relative`}>
+                {plan.popular && (
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+                    Most Popular
+                  </Badge>
+                )}
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
+                  <div className="mb-4">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className="text-muted-foreground ml-2">/ {plan.period}</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3 mb-6">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link to="/pricing">
+                    <Button variant={plan.popular ? "default" : "outline"} className="w-full">
+                      Learn More
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-br from-primary/10 via-accent/10 to-transparent">
         <div className="container mx-auto px-4">
