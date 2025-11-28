@@ -29,7 +29,7 @@ const Pricing = () => {
         "Custom branding",
         "API access",
       ],
-      cta: "Start Free Trial",
+      cta: "Buy Now",
       popular: true,
     },
     {
@@ -134,7 +134,7 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                <Link to="/">
+                <Link to={plan.name === "Pro" ? "/purchase" : plan.name === "Enterprise" ? "/contact" : "/"}>
                   <Button className="w-full" variant={plan.popular ? "default" : "outline"} size="lg">
                     {plan.cta}
                   </Button>
@@ -160,8 +160,8 @@ const Pricing = () => {
                 a: "We accept all major credit cards, PayPal, and cryptocurrency payments.",
               },
               {
-                q: "Is there a free trial for Pro?",
-                a: "Yes! We offer a 14-day free trial for the Pro plan with no credit card required.",
+                q: "How do I activate my Pro plan?",
+                a: "Purchase an activation code and enter it on the purchase page to instantly activate your Pro plan for 30 days.",
               },
               {
                 q: "What happens if I exceed my HWID limit?",
