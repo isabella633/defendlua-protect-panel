@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import LuaCodeEditor from "@/components/LuaCodeEditor";
 import { checkLuaSyntax, type SyntaxError } from "@/lib/luaSyntaxChecker";
 import { supabase } from "@/integrations/supabase/client";
+import LuaCodeAssistant from "./LuaCodeAssistant";
 
 interface ScriptProtectorProps {
   onBack: () => void;
@@ -22,7 +23,24 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
   const [isProtecting, setIsProtecting] = useState(false);
   const [syntaxErrors, setSyntaxErrors] = useState<SyntaxError[]>([]);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'enterprise'>('free');
   const { toast } = useToast();
+
+  useEffect(() => {
+    loadUserPlan();
+  }, [userId]);
+
+  const loadUserPlan = async () => {
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (subscription) {
+      setUserPlan(subscription.plan as 'free' | 'pro' | 'enterprise');
+    }
+  };
 
   const handleProtectScript = async () => {
     if (!scriptName.trim()) {
@@ -197,6 +215,12 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <LuaCodeAssistant 
+        userPlan={userPlan}
+        userId={userId}
+        currentCode={luaCode}
+      />
     </div>
   );
 };
