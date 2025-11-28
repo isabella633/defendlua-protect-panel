@@ -3,16 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Shield, Code, AlertTriangle, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import LuaCodeEditor from "@/components/LuaCodeEditor";
 import { checkLuaSyntax, type SyntaxError } from "@/lib/luaSyntaxChecker";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ScriptProtectorProps {
   onBack: () => void;
+  userId: string;
 }
 
-const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
+const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
+  const [scriptName, setScriptName] = useState("");
   const [luaCode, setLuaCode] = useState("");
   const [isProtecting, setIsProtecting] = useState(false);
   const [syntaxErrors, setSyntaxErrors] = useState<SyntaxError[]>([]);
@@ -20,6 +25,15 @@ const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
   const { toast } = useToast();
 
   const handleProtectScript = async () => {
+    if (!scriptName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a script name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!luaCode.trim()) {
       toast({
         title: "Error",
@@ -40,19 +54,37 @@ const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
     proceedWithProtection();
   };
 
-  const proceedWithProtection = () => {
+  const proceedWithProtection = async () => {
     setIsProtecting(true);
     
-    // Simulate script protection process
-    setTimeout(() => {
-      setIsProtecting(false);
-      const scriptId = `script_${Date.now()}`;
+    try {
+      const { data, error } = await supabase
+        .from('scripts')
+        .insert({
+          owner_id: userId,
+          script_name: scriptName.trim(),
+          script_key: luaCode,
+          hwid_list: []
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
       toast({
         title: "Script Protected!",
-        description: "Your Lua script has been successfully protected.",
+        description: `${scriptName} has been successfully protected.`,
       });
       onBack();
-    }, 2000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save script.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProtecting(false);
+    }
   };
 
   return (
@@ -100,9 +132,17 @@ const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
               </Alert>
 
               <div className="space-y-2">
-                <label htmlFor="lua-code" className="text-sm font-medium">
-                  Enter your .lua code:
-                </label>
+                <Label htmlFor="script-name">Script Name</Label>
+                <Input
+                  id="script-name"
+                  placeholder="My Awesome Script"
+                  value={scriptName}
+                  onChange={(e) => setScriptName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lua-code">Enter your .lua code:</Label>
                 <LuaCodeEditor
                   value={luaCode}
                   onChange={setLuaCode}
