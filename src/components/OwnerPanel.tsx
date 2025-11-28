@@ -17,9 +17,12 @@ import {
   Download,
   ArrowLeft,
   CheckCircle,
-  Globe
+  Globe,
+  Plus,
+  X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OwnerPanelProps {
   scriptId: string;
@@ -37,6 +40,8 @@ end
 protectedFunction()`);
   const [rawLink, setRawLink] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [hwidList, setHwidList] = useState<string[]>([]);
+  const [newHwid, setNewHwid] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -44,19 +49,79 @@ protectedFunction()`);
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const projectId = supabaseUrl?.split('//')[1]?.split('.')[0];
     setRawLink(`https://${projectId}.supabase.co/functions/v1/serve-raw-script/${scriptId}?key=YOUR_HWID`);
+    
+    // Load script data including HWID list
+    loadScriptData();
   }, [scriptId]);
+
+  const loadScriptData = async () => {
+    const { data, error } = await supabase
+      .from('scripts')
+      .select('script_name, script_key, hwid_list')
+      .eq('id', scriptId)
+      .single();
+
+    if (data) {
+      setScriptName(data.script_name);
+      setSourceCode(data.script_key);
+      setHwidList(data.hwid_list || []);
+    }
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
     
-    // Simulate saving
-    setTimeout(() => {
-      setIsSaving(false);
+    const { error } = await supabase
+      .from('scripts')
+      .update({ 
+        script_name: scriptName,
+        script_key: sourceCode,
+        hwid_list: hwidList
+      })
+      .eq('id', scriptId);
+
+    setIsSaving(false);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save changes.",
+        variant: "destructive",
+      });
+    } else {
       toast({
         title: "Script Saved",
         description: "Your changes have been successfully saved.",
       });
-    }, 1000);
+    }
+  };
+
+  const addHwid = () => {
+    if (!newHwid.trim()) return;
+    
+    if (hwidList.includes(newHwid.trim())) {
+      toast({
+        title: "Already exists",
+        description: "This HWID is already in the whitelist.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setHwidList([...hwidList, newHwid.trim()]);
+    setNewHwid("");
+    toast({
+      title: "HWID Added",
+      description: "Remember to save your changes.",
+    });
+  };
+
+  const removeHwid = (hwid: string) => {
+    setHwidList(hwidList.filter(h => h !== hwid));
+    toast({
+      title: "HWID Removed",
+      description: "Remember to save your changes.",
+    });
   };
 
   const copyToClipboard = async (text: string, type: string) => {
@@ -160,6 +225,51 @@ protectedFunction()`);
                     Script is protected and ready to use!
                   </AlertDescription>
                 </Alert>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">HWID Whitelist</label>
+                  <div className="space-y-2">
+                    {hwidList.length === 0 ? (
+                      <Alert className="border-accent/20 bg-accent/5">
+                        <AlertDescription className="text-accent text-sm">
+                          Empty whitelist = all HWIDs allowed
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {hwidList.map((hwid) => (
+                          <div key={hwid} className="flex items-center justify-between bg-muted/50 p-2 rounded border border-border/50">
+                            <span className="text-sm font-mono">{hwid}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeHwid(hwid)}
+                              className="h-6 w-6"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        value={newHwid}
+                        onChange={(e) => setNewHwid(e.target.value)}
+                        placeholder="Enter HWID to whitelist"
+                        onKeyDown={(e) => e.key === 'Enter' && addHwid()}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={addHwid}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
