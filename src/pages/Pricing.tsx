@@ -11,15 +11,9 @@ const Pricing = () => {
       price: "$0",
       period: "forever",
       description: "Perfect for testing and small projects",
-      features: [
-        "1 protected script",
-        "Up to 5 HWIDs",
-        "Basic analytics",
-        "Community support",
-        "7-day access logs"
-      ],
+      features: ["1 protected script", "Up to 5 HWIDs", "Basic analytics", "Community support", "7-day access logs"],
       cta: "Get Started",
-      popular: false
+      popular: false,
     },
     {
       name: "Pro",
@@ -33,10 +27,10 @@ const Pricing = () => {
         "Priority support",
         "30-day access logs",
         "Custom branding",
-        "API access"
+        "API access",
       ],
       cta: "Start Free Trial",
-      popular: true
+      popular: true,
     },
     {
       name: "Enterprise",
@@ -50,11 +44,11 @@ const Pricing = () => {
         "Custom integrations",
         "SLA guarantee",
         "On-premise option",
-        "White-label solution"
+        "White-label solution",
       ],
       cta: "Contact Sales",
-      popular: false
-    }
+      popular: false,
+    },
   ];
 
   return (
@@ -68,11 +62,21 @@ const Pricing = () => {
               <span className="text-2xl font-bold gradient-text">DefendLua</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
-              <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">Features</Link>
-              <Link to="/how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">How It Works</Link>
-              <Link to="/pricing" className="text-soft-blue-dark font-medium">Pricing</Link>
-              <Link to="/docs" className="text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
-              <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
+              <Link to="/features" className="text-muted-foreground hover:text-foreground transition-colors">
+                Features
+              </Link>
+              <Link to="/how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">
+                How It Works
+              </Link>
+              <Link to="/pricing" className="text-soft-blue-dark font-medium">
+                Pricing
+              </Link>
+              <Link to="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
+                Docs
+              </Link>
+              <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
+                Contact
+              </Link>
             </div>
             <Link to="/">
               <Button>Get Started</Button>
@@ -98,12 +102,12 @@ const Pricing = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-3 gap-8">
             {plans.map((plan, index) => (
-              <Card 
-                key={index} 
+              <Card
+                key={index}
                 className={`p-8 relative ${
-                  plan.popular 
-                    ? 'border-primary shadow-xl scale-105 bg-white' 
-                    : 'border-soft-blue/20 bg-white/80 backdrop-blur-sm'
+                  plan.popular
+                    ? "border-primary shadow-xl scale-105 bg-white"
+                    : "border-soft-blue/20 bg-white/80 backdrop-blur-sm"
                 }`}
               >
                 {plan.popular && (
@@ -111,7 +115,7 @@ const Pricing = () => {
                     Most Popular
                   </Badge>
                 )}
-                
+
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
                   <div className="mb-4">
@@ -131,11 +135,7 @@ const Pricing = () => {
                 </ul>
 
                 <Link to="/">
-                  <Button 
-                    className="w-full" 
-                    variant={plan.popular ? "default" : "outline"}
-                    size="lg"
-                  >
+                  <Button className="w-full" variant={plan.popular ? "default" : "outline"} size="lg">
                     {plan.cta}
                   </Button>
                 </Link>
@@ -153,20 +153,20 @@ const Pricing = () => {
             {[
               {
                 q: "Can I change plans later?",
-                a: "Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately."
+                a: "Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.",
               },
               {
                 q: "What payment methods do you accept?",
-                a: "We accept all major credit cards, PayPal, and cryptocurrency payments."
+                a: "We accept all major credit cards, PayPal, and cryptocurrency payments.",
               },
               {
                 q: "Is there a free trial for Pro?",
-                a: "Yes! We offer a 14-day free trial for the Pro plan with no credit card required."
+                a: "Yes! We offer a 14-day free trial for the Pro plan with no credit card required.",
               },
               {
                 q: "What happens if I exceed my HWID limit?",
-                a: "You'll receive a notification and can upgrade your plan or remove old HWIDs to add new ones."
-              }
+                a: "You'll receive a notification and can upgrade your plan or remove old HWIDs to add new ones.",
+              },
             ].map((faq, i) => (
               <Card key={i} className="p-6 border-soft-blue/20 bg-white/80 backdrop-blur-sm">
                 <h3 className="text-lg font-semibold mb-2">{faq.q}</h3>
@@ -180,11 +180,9 @@ const Pricing = () => {
       {/* CTA Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
-          <div className="max-w-3xl mx-auto bg-gradient-to-r from-soft-blue to-soft-purple p-12 rounded-2xl text-white">
+          <div className="max-w-3xl mx-auto bg-gradient-to-r from-soft-blue to-soft-purple p-12 rounded-2xl text-black">
             <h2 className="text-4xl font-bold mb-4">Still Have Questions?</h2>
-            <p className="text-lg mb-8 opacity-90">
-              Our team is here to help you choose the right plan
-            </p>
+            <p className="text-lg mb-8 opacity-90">Our team is here to help you choose the right plan</p>
             <Link to="/contact">
               <Button size="lg" variant="secondary" className="font-semibold">
                 Contact Us
