@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      activation_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          duration_days: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number
+          plan: Database["public"]["Enums"]["plan_type"]
+          used_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          duration_days?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          plan: Database["public"]["Enums"]["plan_type"]
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          duration_days?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          plan?: Database["public"]["Enums"]["plan_type"]
+          used_count?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -73,6 +112,39 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          plan: Database["public"]["Enums"]["plan_type"]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_type"]
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_type"]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           created_at: string | null
@@ -107,10 +179,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_activation_code: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      plan_type: "free" | "pro" | "enterprise"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -237,6 +309,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      plan_type: ["free", "pro", "enterprise"],
+    },
   },
 } as const
