@@ -134,7 +134,7 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                <Link to={plan.name === "Pro" ? "/purchase" : plan.name === "Enterprise" ? "/contact" : "/"}>
+                <Link to={plan.name === "Enterprise" ? "/contact" : "/"}>
                   <Button className="w-full" variant={plan.popular ? "default" : "outline"} size="lg">
                     {plan.cta}
                   </Button>
@@ -161,7 +161,7 @@ const Pricing = () => {
               },
               {
                 q: "How do I activate my Pro plan?",
-                a: "Purchase an activation code and enter it on the purchase page to instantly activate your Pro plan for 30 days.",
+                a: "Contact us to purchase an activation code, then log into your dashboard to enter the code and instantly activate your Pro plan for 30 days.",
               },
               {
                 q: "What happens if I exceed my HWID limit?",

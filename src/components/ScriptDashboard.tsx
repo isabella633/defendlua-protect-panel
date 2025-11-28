@@ -14,7 +14,9 @@ import {
   Trash2,
   LogOut,
   Key,
-  CheckCircle
+  CheckCircle,
+  ShoppingCart,
+  ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -222,54 +224,84 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
-          {/* Activation Code Section */}
-          <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Key className="w-5 h-5" />
-                    Activate Pro Plan
-                  </CardTitle>
-                  <CardDescription>
-                    Enter your activation code to unlock premium features
-                  </CardDescription>
+          {/* Pro Plan Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Activation Code Card */}
+            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Key className="w-5 h-5" />
+                      Activate Pro Plan
+                    </CardTitle>
+                    <CardDescription>
+                      Enter your activation code
+                    </CardDescription>
+                  </div>
+                  {subscription && subscription.plan !== 'free' && (
+                    <Badge className="bg-primary">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      {subscription.plan.toUpperCase()}
+                    </Badge>
+                  )}
                 </div>
-                {subscription && subscription.plan !== 'free' && (
-                  <Badge className="bg-primary">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    {subscription.plan.toUpperCase()} Active
-                  </Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Label htmlFor="activation-code" className="sr-only">Activation Code</Label>
+                    <Input
+                      id="activation-code"
+                      placeholder="Paste code here"
+                      value={activationCode}
+                      onChange={(e) => setActivationCode(e.target.value)}
+                      disabled={isActivating}
+                      className="font-mono"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleActivateCode}
+                    disabled={isActivating || !activationCode.trim()}
+                    variant="hero"
+                  >
+                    {isActivating ? "..." : "Activate"}
+                  </Button>
+                </div>
+                {subscription && subscription.expires_at && (
+                  <p className="text-sm text-muted-foreground mt-3">
+                    Expires: {new Date(subscription.expires_at).toLocaleDateString()}
+                  </p>
                 )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <Label htmlFor="activation-code" className="sr-only">Activation Code</Label>
-                  <Input
-                    id="activation-code"
-                    placeholder="Enter your activation code"
-                    value={activationCode}
-                    onChange={(e) => setActivationCode(e.target.value)}
-                    disabled={isActivating}
-                  />
+              </CardContent>
+            </Card>
+
+            {/* Purchase Code Card */}
+            <Card className="border-accent/20 bg-gradient-to-br from-accent/5 to-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5" />
+                  Get Pro Codes
+                </CardTitle>
+                <CardDescription>
+                  Contact us to purchase activation codes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>• Unlimited scripts</p>
+                  <p>• Up to 100 HWIDs per script</p>
+                  <p>• Advanced analytics & priority support</p>
                 </div>
-                <Button 
-                  onClick={handleActivateCode}
-                  disabled={isActivating || !activationCode.trim()}
-                  variant="hero"
-                >
-                  {isActivating ? "Activating..." : "Activate"}
-                </Button>
-              </div>
-              {subscription && subscription.expires_at && (
-                <p className="text-sm text-muted-foreground mt-3">
-                  Current plan expires: {new Date(subscription.expires_at).toLocaleDateString()}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                <a href="/contact" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="w-full gap-2">
+                    Contact Sales
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="flex items-center justify-between mb-8">
             <div>
