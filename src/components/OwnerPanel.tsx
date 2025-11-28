@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import LuaCodeAssistant from "./LuaCodeAssistant";
 
 interface OwnerPanelProps {
   scriptId: string;
@@ -42,6 +43,8 @@ protectedFunction()`);
   const [isSaving, setIsSaving] = useState(false);
   const [hwidList, setHwidList] = useState<string[]>([]);
   const [newHwid, setNewHwid] = useState("");
+  const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'enterprise'>('free');
+  const [userId, setUserId] = useState<string>("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,7 +55,24 @@ protectedFunction()`);
     
     // Load script data including HWID list
     loadScriptData();
+    loadUserData();
   }, [scriptId]);
+
+  const loadUserData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserId(user.id);
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('plan')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (subscription) {
+        setUserPlan(subscription.plan as 'free' | 'pro' | 'enterprise');
+      }
+    }
+  };
 
   const loadScriptData = async () => {
     const { data, error } = await supabase
@@ -384,6 +404,12 @@ protectedFunction()`);
           </div>
         </div>
       </main>
+
+      <LuaCodeAssistant 
+        userPlan={userPlan}
+        userId={userId}
+        currentCode={sourceCode}
+      />
     </div>
   );
 };
