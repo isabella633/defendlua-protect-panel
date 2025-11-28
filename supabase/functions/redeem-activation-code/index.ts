@@ -16,48 +16,59 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('Starting redemption request');
+    
     // Get user from JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.log('No auth header provided');
       return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create client with anon key for auth verification
+    console.log('Auth header present, creating client');
+
+    // Create client with service role for auth verification and data access
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Create client for user verification with their JWT
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false }
       }
     );
 
+    console.log('Getting user from JWT');
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     
     if (userError || !user) {
+      console.log('User verification failed:', userError?.message);
       return new Response(
         JSON.stringify({ error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('User verified:', user.id);
+
     // Parse request body
     const { code }: RedeemRequest = await req.json();
 
     if (!code || !code.trim()) {
+      console.log('No code provided in request');
       return new Response(
         JSON.stringify({ error: 'Activation code is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Create service role client to bypass RLS
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
 
     console.log('Checking activation code:', code.trim());
 
