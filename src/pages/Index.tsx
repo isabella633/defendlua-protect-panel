@@ -3,6 +3,7 @@ import { Shield, Lock, Code, Users, CheckCircle, Zap, ArrowRight, ChevronRight }
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 import AuthForm from "@/components/AuthForm";
 import ScriptDashboard from "@/components/ScriptDashboard";
 import ScriptProtector from "@/components/ScriptProtector";
@@ -72,15 +73,21 @@ const Index = () => {
               </Badge>
             </div>
             <div className="flex items-center gap-6">
-              <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+              <Link to="/features" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
                 Features
-              </a>
-              <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+              </Link>
+              <Link to="/how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
                 How It Works
-              </a>
-              <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+              </Link>
+              <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
                 Pricing
-              </a>
+              </Link>
+              <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+                Docs
+              </Link>
+              <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+                Contact
+              </Link>
               <Button onClick={() => setCurrentView('auth')} variant="default" size="sm">
                 Get Started
               </Button>
@@ -118,10 +125,12 @@ const Index = () => {
                 Start Protecting Now
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button variant="gentle" size="lg">
-                <Code className="w-4 h-4 mr-2" />
-                View Documentation
-              </Button>
+              <Link to="/docs">
+                <Button variant="gentle" size="lg">
+                  <Code className="w-4 h-4 mr-2" />
+                  View Documentation
+                </Button>
+              </Link>
             </div>
 
             {/* Trust indicators */}
@@ -297,18 +306,18 @@ const Index = () => {
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
-                <li><a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Documentation</a></li>
+                <li><Link to="/features" className="hover:text-foreground transition-colors">Features</Link></li>
+                <li><Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
+                <li><Link to="/docs" className="hover:text-foreground transition-colors">Documentation</Link></li>
               </ul>
             </div>
             
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Support</a></li>
+                <li><Link to="/how-it-works" className="hover:text-foreground transition-colors">How It Works</Link></li>
+                <li><Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
+                <li><Link to="/docs" className="hover:text-foreground transition-colors">Support</Link></li>
               </ul>
             </div>
             
