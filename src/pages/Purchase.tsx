@@ -19,113 +19,38 @@ const Purchase = () => {
     setIsRedeeming(true);
 
     try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to redeem an activation code.",
-          variant: "destructive",
-        });
-        navigate("/");
-        return;
-      }
+      const { data, error } = await supabase.functions.invoke('redeem-activation-code', {
+        body: { code: activationCode.trim() }
+      });
 
-      // Check if code exists and is valid
-      const { data: codeData, error: codeError } = await supabase
-        .from("activation_codes")
-        .select("*")
-        .eq("code", activationCode.trim())
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (codeError || !codeData) {
-        toast({
-          title: "Invalid Code",
-          description: "The activation code you entered is invalid or has expired.",
-          variant: "destructive",
-        });
-        setIsRedeeming(false);
-        return;
-      }
-
-      // Check if code has uses remaining
-      if (codeData.used_count >= codeData.max_uses) {
-        toast({
-          title: "Code Exhausted",
-          description: "This activation code has already been used the maximum number of times.",
-          variant: "destructive",
-        });
-        setIsRedeeming(false);
-        return;
-      }
-
-      // Check if code has expired
-      if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
-        toast({
-          title: "Code Expired",
-          description: "This activation code has expired.",
-          variant: "destructive",
-        });
-        setIsRedeeming(false);
-        return;
-      }
-
-      // Calculate expiration date
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + codeData.duration_days);
-
-      // Update or create subscription
-      const { data: existingSub } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (existingSub) {
-        // Update existing subscription
-        const { error: updateError } = await supabase
-          .from("subscriptions")
-          .update({
-            plan: codeData.plan,
-            status: "active",
-            expires_at: expiresAt.toISOString(),
-            activated_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", user.id);
-
-        if (updateError) throw updateError;
-      } else {
-        // Create new subscription
-        const { error: insertError } = await supabase
-          .from("subscriptions")
-          .insert({
-            user_id: user.id,
-            plan: codeData.plan,
-            status: "active",
-            expires_at: expiresAt.toISOString(),
-            activated_at: new Date().toISOString(),
+      if (error) {
+        if (error.message?.includes('authentication') || error.message?.includes('JWT')) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to redeem an activation code.",
+            variant: "destructive",
           });
-
-        if (insertError) throw insertError;
+          navigate("/");
+          return;
+        }
+        throw error;
       }
 
-      // Increment used count
-      const { error: incrementError } = await supabase
-        .from("activation_codes")
-        .update({ used_count: codeData.used_count + 1 })
-        .eq("code", activationCode.trim());
-
-      if (incrementError) throw incrementError;
+      if (data.error) {
+        toast({
+          title: "Activation Failed",
+          description: data.error,
+          variant: "destructive",
+        });
+        setIsRedeeming(false);
+        return;
+      }
 
       toast({
         title: "Success!",
-        description: `Your ${codeData.plan.toUpperCase()} plan has been activated for ${codeData.duration_days} days!`,
+        description: `Your ${data.plan.toUpperCase()} plan has been activated for ${data.duration_days} days!`,
       });
 
-      // Redirect to dashboard
       setTimeout(() => navigate("/"), 2000);
     } catch (error: any) {
       console.error("Redemption error:", error);

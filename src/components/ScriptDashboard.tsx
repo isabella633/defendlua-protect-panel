@@ -83,56 +83,19 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
     setIsActivating(true);
     
     try {
-      // Check if code exists and is valid
-      const { data: codeData, error: codeError } = await supabase
-        .from('activation_codes')
-        .select('*')
-        .eq('code', activationCode.trim())
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke('redeem-activation-code', {
+        body: { code: activationCode.trim() }
+      });
 
-      if (codeError || !codeData) {
-        throw new Error("Invalid activation code");
+      if (error) throw error;
+
+      if (data.error) {
+        throw new Error(data.error);
       }
-
-      if (!codeData.is_active) {
-        throw new Error("This activation code has been deactivated");
-      }
-
-      if (codeData.used_count >= codeData.max_uses) {
-        throw new Error("This activation code has already been used");
-      }
-
-      if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
-        throw new Error("This activation code has expired");
-      }
-
-      // Update or create subscription
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + codeData.duration_days);
-
-      const { error: subError } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id: userId,
-          plan: codeData.plan,
-          status: 'active',
-          activated_at: new Date().toISOString(),
-          expires_at: expiresAt.toISOString(),
-        });
-
-      if (subError) throw subError;
-
-      // Increment code usage
-      const { error: updateError } = await supabase
-        .from('activation_codes')
-        .update({ used_count: codeData.used_count + 1 })
-        .eq('code', activationCode.trim());
-
-      if (updateError) throw updateError;
 
       toast({
         title: "Activation Successful!",
-        description: `Your ${codeData.plan} plan has been activated for ${codeData.duration_days} days.`,
+        description: `Your ${data.plan} plan has been activated for ${data.duration_days} days.`,
       });
 
       setActivationCode("");

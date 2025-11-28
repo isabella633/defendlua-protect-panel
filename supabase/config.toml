@@ -1,1 +1,4 @@
 project_id = "uwfuuhhcjlxgyeecpeii"
+
+[functions.redeem-activation-code]
+verify_jwt = true
