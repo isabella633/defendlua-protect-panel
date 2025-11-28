@@ -11,6 +11,7 @@ import Docs from "./pages/Docs";
 import Contact from "./pages/Contact";
 import Purchase from "./pages/Purchase";
 import NotFound from "./pages/NotFound";
+import RawScript from "./pages/RawScript";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/docs" element={<Docs />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/purchase" element={<Purchase />} />
+          <Route path="/api/raw/:scriptId" element={<RawScript />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
