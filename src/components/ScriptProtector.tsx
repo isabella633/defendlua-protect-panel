@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Shield, Code, AlertTriangle, LogOut, ArrowLeft } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Shield, Code, AlertTriangle, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import LuaCodeEditor from "@/components/LuaCodeEditor";
+import { checkLuaSyntax, type SyntaxError } from "@/lib/luaSyntaxChecker";
 
 interface ScriptProtectorProps {
   onBack: () => void;
@@ -13,6 +15,8 @@ interface ScriptProtectorProps {
 const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
   const [luaCode, setLuaCode] = useState("");
   const [isProtecting, setIsProtecting] = useState(false);
+  const [syntaxErrors, setSyntaxErrors] = useState<SyntaxError[]>([]);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
   const { toast } = useToast();
 
   const handleProtectScript = async () => {
@@ -25,6 +29,18 @@ const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
       return;
     }
 
+    // Check for syntax errors
+    const errors = checkLuaSyntax(luaCode);
+    if (errors.length > 0) {
+      setSyntaxErrors(errors);
+      setShowErrorDialog(true);
+      return;
+    }
+
+    proceedWithProtection();
+  };
+
+  const proceedWithProtection = () => {
     setIsProtecting(true);
     
     // Simulate script protection process
@@ -72,33 +88,24 @@ const ScriptProtector = ({ onBack }: ScriptProtectorProps) => {
                 <span>Lua Code Input</span>
               </CardTitle>
               <CardDescription>
-                Paste your Lua script below. We DO NOT scan for syntax errors.
+                Paste your Lua script below. We'll scan for syntax errors before protection.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <Alert className="border-security-accent/20 bg-security-accent/5">
-                <AlertTriangle className="h-4 w-4 text-security-accent" />
-                <AlertDescription className="text-security-accent">
-                  <strong>Important:</strong> We DO NOT scan for syntax errors. 
-                  Please ensure your Lua code is valid before protection.
+              <Alert className="border-primary/20 bg-primary/5">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-primary">
+                  <strong>Syntax Checking Enabled:</strong> Your code will be scanned for common syntax errors before protection.
                 </AlertDescription>
               </Alert>
 
               <div className="space-y-2">
-                 <label htmlFor="lua-code" className="text-sm font-medium">
+                <label htmlFor="lua-code" className="text-sm font-medium">
                   Enter your .lua code:
                 </label>
-                <Textarea
-                  id="lua-code"
-                  placeholder="-- Enter your Lua code here
-function myFunction()
-    print('Hello, World!')
-end
-
-myFunction()"
+                <LuaCodeEditor
                   value={luaCode}
-                  onChange={(e) => setLuaCode(e.target.value)}
-                  className="min-h-[300px] font-mono text-sm bg-muted/30 border-border/50"
+                  onChange={setLuaCode}
                 />
               </div>
 
@@ -118,6 +125,38 @@ myFunction()"
           </Card>
         </div>
       </main>
+
+      {/* Syntax Error Dialog */}
+      <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              <span>Syntax Errors Found</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>The following syntax errors were detected in your code:</p>
+                <div className="max-h-[300px] overflow-y-auto space-y-2 bg-muted/50 rounded-md p-3">
+                  {syntaxErrors.map((error, index) => (
+                    <div key={index} className="text-sm">
+                      <span className="font-semibold text-foreground">Line {error.line}:</span>{" "}
+                      <span className="text-muted-foreground">{error.message}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs">Would you like to proceed with protection anyway?</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={proceedWithProtection} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Protect Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
