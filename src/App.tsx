@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -13,12 +13,12 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   return user ? <>{children}</> : <Navigate to="/auth" replace />;
 }
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
+function PublicRoute({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 }
