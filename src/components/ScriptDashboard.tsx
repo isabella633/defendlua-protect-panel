@@ -23,11 +23,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface Script {
   id: string;
-  name: string;
-  createdAt: Date;
-  lastModified: Date;
-  size: string;
-  status: 'protected' | 'processing' | 'error';
+  script_name: string;
+  created_at: string;
+  updated_at: string;
+  script_key: string;
+  hwid_list: string[];
 }
 
 interface ScriptDashboardProps {
@@ -47,6 +47,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
 
   useEffect(() => {
     fetchSubscription();
+    fetchScripts();
   }, [userId]);
 
   const fetchSubscription = async () => {
@@ -57,6 +58,16 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
       .maybeSingle();
     
     if (data) setSubscription(data);
+  };
+
+  const fetchScripts = async () => {
+    const { data, error } = await supabase
+      .from('scripts')
+      .select('*')
+      .eq('owner_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (data) setScripts(data);
   };
 
   const handleActivateCode = async () => {
@@ -137,68 +148,38 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
     }
   };
 
-  useEffect(() => {
-    // Simulate loading existing scripts
-    const mockScripts: Script[] = [
-      {
-        id: "script_1703845200000",
-        name: "GameHack_Ultimate",
-        createdAt: new Date("2024-08-20T10:30:00"),
-        lastModified: new Date("2024-08-21T15:45:00"),
-        size: "15.2 KB",
-        status: "protected"
-      },
-      {
-        id: "script_1703831600000",
-        name: "AutoFarm_Pro",
-        createdAt: new Date("2024-08-19T14:20:00"),
-        lastModified: new Date("2024-08-19T14:20:00"),
-        size: "8.7 KB",
-        status: "protected"
-      },
-      {
-        id: "script_1703818000000",
-        name: "SpeedHack_Elite",
-        createdAt: new Date("2024-08-18T09:15:00"),
-        lastModified: new Date("2024-08-20T11:30:00"),
-        size: "12.4 KB",
-        status: "protected"
-      }
-    ];
-    
-    setTimeout(() => {
-      setScripts(mockScripts);
-    }, 500);
-  }, []);
-
   const filteredScripts = scripts.filter(script =>
-    script.name.toLowerCase().includes(searchTerm.toLowerCase())
+    script.script_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const deleteScript = (scriptId: string) => {
-    setScripts(prev => prev.filter(s => s.id !== scriptId));
-    toast({
-      title: "Script Deleted",
-      description: "The script has been permanently removed.",
-    });
-  };
+  const deleteScript = async (scriptId: string) => {
+    try {
+      const { error } = await supabase
+        .from('scripts')
+        .delete()
+        .eq('id', scriptId);
 
-  const getStatusColor = (status: Script['status']) => {
-    switch (status) {
-      case 'protected': return 'bg-primary/10 text-primary';
-      case 'processing': return 'bg-accent/10 text-accent';
-      case 'error': return 'bg-destructive/10 text-destructive';
-      default: return 'bg-muted text-muted-foreground';
+      if (error) throw error;
+
+      setScripts(prev => prev.filter(s => s.id !== scriptId));
+      toast({
+        title: "Script Deleted",
+        description: "The script has been permanently removed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete script.",
+        variant: "destructive",
+      });
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric'
     });
   };
 
@@ -374,7 +355,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
               <CardContent className="p-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {scripts.filter(s => s.status === 'protected').length}
+                    {scripts.length}
                   </div>
                   <div className="text-sm text-muted-foreground">Protected</div>
                 </div>
@@ -411,14 +392,14 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">{script.name}</CardTitle>
+                        <CardTitle className="text-lg truncate">{script.script_name}</CardTitle>
                         <CardDescription className="flex items-center mt-1">
                           <Calendar className="w-3 h-3 mr-1" />
-                          {formatDate(script.createdAt)}
+                          {formatDate(script.created_at)}
                         </CardDescription>
                       </div>
-                      <Badge className={getStatusColor(script.status)}>
-                        {script.status}
+                      <Badge className="bg-primary/10 text-primary">
+                        Protected
                       </Badge>
                     </div>
                   </CardHeader>
@@ -426,8 +407,8 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                   <CardContent className="pt-0">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>Size: {script.size}</span>
-                        <span>Modified: {formatDate(script.lastModified)}</span>
+                        <span>HWIDs: {script.hwid_list.length}</span>
+                        <span>Updated: {formatDate(script.updated_at)}</span>
                       </div>
                       
                       <div className="flex items-center space-x-2">

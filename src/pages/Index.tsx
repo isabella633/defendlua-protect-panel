@@ -85,7 +85,7 @@ const Index = () => {
   }
 
   if (currentView === 'protect' && user) {
-    return <ScriptProtector onBack={handleBackToDashboard} />;
+    return <ScriptProtector onBack={handleBackToDashboard} userId={user.id} />;
   }
 
   if (currentView === 'owner' && user && currentScriptId) {
