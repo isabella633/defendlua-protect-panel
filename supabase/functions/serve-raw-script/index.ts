@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       console.log('Access denied - blacklisted:', { scriptId, hwid, clientIp });
       await logAccess('denied', 'HWID blacklisted');
       return new Response(
-        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: Your HWID has been blacklisted")\nprint("Contact the script owner if you believe this is an error")`,
+        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: HWID has been blacklisted")\nprint("Your HWID: ${hwid}")\nprint("Contact the script owner if you believe this is an error")`,
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
       console.log('Access denied - IP not authorized:', { scriptId, hwid, clientIp });
       await logAccess('denied', 'IP address not authorized');
       return new Response(
-        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: IP address not authorized")\nprint("Your IP: ${clientIp}")\nprint("Contact the script owner to request authorization")`,
+        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: IP address not authorized")\nprint("Your HWID: ${hwid}")\nprint("Contact the script owner to request IP whitelist authorization")`,
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
       console.log('Access denied - HWID not authorized:', { scriptId, hwid, clientIp, plan: userPlan });
       await logAccess('denied', 'HWID not authorized');
       return new Response(
-        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: HWID not authorized")\nprint("Your IP: ${clientIp}")\nprint("Contact the script owner to request authorization")`,
+        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: HWID not authorized")\nprint("Your HWID: ${hwid}")\nprint("Contact the script owner to request HWID authorization")`,
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 

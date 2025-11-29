@@ -84,7 +84,6 @@ const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode, onInsertCode
             role: m.role,
             content: m.content
           })),
-          userId,
           currentCode
         }
       });

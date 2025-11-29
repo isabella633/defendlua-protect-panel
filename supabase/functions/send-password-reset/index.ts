@@ -20,6 +20,28 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const { email, resetLink }: PasswordResetRequest = await req.json();
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email format' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate resetLink is from allowed domain
+    const allowedOrigins = [
+      'https://defendlua-protect-panel.lovable.app',
+      'http://localhost:5173',
+      'http://localhost:8080'
+    ];
+    if (!allowedOrigins.some(origin => resetLink.startsWith(origin))) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid reset link domain' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     console.log("Sending password reset email to:", email);
 
