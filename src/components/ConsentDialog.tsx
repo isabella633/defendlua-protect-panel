@@ -8,9 +8,9 @@ const ConsentDialog = () => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Check if user has already given consent
-    const hasConsented = localStorage.getItem('defendlua_consent');
-    if (!hasConsented) {
+    // Only hide dialog if user explicitly accepted
+    const consentStatus = localStorage.getItem('defendlua_consent');
+    if (consentStatus !== 'accepted') {
       setOpen(true);
     }
   }, []);
@@ -22,8 +22,10 @@ const ConsentDialog = () => {
   };
 
   const handleDecline = () => {
-    localStorage.setItem('defendlua_consent', 'declined');
-    // Redirect to a neutral page or close
+    // Remove consent so dialog shows again next time
+    localStorage.removeItem('defendlua_consent');
+    localStorage.removeItem('defendlua_consent_date');
+    // Redirect to a neutral page
     window.location.href = 'https://www.google.com';
   };
 
