@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { obfuscateLua, addProtectionHeader } from './_obfuscate.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -156,20 +155,16 @@ Deno.serve(async (req) => {
       await logAccess('allowed', 'HWID whitelisted');
     }
 
-    // Obfuscate the script before returning
-    const obfuscatedScript = addProtectionHeader(obfuscateLua(script.script_key));
-
-    // Return obfuscated script for execution (protected by HWID whitelist)
+    // Return raw script for Roblox execution only
     return new Response(
-      obfuscatedScript,
+      script.script_key,
       { 
         status: 200, 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'text/plain',
           'Cache-Control': 'no-cache',
-          'X-Protected-By': 'DefendLua',
-          'X-Obfuscated': 'true'
+          'X-Protected-By': 'DefendLua'
         } 
       }
     );
