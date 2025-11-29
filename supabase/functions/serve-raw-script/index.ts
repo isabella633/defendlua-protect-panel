@@ -121,34 +121,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // For Pro/Enterprise with public access enabled, allow any HWID (but still log it)
-    const isProOrEnterprise = userPlan === 'pro' || userPlan === 'enterprise';
-    if (isProOrEnterprise && publicAccess) {
-      console.log('Public access granted:', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
-      await logAccess('allowed', 'Public access (Pro/Enterprise)');
-      
-      // Obfuscate the script before returning
-      const obfuscatedScript = addProtectionHeader(obfuscateLua(script.script_key));
-      
-      // Return obfuscated script for execution
-      return new Response(
-        obfuscatedScript,
-        { 
-          status: 200, 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'text/plain',
-            'Cache-Control': 'no-cache',
-            'X-Protected-By': 'DefendLua',
-            'X-Obfuscated': 'true'
-          } 
-        }
-      );
-    }
-
-    // For Free plan OR Pro/Enterprise with public access disabled, enforce HWID whitelist
+    // Check if HWID is already whitelisted
     const isHwidWhitelisted = hwidList.includes(hwid);
-    if (!isHwidWhitelisted) {
+    
+    // For Pro/Enterprise with public access enabled, auto-whitelist new HWIDs
+    const isProOrEnterprise = userPlan === 'pro' || userPlan === 'enterprise';
+    if (isProOrEnterprise && publicAccess && !isHwidWhitelisted) {
+      console.log('Auto-whitelisting new HWID:', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
+      
+      // Add HWID to whitelist
+      const updatedHwidList = [...hwidList, hwid];
+      await supabaseAdmin
+        .from('scripts')
+        .update({ hwid_list: updatedHwidList })
+        .eq('id', scriptId);
+      
+      await logAccess('allowed', 'Auto-whitelisted (Public Access)');
+    } else if (isProOrEnterprise && publicAccess) {
+      console.log('Public access granted (already whitelisted):', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
+      await logAccess('allowed', 'Public access (already whitelisted)');
+    } else if (!isHwidWhitelisted) {
+      // For Free plan OR Pro/Enterprise with public access disabled, deny if not whitelisted
       console.log('Access denied - HWID not authorized:', { scriptId, hwid, clientIp, plan: userPlan });
       await logAccess('denied', 'HWID not authorized');
       return new Response(
@@ -158,10 +151,10 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
         }
       );
+    } else {
+      console.log('Script execution authorized:', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
+      await logAccess('allowed', 'HWID whitelisted');
     }
-
-    console.log('Script execution authorized:', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
-    await logAccess('allowed', 'HWID whitelisted');
 
     // Obfuscate the script before returning
     const obfuscatedScript = addProtectionHeader(obfuscateLua(script.script_key));
