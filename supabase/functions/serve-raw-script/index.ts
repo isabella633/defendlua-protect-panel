@@ -51,10 +51,19 @@ Deno.serve(async (req) => {
 
     console.log('Request details:', { scriptId, hwid: hwid ? 'provided' : 'missing', clientIp });
 
-    // Fetch script with HWID and IP verification
+    // Fetch script with owner's subscription plan
     const { data: script, error } = await supabaseAdmin
       .from('scripts')
-      .select('script_key, hwid_list, ip_list, script_name')
+      .select(`
+        script_key, 
+        hwid_list, 
+        ip_list, 
+        hwid_blacklist,
+        public_access,
+        script_name,
+        owner_id,
+        subscriptions!inner(plan)
+      `)
       .eq('id', scriptId)
       .single();
 
@@ -69,19 +78,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Dual Protection: HWID + IP Whitelist
+    const userPlan = script.subscriptions?.plan || 'free';
     const hwidList = script.hwid_list || [];
     const ipList = script.ip_list || [];
-    
-    const isHwidWhitelisted = hwidList.includes(hwid);
-    const isIpWhitelisted = ipList.length === 0 || ipList.includes(clientIp);
+    const hwidBlacklist = script.hwid_blacklist || [];
+    const publicAccess = script.public_access || false;
 
-    // Both HWID and IP must be authorized
-    if (!isHwidWhitelisted || !isIpWhitelisted) {
-      const reason = !isHwidWhitelisted ? 'HWID not authorized' : 'IP address not authorized';
-      console.log('Access denied:', { scriptId, reason, hwid, clientIp, allowedHwids: hwidList.length, allowedIps: ipList.length });
+    // Helper function to log access attempts
+    const logAccess = async (status: string, reason?: string) => {
+      await supabaseAdmin.from('access_logs').insert({
+        script_id: scriptId,
+        hwid,
+        ip_address: clientIp,
+        status,
+        reason
+      });
+    };
+
+    // Check blacklist first (applies to all plans)
+    if (hwidBlacklist.includes(hwid)) {
+      console.log('Access denied - blacklisted:', { scriptId, hwid, clientIp });
+      await logAccess('denied', 'HWID blacklisted');
       return new Response(
-        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: ${reason}")\nprint("Your IP: ${clientIp}")\nprint("This access attempt has been logged")\nprint("Contact the script owner to request authorization")`,
+        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: Your HWID has been blacklisted")\nprint("Contact the script owner if you believe this is an error")`,
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -89,7 +108,57 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Script execution authorized:', { scriptId, scriptName: script.script_name, hwid, clientIp });
+    // Check IP whitelist (applies to all plans)
+    const isIpWhitelisted = ipList.length === 0 || ipList.includes(clientIp);
+    if (!isIpWhitelisted) {
+      console.log('Access denied - IP not authorized:', { scriptId, hwid, clientIp });
+      await logAccess('denied', 'IP address not authorized');
+      return new Response(
+        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: IP address not authorized")\nprint("Your IP: ${clientIp}")\nprint("Contact the script owner to request authorization")`,
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
+        }
+      );
+    }
+
+    // For Pro/Enterprise with public access enabled, allow any HWID (but still log it)
+    const isProOrEnterprise = userPlan === 'pro' || userPlan === 'enterprise';
+    if (isProOrEnterprise && publicAccess) {
+      console.log('Public access granted:', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
+      await logAccess('allowed', 'Public access (Pro/Enterprise)');
+      
+      // Return script for execution
+      return new Response(
+        script.script_key,
+        { 
+          status: 200, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'text/plain',
+            'Cache-Control': 'no-cache',
+            'X-Protected-By': 'DefendLua'
+          } 
+        }
+      );
+    }
+
+    // For Free plan OR Pro/Enterprise with public access disabled, enforce HWID whitelist
+    const isHwidWhitelisted = hwidList.includes(hwid);
+    if (!isHwidWhitelisted) {
+      console.log('Access denied - HWID not authorized:', { scriptId, hwid, clientIp, plan: userPlan });
+      await logAccess('denied', 'HWID not authorized');
+      return new Response(
+        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: HWID not authorized")\nprint("Your IP: ${clientIp}")\nprint("Contact the script owner to request authorization")`,
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
+        }
+      );
+    }
+
+    console.log('Script execution authorized:', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
+    await logAccess('allowed', 'HWID whitelisted');
 
     // Return script for execution (protected by HWID whitelist)
     return new Response(

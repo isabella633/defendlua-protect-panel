@@ -19,8 +19,12 @@ import {
   CheckCircle,
   Globe,
   Plus,
-  X
+  X,
+  History,
+  Ban
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import LuaCodeAssistant from "./LuaCodeAssistant";
@@ -45,6 +49,10 @@ protectedFunction()`);
   const [newHwid, setNewHwid] = useState("");
   const [ipList, setIpList] = useState<string[]>([]);
   const [newIp, setNewIp] = useState("");
+  const [hwidBlacklist, setHwidBlacklist] = useState<string[]>([]);
+  const [newBlacklistHwid, setNewBlacklistHwid] = useState("");
+  const [publicAccess, setPublicAccess] = useState(false);
+  const [accessLogs, setAccessLogs] = useState<any[]>([]);
   const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'enterprise'>('free');
   const [userId, setUserId] = useState<string>("");
   const { toast } = useToast();
@@ -79,7 +87,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from('scripts')
-      .select('script_name, script_key, hwid_list, ip_list')
+      .select('script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access')
       .eq('id', scriptId)
       .single();
 
@@ -88,6 +96,20 @@ protectedFunction()`);
       setSourceCode(data.script_key);
       setHwidList(data.hwid_list || []);
       setIpList(data.ip_list || []);
+      setHwidBlacklist(data.hwid_blacklist || []);
+      setPublicAccess(data.public_access || false);
+    }
+
+    // Load access logs
+    const { data: logs } = await supabase
+      .from('access_logs')
+      .select('*')
+      .eq('script_id', scriptId)
+      .order('accessed_at', { ascending: false })
+      .limit(50);
+    
+    if (logs) {
+      setAccessLogs(logs);
     }
   };
 
@@ -100,7 +122,9 @@ protectedFunction()`);
         script_name: scriptName,
         script_key: sourceCode,
         hwid_list: hwidList,
-        ip_list: ipList
+        ip_list: ipList,
+        hwid_blacklist: hwidBlacklist,
+        public_access: publicAccess
       })
       .eq('id', scriptId);
 
@@ -183,6 +207,51 @@ protectedFunction()`);
     setIpList(ipList.filter(i => i !== ip));
     toast({
       title: "IP Removed",
+      description: "Remember to save your changes.",
+    });
+  };
+
+  const addBlacklistHwid = () => {
+    if (!newBlacklistHwid.trim()) return;
+    
+    if (hwidBlacklist.includes(newBlacklistHwid.trim())) {
+      toast({
+        title: "Already blacklisted",
+        description: "This HWID is already in the blacklist.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setHwidBlacklist([...hwidBlacklist, newBlacklistHwid.trim()]);
+    setNewBlacklistHwid("");
+    toast({
+      title: "HWID Blacklisted",
+      description: "Remember to save your changes.",
+    });
+  };
+
+  const removeBlacklistHwid = (hwid: string) => {
+    setHwidBlacklist(hwidBlacklist.filter(h => h !== hwid));
+    toast({
+      title: "HWID Unblacklisted",
+      description: "Remember to save your changes.",
+    });
+  };
+
+  const blacklistFromLogs = (hwid: string) => {
+    if (hwidBlacklist.includes(hwid)) {
+      toast({
+        title: "Already blacklisted",
+        description: "This HWID is already in the blacklist.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setHwidBlacklist([...hwidBlacklist, hwid]);
+    toast({
+      title: "HWID Blacklisted",
       description: "Remember to save your changes.",
     });
   };
@@ -378,6 +447,69 @@ protectedFunction()`);
                     </div>
                   </div>
                 </div>
+
+                {(userPlan === 'pro' || userPlan === 'enterprise') && (
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Public Access</label>
+                    <div className="flex items-center justify-between bg-muted/50 p-3 rounded border border-border/50">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Allow Anyone</p>
+                        <p className="text-xs text-muted-foreground">
+                          {userPlan === 'pro' ? 'Pro' : 'Enterprise'} feature: Skip HWID checks (still logs all access)
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={publicAccess}
+                        onCheckedChange={setPublicAccess}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">HWID Blacklist</label>
+                  <div className="space-y-2">
+                    {hwidBlacklist.length === 0 ? (
+                      <Alert className="border-muted bg-muted/30">
+                        <AlertDescription className="text-sm">
+                          No blacklisted HWIDs
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {hwidBlacklist.map((hwid) => (
+                          <div key={hwid} className="flex items-center justify-between bg-destructive/10 p-2 rounded border border-destructive/30">
+                            <span className="text-sm font-mono text-destructive">{hwid}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeBlacklistHwid(hwid)}
+                              className="h-6 w-6"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        value={newBlacklistHwid}
+                        onChange={(e) => setNewBlacklistHwid(e.target.value)}
+                        placeholder="Enter HWID to blacklist"
+                        onKeyDown={(e) => e.key === 'Enter' && addBlacklistHwid()}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={addBlacklistHwid}
+                      >
+                        <Ban className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -398,6 +530,10 @@ protectedFunction()`);
                       <TabsTrigger value="raw-link">
                         <Globe className="w-4 h-4 mr-2" />
                         Raw Link
+                      </TabsTrigger>
+                      <TabsTrigger value="logs">
+                        <History className="w-4 h-4 mr-2" />
+                        Access Logs
                       </TabsTrigger>
                     </TabsList>
                   </div>
@@ -485,6 +621,79 @@ protectedFunction()`);
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </TabsContent>
+
+                <TabsContent value="logs">
+                  <CardContent className="space-y-4">
+                    <CardDescription>
+                      View all access attempts to your script. Blacklist suspicious HWIDs instantly.
+                    </CardDescription>
+                    
+                    <ScrollArea className="h-[450px] border border-border/50 rounded-lg">
+                      <div className="p-4 space-y-2">
+                        {accessLogs.length === 0 ? (
+                          <Alert>
+                            <AlertDescription>
+                              No access attempts recorded yet.
+                            </AlertDescription>
+                          </Alert>
+                        ) : (
+                          accessLogs.map((log) => (
+                            <div 
+                              key={log.id} 
+                              className={`p-3 rounded-lg border ${
+                                log.status === 'allowed' 
+                                  ? 'bg-primary/5 border-primary/20' 
+                                  : 'bg-destructive/5 border-destructive/20'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-1 flex-1">
+                                  <div className="flex items-center space-x-2">
+                                    <Badge 
+                                      variant={log.status === 'allowed' ? 'default' : 'destructive'}
+                                      className="text-xs"
+                                    >
+                                      {log.status}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(log.accessed_at).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm font-mono space-y-1">
+                                    <div>
+                                      <span className="text-muted-foreground">HWID:</span>{' '}
+                                      <span className="text-foreground">{log.hwid}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">IP:</span>{' '}
+                                      <span className="text-foreground">{log.ip_address || 'N/A'}</span>
+                                    </div>
+                                    {log.reason && (
+                                      <div>
+                                        <span className="text-muted-foreground">Reason:</span>{' '}
+                                        <span className="text-foreground">{log.reason}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {log.status === 'allowed' && !hwidBlacklist.includes(log.hwid) && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => blacklistFromLogs(log.hwid)}
+                                  >
+                                    <Ban className="w-3 h-3 mr-1" />
+                                    Block
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
                   </CardContent>
                 </TabsContent>
               </Tabs>
