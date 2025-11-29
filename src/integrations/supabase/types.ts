@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_logs: {
+        Row: {
+          accessed_at: string | null
+          hwid: string
+          id: string
+          ip_address: string | null
+          reason: string | null
+          script_id: string
+          status: string
+        }
+        Insert: {
+          accessed_at?: string | null
+          hwid: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          script_id: string
+          status: string
+        }
+        Update: {
+          accessed_at?: string | null
+          hwid?: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          script_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_logs_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activation_codes: {
         Row: {
           code: string
@@ -77,30 +115,36 @@ export type Database = {
       scripts: {
         Row: {
           created_at: string | null
+          hwid_blacklist: string[] | null
           hwid_list: string[] | null
           id: string
           ip_list: string[] | null
           owner_id: string
+          public_access: boolean | null
           script_key: string
           script_name: string
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          hwid_blacklist?: string[] | null
           hwid_list?: string[] | null
           id?: string
           ip_list?: string[] | null
           owner_id: string
+          public_access?: boolean | null
           script_key: string
           script_name: string
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          hwid_blacklist?: string[] | null
           hwid_list?: string[] | null
           id?: string
           ip_list?: string[] | null
           owner_id?: string
+          public_access?: boolean | null
           script_key?: string
           script_name?: string
           updated_at?: string | null
