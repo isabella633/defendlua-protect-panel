@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     if (!scriptId) {
       return new Response(
-        '-- Error: Script ID not provided',
+        'print("⛔ ACCESS DENIED ⛔")\nprint("ERROR: Script ID not provided")',
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     if (!hwid) {
       return new Response(
-        '-- ⛔ ACCESS DENIED ⛔\n-- UNAUTHORIZED: This script is protected by DefendLua\n-- Authentication required: Add ?key=YOUR_HWID to access\n-- Contact script owner for authorization',
+        'print("⛔ ACCESS DENIED ⛔")\nprint("UNAUTHORIZED: This script is protected by DefendLua")\nprint("Authentication required: Add ?key=YOUR_HWID to access")\nprint("Contact script owner for authorization")',
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     if (error || !script) {
       console.error('Script not found:', error);
       return new Response(
-        '-- ⛔ ACCESS DENIED ⛔\n-- ERROR: Script not found or does not exist\n-- This access attempt has been logged',
+        'print("⛔ ACCESS DENIED ⛔")\nprint("ERROR: Script not found or does not exist")\nprint("This access attempt has been logged")',
         { 
           status: 404, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       const reason = !isHwidWhitelisted ? 'HWID not authorized' : 'IP address not authorized';
       console.log('Access denied:', { scriptId, reason, hwid, clientIp, allowedHwids: hwidList.length, allowedIps: ipList.length });
       return new Response(
-        `-- ⛔ ACCESS DENIED ⛔\n-- FORBIDDEN: ${reason}\n-- Your IP: ${clientIp}\n-- This access attempt has been logged\n-- Contact the script owner to request authorization`,
+        `print("⛔ ACCESS DENIED ⛔")\nprint("FORBIDDEN: ${reason}")\nprint("Your IP: ${clientIp}")\nprint("This access attempt has been logged")\nprint("Contact the script owner to request authorization")`,
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error serving raw script:', error);
     return new Response(
-      '-- Error: Internal server error',
+      'print("Error: Internal server error")',
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
