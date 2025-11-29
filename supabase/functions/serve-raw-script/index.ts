@@ -62,13 +62,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    // MAXIMUM SECURITY: Deny all access attempts
-    console.log('Access denied (maximum security mode):', { scriptId, scriptName: script.script_name, hwid });
+    // HWID Protection: Only whitelisted HWIDs can execute
+    const hwidList = script.hwid_list || [];
+    const isWhitelisted = hwidList.includes(hwid);
+
+    if (!isWhitelisted) {
+      console.log('HWID not whitelisted:', { scriptId, hwid, allowedCount: hwidList.length });
+      return new Response(
+        '-- ⛔ ACCESS DENIED ⛔\n-- FORBIDDEN: Your HWID is not authorized for this script\n-- This access attempt has been logged\n-- Contact the script owner to request authorization',
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
+        }
+      );
+    }
+
+    console.log('Script execution authorized:', { scriptId, scriptName: script.script_name });
+
+    // Return script for execution (protected by HWID whitelist)
     return new Response(
-      '-- ⛔ ACCESS DENIED ⛔\n-- MAXIMUM SECURITY: This script is protected by DefendLua\n-- Direct raw access is disabled for all users\n-- This access attempt has been logged\n-- Please use the authorized client application',
+      script.script_key,
       { 
-        status: 403, 
-        headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
+        status: 200, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'text/plain',
+          'Cache-Control': 'no-cache',
+          'X-Protected-By': 'DefendLua'
+        } 
       }
     );
 
