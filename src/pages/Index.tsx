@@ -10,6 +10,7 @@ import AuthForm from "@/components/AuthForm";
 import ScriptDashboard from "@/components/ScriptDashboard";
 import ScriptProtector from "@/components/ScriptProtector";
 import OwnerPanel from "@/components/OwnerPanel";
+import ConsentDialog from "@/components/ConsentDialog";
 
 type View = 'landing' | 'auth' | 'dashboard' | 'protect' | 'owner';
 
@@ -429,8 +430,8 @@ const Index = () => {
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Terms of Service</a></li>
+                <li><Link to="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms-of-service" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
@@ -440,6 +441,8 @@ const Index = () => {
           </div>
         </div>
       </footer>
+      
+      <ConsentDialog />
     </div>
   );
 };
