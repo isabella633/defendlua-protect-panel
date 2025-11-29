@@ -419,6 +419,9 @@ protectedFunction()`);
             description: "AI code has been added to your editor",
           });
         }}
+        onClearCode={() => {
+          setSourceCode('');
+        }}
       />
     </div>
   );
