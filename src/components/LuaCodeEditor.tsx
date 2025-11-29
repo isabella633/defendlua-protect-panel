@@ -7,7 +7,7 @@ interface LuaCodeEditorProps {
 }
 
 const LuaCodeEditor = ({ value, onChange, className }: LuaCodeEditorProps) => {
-  const lines = value.split('\n');
+  const lines = value.split("\n");
   const lineCount = lines.length;
 
   return (
@@ -20,7 +20,7 @@ const LuaCodeEditor = ({ value, onChange, className }: LuaCodeEditorProps) => {
           </div>
         ))}
       </div>
-      
+
       {/* Code textarea */}
       <Textarea
         value={value}
@@ -32,9 +32,9 @@ end
 
 myFunction()"
         className={`min-h-[300px] font-mono text-sm border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none leading-6 ${className}`}
-        style={{ 
-          paddingTop: '0.5rem',
-          paddingBottom: '0.5rem',
+        style={{
+          paddingTop: "0.5rem",
+          paddingBottom: "0.5rem",
         }}
       />
     </div>
