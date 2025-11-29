@@ -230,6 +230,9 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
             description: "AI code has been added to your editor",
           });
         }}
+        onClearCode={() => {
+          setLuaCode('');
+        }}
       />
     </div>
   );

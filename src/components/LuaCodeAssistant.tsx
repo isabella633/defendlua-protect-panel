@@ -13,6 +13,7 @@ interface Message {
   content: string;
   timestamp: Date;
   codeBlock?: string;
+  action?: 'clear_code';
 }
 
 interface LuaCodeAssistantProps {
@@ -20,9 +21,10 @@ interface LuaCodeAssistantProps {
   userId?: string;
   currentCode?: string;
   onInsertCode?: (code: string) => void;
+  onClearCode?: () => void;
 }
 
-const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode, onInsertCode }: LuaCodeAssistantProps) => {
+const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode, onInsertCode, onClearCode }: LuaCodeAssistantProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -93,11 +95,19 @@ const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode, onInsertCode
       const codeBlockMatch = data.message.match(/```(?:lua)?\n([\s\S]*?)```/);
       const codeBlock = codeBlockMatch ? codeBlockMatch[1].trim() : undefined;
 
+      // Check if the message is about clearing/deleting code
+      const clearKeywords = ['clear', 'delete', 'remove', 'empty', 'erase'];
+      const codeKeywords = ['code', 'editor', 'text box', 'input', 'everything'];
+      const messageText = data.message.toLowerCase();
+      const hasClearIntent = clearKeywords.some(k => messageText.includes(k)) && 
+                            codeKeywords.some(k => messageText.includes(k));
+
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.message,
         timestamp: new Date(),
-        codeBlock
+        codeBlock,
+        action: hasClearIntent ? 'clear_code' : undefined
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -219,6 +229,23 @@ const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode, onInsertCode
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   Insert Code
+                </Button>
+              )}
+              {message.action === 'clear_code' && message.role === 'assistant' && onClearCode && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    onClearCode();
+                    toast({
+                      title: "Code Cleared",
+                      description: "The editor has been cleared",
+                    });
+                  }}
+                  className="mt-2"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Clear Editor
                 </Button>
               )}
             </div>
