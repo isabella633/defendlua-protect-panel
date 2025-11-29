@@ -33,9 +33,7 @@ serve(async (req) => {
       }
     }
 
-    // Define system prompts based on plan with code context
-    const codeContext = currentCode ? `\n\nCurrent Lua code being worked on:\n\`\`\`lua\n${currentCode}\n\`\`\`\n\nProvide assistance based on this code when relevant.` : '';
-    
+
     // Define system prompts based on plan with code context
     const codeContext = currentCode ? `\n\n=== EXISTING CODE IN EDITOR ===\n\`\`\`lua\n${currentCode}\n\`\`\`\n=== END EXISTING CODE ===\n\nYou MUST analyze this code before responding. When modifying, preserve all working functionality.` : '';
     
