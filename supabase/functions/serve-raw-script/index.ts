@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     if (!hwid) {
       return new Response(
-        '-- ACCESS DENIED\n-- This script is protected and requires authorization\n-- Add ?key=YOUR_HWID to access',
+        '-- ⛔ ACCESS DENIED ⛔\n-- UNAUTHORIZED: This script is protected by DefendLua\n-- Authentication required: Add ?key=YOUR_HWID to access\n-- Contact script owner for authorization',
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     if (error || !script) {
       console.error('Script not found:', error);
       return new Response(
-        '-- Error: Script not found',
+        '-- ⛔ ACCESS DENIED ⛔\n-- ERROR: Script not found or does not exist\n-- This access attempt has been logged',
         { 
           status: 404, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     if (!isWhitelisted) {
       console.log('HWID not whitelisted:', { scriptId, hwid, allowedCount: hwidList.length });
       return new Response(
-        '-- ACCESS DENIED\n-- Your HWID is not authorized for this script\n-- Contact the script owner to request access',
+        '-- ⛔ ACCESS DENIED ⛔\n-- FORBIDDEN: Your HWID is not authorized for this script\n-- This access attempt has been logged\n-- Contact the script owner to request authorization',
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
