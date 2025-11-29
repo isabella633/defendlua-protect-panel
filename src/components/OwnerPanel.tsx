@@ -596,10 +596,14 @@ protectedFunction()`);
                         <Button
                           variant="primary"
                           size="lg"
-                          onClick={() => copyToClipboard(
-                            `loadstring(game:HttpGet("${rawLink.replace('?key=YOUR_HWID', '')}?key=" .. (gethwid and gethwid() or "unknown")))()`,
-                            "Loader script"
-                          )}
+                          onClick={() => {
+                            const baseUrl = rawLink.replace('?key=YOUR_HWID', '');
+                            const urlParts = baseUrl.split('/');
+                            const scriptId = urlParts[urlParts.length - 1];
+                            const baseWithoutId = baseUrl.replace('/' + scriptId, '');
+                            const obfuscatedScript = `loadstring(game:HttpGet("${baseWithoutId}/".."${scriptId}".."?key="..(gethwid and gethwid()or"unknown")))()`;
+                            copyToClipboard(obfuscatedScript, "Loader script");
+                          }}
                           className="w-full"
                         >
                           <Copy className="w-4 h-4 mr-2" />
