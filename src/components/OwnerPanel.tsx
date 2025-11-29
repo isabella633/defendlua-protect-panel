@@ -108,7 +108,7 @@ protectedFunction()`);
       .select("*")
       .eq("script_id", scriptId)
       .order("accessed_at", { ascending: false })
-      .limit(500);
+      .limit(5000);
 
     if (logs) {
       setAccessLogs(logs);
