@@ -221,13 +221,10 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
         userId={userId}
         currentCode={luaCode}
         onInsertCode={(code) => {
-          setLuaCode(prev => {
-            if (!prev.trim()) return code;
-            return prev + '\n\n' + code;
-          });
+          setLuaCode(code);
           toast({
-            title: "Code Inserted",
-            description: "AI code has been added to your editor",
+            title: "Code Replaced",
+            description: "AI code has replaced the editor contents.",
           });
         }}
         onClearCode={() => {
