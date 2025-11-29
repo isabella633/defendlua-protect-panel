@@ -78,8 +78,7 @@ const AIChatWidget = ({ userPlan = 'free', userId }: AIChatWidgetProps) => {
           messages: [...messages, userMessage].map(m => ({
             role: m.role,
             content: m.content
-          })),
-          userId
+          }))
         }
       });
 

@@ -12,25 +12,45 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, userId, currentCode } = await req.json();
-    
-    // Initialize Supabase client
+    // Extract userId from JWT token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const jwt = authHeader.replace('Bearer ', '');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+    const { messages, currentCode } = await req.json();
+    
+    // Initialize Supabase admin client for subscription lookup
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user's subscription plan
     let userPlan = 'free';
-    if (userId) {
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('plan')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (subscription) {
-        userPlan = subscription.plan;
-      }
+    const { data: subscription } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (subscription) {
+      userPlan = subscription.plan;
     }
 
 
