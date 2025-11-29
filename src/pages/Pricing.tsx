@@ -11,15 +11,16 @@ const Pricing = () => {
       price: "$0",
       period: "forever",
       description: "Perfect for testing and small projects",
-      features: ["1 protected script", "Up to 5 HWIDs", "Basic analytics", "Community support", "7-day access logs", "AI Chat (5 messages/day)"],
+      features: ["1 protected script", "Up to 5 HWIDs", "Basic analytics", "Community support", "7-day access logs", "10 AI questions per session", "Standard AI responses (500 tokens)"],
       cta: "Get Started",
       popular: false,
+      link: "/",
     },
     {
       name: "Pro",
       price: "$9.99",
       period: "per month",
-      description: "For serious developers and small teams",
+      description: "Buy activation keys online - auto-generated & secure",
       features: [
         "Unlimited scripts",
         "Up to 100 HWIDs per script",
@@ -28,12 +29,13 @@ const Pricing = () => {
         "30-day access logs",
         "Custom branding",
         "API access",
-        "Unlimited AI Chat",
-        "Priority AI responses",
-        "Chat history saved",
+        "100 AI questions per session",
+        "Priority AI responses (2000 tokens)",
+        "Detailed technical support",
       ],
-      cta: "Buy Now",
+      cta: "Buy Pro Keys",
       popular: true,
+      link: "https://defendlua.mysellauth.com/product/pro-activation-keys",
     },
     {
       name: "Enterprise",
@@ -48,13 +50,14 @@ const Pricing = () => {
         "SLA guarantee",
         "On-premise option",
         "White-label solution",
-        "Custom AI training",
-        "Instant AI responses",
-        "Human support handoff",
-        "Advanced chat analytics",
+        "Unlimited AI questions",
+        "Expert AI responses (8000 tokens)",
+        "Custom AI training available",
+        "24/7 support team",
       ],
       cta: "Contact Sales",
       popular: false,
+      link: "/contact",
     },
   ];
 
@@ -141,7 +144,7 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                <Link to={plan.name === "Enterprise" ? "/contact" : "/"}>
+                <Link to={plan.link || "/"} target={plan.name === "Pro" ? "_blank" : undefined} rel={plan.name === "Pro" ? "noopener noreferrer" : undefined}>
                   <Button className="w-full" variant={plan.popular ? "default" : "outline"} size="lg">
                     {plan.cta}
                   </Button>
@@ -168,7 +171,7 @@ const Pricing = () => {
               },
               {
                 q: "How do I activate my Pro plan?",
-                a: "Contact us to purchase an activation code, then log into your dashboard to enter the code and instantly activate your Pro plan for 30 days.",
+                a: "Purchase a Pro activation key from our secure online store at defendlua.mysellauth.com. Keys are auto-generated and regularly updated. Once purchased, enter the key in your dashboard to instantly activate your Pro plan.",
               },
               {
                 q: "What happens if I exceed my HWID limit?",
