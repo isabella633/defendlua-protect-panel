@@ -62,9 +62,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if HWID is whitelisted (empty list means allow all)
+    // Check if HWID is whitelisted - MUST be explicitly in the list
     const hwidList = script.hwid_list || [];
-    const isWhitelisted = hwidList.length === 0 || hwidList.includes(hwid);
+    const isWhitelisted = hwidList.includes(hwid);
 
     if (!isWhitelisted) {
       console.log('HWID not whitelisted:', { scriptId, hwid, allowedCount: hwidList.length });
