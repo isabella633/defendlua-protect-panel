@@ -51,19 +51,10 @@ Deno.serve(async (req) => {
 
     console.log('Request details:', { scriptId, hwid: hwid ? 'provided' : 'missing', clientIp });
 
-    // Fetch script with owner's subscription plan
+    // Fetch script data
     const { data: script, error } = await supabaseAdmin
       .from('scripts')
-      .select(`
-        script_key, 
-        hwid_list, 
-        ip_list, 
-        hwid_blacklist,
-        public_access,
-        script_name,
-        owner_id,
-        subscriptions!inner(plan)
-      `)
+      .select('script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id')
       .eq('id', scriptId)
       .single();
 
@@ -78,7 +69,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const userPlan = script.subscriptions?.plan || 'free';
+    // Fetch owner's subscription plan
+    const { data: subscription } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', script.owner_id)
+      .single();
+
+    const userPlan = subscription?.plan || 'free';
     const hwidList = script.hwid_list || [];
     const ipList = script.ip_list || [];
     const hwidBlacklist = script.hwid_blacklist || [];
