@@ -345,24 +345,28 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingCart className="w-5 h-5" />
-                  Get Pro Codes
+                  Buy Pro Activation Keys
                 </CardTitle>
                 <CardDescription>
-                  Contact us to purchase activation codes
+                  Purchase auto-generated, secure Pro keys
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="text-sm text-muted-foreground space-y-2">
-                  <p>• Unlimited scripts</p>
-                  <p>• Up to 100 HWIDs per script</p>
-                  <p>• Advanced analytics & priority support</p>
+                  <p>✓ Unlimited scripts</p>
+                  <p>✓ Up to 100 HWIDs per script</p>
+                  <p>✓ Advanced analytics & priority support</p>
+                  <p>✓ 100 AI questions per session</p>
                 </div>
-                <a href="/contact" target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" className="w-full gap-2">
-                    Contact Sales
+                <a href="https://defendlua.mysellauth.com/product/pro-activation-keys" target="_blank" rel="noopener noreferrer" className="block">
+                  <Button variant="hero" className="w-full gap-2">
+                    Buy Pro Keys Now
                     <ExternalLink className="w-4 h-4" />
                   </Button>
                 </a>
+                <p className="text-xs text-center text-muted-foreground">
+                  Keys are auto-generated and updated regularly
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -628,9 +632,14 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
 
                       {(subscription?.plan === 'free' || !subscription?.plan) && (
                         <div className="pt-4">
-                          <Button variant="hero" className="w-full" onClick={() => window.location.href = '/pricing'}>
-                            Upgrade to Pro or Enterprise
-                          </Button>
+                          <a href="https://defendlua.mysellauth.com/product/pro-activation-keys" target="_blank" rel="noopener noreferrer">
+                            <Button variant="hero" className="w-full">
+                              Buy Pro Activation Keys
+                            </Button>
+                          </a>
+                          <p className="text-xs text-center text-muted-foreground mt-2">
+                            Or <a href="/contact" className="text-primary hover:underline">contact us</a> for Enterprise
+                          </p>
                         </div>
                       )}
                     </div>
