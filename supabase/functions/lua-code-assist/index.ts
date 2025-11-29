@@ -36,49 +36,39 @@ serve(async (req) => {
     // Define system prompts based on plan with code context
     const codeContext = currentCode ? `\n\nCurrent Lua code being worked on:\n\`\`\`lua\n${currentCode}\n\`\`\`\n\nProvide assistance based on this code when relevant.` : '';
     
+    // Define system prompts based on plan with code context
+    const codeContext = currentCode ? `\n\nCurrent code:\n\`\`\`lua\n${currentCode}\n\`\`\`\n\nReference this when relevant.` : '';
+    
     const systemPrompts = {
-      free: `You are a DefendLua Lua Code Assistant (Free tier). Help with basic Lua scripting.
+      free: `You are a Lua coding expert. Respond with CODE FIRST, minimal text.
 
-RESPONSE FORMAT:
-- When providing code, wrap it in \`\`\`lua code blocks
-- Keep explanations brief (1-2 lines max)
-- Focus on the solution, not lengthy descriptions
+CRITICAL RULES:
+- Code in \`\`\`lua blocks ONLY
+- Explanation: MAX 1 sentence after code
+- NO introductions, NO long descriptions
+- Just solve the problem
 
-Topics:
-- Basic Lua syntax and functions
-- Common errors and debugging
-- Simple code explanations${codeContext}`,
+Focus: Basic Lua, Roblox basics, syntax fixes${codeContext}`,
       
-      pro: `You are a DefendLua Lua Code Assistant (Pro tier). Provide comprehensive Lua development support.
+      pro: `You are a Lua coding expert. Respond with CODE FIRST, minimal text.
 
-RESPONSE FORMAT:
-- Always wrap code in \`\`\`lua code blocks
-- Brief explanation before code (2-3 lines max)
-- Code speaks for itself - minimal text
+CRITICAL RULES:
+- Code in \`\`\`lua blocks ONLY
+- Explanation: MAX 2 sentences after code
+- NO introductions, NO verbose descriptions
+- Code speaks for itself
 
-Topics:
-- All Free tier topics
-- Advanced Lua patterns and optimization
-- Complex debugging and performance
-- Script architecture and design patterns
-- Roblox-specific Lua features and APIs
-- Security best practices${codeContext}`,
+Focus: Advanced Lua, Roblox APIs, optimization, patterns, security${codeContext}`,
       
-      enterprise: `You are a DefendLua Lua Code Assistant (Enterprise tier). Expert-level Lua development support.
+      enterprise: `You are an expert Lua architect. Respond with CODE FIRST, minimal text.
 
-RESPONSE FORMAT:
-- Always wrap code in \`\`\`lua code blocks
-- Concise explanation (3-4 lines max)
-- Let code demonstrate the solution
+CRITICAL RULES:
+- Code in \`\`\`lua blocks ONLY  
+- Explanation: MAX 3 sentences after code
+- NO preambles, NO essays
+- Production-quality code with brief context
 
-Topics:
-- All Pro tier topics
-- Advanced optimization and obfuscation
-- Custom implementation strategies
-- Integration with external systems
-- Performance profiling and analysis
-- Enterprise security patterns
-- Code review and refactoring${codeContext}`
+Focus: Enterprise patterns, advanced optimization, obfuscation, architecture, performance profiling${codeContext}`
     };
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -102,8 +92,8 @@ Topics:
           },
           ...messages
         ],
-        temperature: 0.7,
-        max_tokens: userPlan === 'free' ? 300 : userPlan === 'pro' ? 2500 : 5000,
+        temperature: 0.4,
+        max_tokens: userPlan === 'free' ? 400 : userPlan === 'pro' ? 3000 : 6000,
       }),
     });
 
