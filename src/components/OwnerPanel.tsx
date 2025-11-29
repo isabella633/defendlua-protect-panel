@@ -573,52 +573,73 @@ protectedFunction()`);
                 <TabsContent value="raw-link">
                   <CardContent className="space-y-4">
                     <CardDescription>
-                      Use this raw link to access your protected script directly.
+                      Distribute this loader script - it automatically detects HWIDs and handles authentication.
                     </CardDescription>
                     
                     <Alert className="border-accent/20 bg-accent/5">
                       <Link className="h-4 w-4 text-accent" />
                       <AlertDescription className="text-accent">
-                        This link provides direct access to your protected Lua script.
+                        {publicAccess 
+                          ? "🌐 Public Access ON - New HWIDs are auto-whitelisted" 
+                          : "🔒 HWID Protection ON - Only whitelisted HWIDs can access"}
                       </AlertDescription>
                     </Alert>
                     
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Raw Link URL</label>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          value={rawLink}
-                          readOnly
-                          className="bg-muted/50 font-mono text-sm"
-                        />
-                        <Button
-                          variant="outline"
-                          onClick={() => copyToClipboard(rawLink, "Raw link")}
-                        >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy
-                        </Button>
-                      </div>
+                      <label className="text-sm font-medium">Loader Script (Auto HWID Detection)</label>
+                      <Textarea
+                        value={`loadstring(game:HttpGet("${rawLink.replace('?key=YOUR_HWID', '')}?key=" .. (gethwid and gethwid() or "unknown")))()`}
+                        readOnly
+                        className="bg-muted/50 font-mono text-sm h-20"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => copyToClipboard(
+                          `loadstring(game:HttpGet("${rawLink.replace('?key=YOUR_HWID', '')}?key=" .. (gethwid and gethwid() or "unknown")))()`,
+                          "Loader script"
+                        )}
+                        className="w-full"
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy Loader Script
+                      </Button>
                     </div>
                     
                     <div className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-3">
                       <div>
-                        <h4 className="font-medium mb-2 text-accent">🔒 Dual Protection Active</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Replace <code className="text-primary">YOUR_HWID</code> with the whitelisted hardware ID. Both HWID and IP must be authorized.
-                        </p>
+                        <h4 className="font-medium mb-2 text-accent">✨ How It Works</h4>
+                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                          <li>Loader automatically detects executor HWID using gethwid()</li>
+                          <li>Sends HWID to authentication endpoint</li>
+                          {publicAccess ? (
+                            <li className="text-accent">New HWIDs are automatically whitelisted (Public Access ON)</li>
+                          ) : (
+                            <li>Only pre-approved HWIDs can execute (HWID locked)</li>
+                          )}
+                          <li>IP address is also verified against whitelist</li>
+                          <li>Script source remains hidden - only executable via loadstring</li>
+                        </ul>
                       </div>
                       
                       <div>
-                        <h4 className="font-medium mb-2">Usage Examples:</h4>
-                        <div className="space-y-2 text-sm font-mono text-muted-foreground break-all">
-                          <div>
-                            <span className="text-primary">Lua:</span> loadstring(game:HttpGet("{rawLink}"))()
-                          </div>
-                          <div>
-                            <span className="text-primary">cURL:</span> curl -s "{rawLink}"
-                          </div>
-                        </div>
+                        <h4 className="font-medium mb-2">Alternative: Manual HWID Script</h4>
+                        <Textarea
+                          value={`local clipboard = setclipboard or toclipboard or copyclipboard\nif gethwid and clipboard then\n    clipboard(gethwid())\n    print("HWID copied to clipboard!")\nelse\n    warn("Your executor does not support required functions.")\nend`}
+                          readOnly
+                          className="bg-muted/50 font-mono text-xs h-24"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(
+                            `local clipboard = setclipboard or toclipboard or copyclipboard\nif gethwid and clipboard then\n    clipboard(gethwid())\n    print("HWID copied to clipboard!")\nelse\n    warn("Your executor does not support required functions.")\nend`,
+                            "HWID getter script"
+                          )}
+                          className="w-full mt-2"
+                        >
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copy HWID Getter
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
