@@ -585,60 +585,25 @@ protectedFunction()`);
                       </AlertDescription>
                     </Alert>
                     
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Loader Script (Auto HWID Detection)</label>
-                      <Textarea
-                        value={`loadstring(game:HttpGet("${rawLink.replace('?key=YOUR_HWID', '')}?key=" .. (gethwid and gethwid() or "unknown")))()`}
-                        readOnly
-                        className="bg-muted/50 font-mono text-sm h-20"
-                      />
-                      <Button
-                        variant="outline"
-                        onClick={() => copyToClipboard(
-                          `loadstring(game:HttpGet("${rawLink.replace('?key=YOUR_HWID', '')}?key=" .. (gethwid and gethwid() or "unknown")))()`,
-                          "Loader script"
-                        )}
-                        className="w-full"
-                      >
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy Loader Script
-                      </Button>
-                    </div>
-                    
-                    <div className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-3">
-                      <div>
-                        <h4 className="font-medium mb-2 text-accent">✨ How It Works</h4>
-                        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                          <li>Loader automatically detects executor HWID using gethwid()</li>
-                          <li>Sends HWID to authentication endpoint</li>
-                          {publicAccess ? (
-                            <li className="text-accent">New HWIDs are automatically whitelisted (Public Access ON)</li>
-                          ) : (
-                            <li>Only pre-approved HWIDs can execute (HWID locked)</li>
-                          )}
-                          <li>IP address is also verified against whitelist</li>
-                          <li>Script source remains hidden - only executable via loadstring</li>
-                        </ul>
-                      </div>
-                      
-                      <div>
-                        <h4 className="font-medium mb-2">Alternative: Manual HWID Script</h4>
-                        <Textarea
-                          value={`local clipboard = setclipboard or toclipboard or copyclipboard\nif gethwid and clipboard then\n    clipboard(gethwid())\n    print("HWID copied to clipboard!")\nelse\n    warn("Your executor does not support required functions.")\nend`}
-                          readOnly
-                          className="bg-muted/50 font-mono text-xs h-24"
-                        />
+                    <div className="space-y-4">
+                      <div className="p-6 bg-muted/30 rounded-lg border border-border/50 text-center space-y-3">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-lg">Protected Script Loader</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Copy and distribute this script to your users. Access is controlled via your whitelist settings.
+                          </p>
+                        </div>
                         <Button
-                          variant="ghost"
-                          size="sm"
+                          variant="primary"
+                          size="lg"
                           onClick={() => copyToClipboard(
-                            `local clipboard = setclipboard or toclipboard or copyclipboard\nif gethwid and clipboard then\n    clipboard(gethwid())\n    print("HWID copied to clipboard!")\nelse\n    warn("Your executor does not support required functions.")\nend`,
-                            "HWID getter script"
+                            `loadstring(game:HttpGet("${rawLink.replace('?key=YOUR_HWID', '')}?key=" .. (gethwid and gethwid() or "unknown")))()`,
+                            "Loader script"
                           )}
-                          className="w-full mt-2"
+                          className="w-full"
                         >
                           <Copy className="w-4 h-4 mr-2" />
-                          Copy HWID Getter
+                          Copy Script Loader
                         </Button>
                       </div>
                     </div>
