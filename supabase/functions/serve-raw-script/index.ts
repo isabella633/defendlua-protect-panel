@@ -44,10 +44,17 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch script with HWID verification
+    // Get client IP address from request headers
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+
+    console.log('Request details:', { scriptId, hwid: hwid ? 'provided' : 'missing', clientIp });
+
+    // Fetch script with HWID and IP verification
     const { data: script, error } = await supabaseAdmin
       .from('scripts')
-      .select('script_key, hwid_list, script_name')
+      .select('script_key, hwid_list, ip_list, script_name')
       .eq('id', scriptId)
       .single();
 
@@ -62,14 +69,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // HWID Protection: Only whitelisted HWIDs can execute
+    // Dual Protection: HWID + IP Whitelist
     const hwidList = script.hwid_list || [];
-    const isWhitelisted = hwidList.includes(hwid);
+    const ipList = script.ip_list || [];
+    
+    const isHwidWhitelisted = hwidList.includes(hwid);
+    const isIpWhitelisted = ipList.length === 0 || ipList.includes(clientIp);
 
-    if (!isWhitelisted) {
-      console.log('HWID not whitelisted:', { scriptId, hwid, allowedCount: hwidList.length });
+    // Both HWID and IP must be authorized
+    if (!isHwidWhitelisted || !isIpWhitelisted) {
+      const reason = !isHwidWhitelisted ? 'HWID not authorized' : 'IP address not authorized';
+      console.log('Access denied:', { scriptId, reason, hwid, clientIp, allowedHwids: hwidList.length, allowedIps: ipList.length });
       return new Response(
-        '-- ⛔ ACCESS DENIED ⛔\n-- FORBIDDEN: Your HWID is not authorized for this script\n-- This access attempt has been logged\n-- Contact the script owner to request authorization',
+        `-- ⛔ ACCESS DENIED ⛔\n-- FORBIDDEN: ${reason}\n-- Your IP: ${clientIp}\n-- This access attempt has been logged\n-- Contact the script owner to request authorization`,
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
@@ -77,7 +89,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Script execution authorized:', { scriptId, scriptName: script.script_name });
+    console.log('Script execution authorized:', { scriptId, scriptName: script.script_name, hwid, clientIp });
 
     // Return script for execution (protected by HWID whitelist)
     return new Response(

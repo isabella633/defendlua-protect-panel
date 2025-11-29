@@ -79,6 +79,7 @@ export type Database = {
           created_at: string | null
           hwid_list: string[] | null
           id: string
+          ip_list: string[] | null
           owner_id: string
           script_key: string
           script_name: string
@@ -88,6 +89,7 @@ export type Database = {
           created_at?: string | null
           hwid_list?: string[] | null
           id?: string
+          ip_list?: string[] | null
           owner_id: string
           script_key: string
           script_name: string
@@ -97,6 +99,7 @@ export type Database = {
           created_at?: string | null
           hwid_list?: string[] | null
           id?: string
+          ip_list?: string[] | null
           owner_id?: string
           script_key?: string
           script_name?: string
