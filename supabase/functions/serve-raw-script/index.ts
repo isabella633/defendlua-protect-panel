@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { obfuscateLua, addProtectionHeader } from './_obfuscate.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -126,16 +127,20 @@ Deno.serve(async (req) => {
       console.log('Public access granted:', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
       await logAccess('allowed', 'Public access (Pro/Enterprise)');
       
-      // Return script for execution
+      // Obfuscate the script before returning
+      const obfuscatedScript = addProtectionHeader(obfuscateLua(script.script_key));
+      
+      // Return obfuscated script for execution
       return new Response(
-        script.script_key,
+        obfuscatedScript,
         { 
           status: 200, 
           headers: { 
             ...corsHeaders, 
             'Content-Type': 'text/plain',
             'Cache-Control': 'no-cache',
-            'X-Protected-By': 'DefendLua'
+            'X-Protected-By': 'DefendLua',
+            'X-Obfuscated': 'true'
           } 
         }
       );
@@ -158,16 +163,20 @@ Deno.serve(async (req) => {
     console.log('Script execution authorized:', { scriptId, scriptName: script.script_name, hwid, clientIp, plan: userPlan });
     await logAccess('allowed', 'HWID whitelisted');
 
-    // Return script for execution (protected by HWID whitelist)
+    // Obfuscate the script before returning
+    const obfuscatedScript = addProtectionHeader(obfuscateLua(script.script_key));
+
+    // Return obfuscated script for execution (protected by HWID whitelist)
     return new Response(
-      script.script_key,
+      obfuscatedScript,
       { 
         status: 200, 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'text/plain',
           'Cache-Control': 'no-cache',
-          'X-Protected-By': 'DefendLua'
+          'X-Protected-By': 'DefendLua',
+          'X-Obfuscated': 'true'
         } 
       }
     );
