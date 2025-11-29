@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Bot, X, Send, Loader2, Code, Sparkles, Zap, Crown } from "lucide-react";
+import { Bot, X, Send, Loader2, Code, Sparkles, Zap, Crown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,15 +12,17 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  codeBlock?: string;
 }
 
 interface LuaCodeAssistantProps {
   userPlan?: 'free' | 'pro' | 'enterprise';
   userId?: string;
   currentCode?: string;
+  onInsertCode?: (code: string) => void;
 }
 
-const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode }: LuaCodeAssistantProps) => {
+const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode, onInsertCode }: LuaCodeAssistantProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -87,10 +89,15 @@ const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode }: LuaCodeAss
 
       if (error) throw error;
 
+      // Extract code block from response if present
+      const codeBlockMatch = data.message.match(/```(?:lua)?\n([\s\S]*?)```/);
+      const codeBlock = codeBlockMatch ? codeBlockMatch[1].trim() : undefined;
+
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.message,
-        timestamp: new Date()
+        timestamp: new Date(),
+        codeBlock
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -186,7 +193,7 @@ const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode }: LuaCodeAss
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}
             >
               <div
                 className={`max-w-[85%] rounded-lg p-3 ${
@@ -195,7 +202,7 @@ const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode }: LuaCodeAss
                     : 'bg-muted'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap font-mono">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 <p className="text-xs opacity-70 mt-1">
                   {message.timestamp.toLocaleTimeString([], {
                     hour: '2-digit',
@@ -203,6 +210,17 @@ const LuaCodeAssistant = ({ userPlan = 'free', userId, currentCode }: LuaCodeAss
                   })}
                 </p>
               </div>
+              {message.codeBlock && message.role === 'assistant' && onInsertCode && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onInsertCode(message.codeBlock!)}
+                  className="mt-2"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Insert Code
+                </Button>
+              )}
             </div>
           ))}
           {isLoading && (

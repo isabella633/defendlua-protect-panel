@@ -409,6 +409,16 @@ protectedFunction()`);
         userPlan={userPlan}
         userId={userId}
         currentCode={sourceCode}
+        onInsertCode={(code) => {
+          setSourceCode(prev => {
+            if (!prev.trim()) return code;
+            return prev + '\n\n' + code;
+          });
+          toast({
+            title: "Code Inserted",
+            description: "AI code has been added to your editor",
+          });
+        }}
       />
     </div>
   );

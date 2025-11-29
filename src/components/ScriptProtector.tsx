@@ -220,6 +220,16 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
         userPlan={userPlan}
         userId={userId}
         currentCode={luaCode}
+        onInsertCode={(code) => {
+          setLuaCode(prev => {
+            if (!prev.trim()) return code;
+            return prev + '\n\n' + code;
+          });
+          toast({
+            title: "Code Inserted",
+            description: "AI code has been added to your editor",
+          });
+        }}
       />
     </div>
   );
