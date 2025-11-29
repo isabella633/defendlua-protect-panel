@@ -62,33 +62,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if HWID is whitelisted - MUST be explicitly in the list
-    const hwidList = script.hwid_list || [];
-    const isWhitelisted = hwidList.includes(hwid);
-
-    if (!isWhitelisted) {
-      console.log('HWID not whitelisted:', { scriptId, hwid, allowedCount: hwidList.length });
-      return new Response(
-        '-- ⛔ ACCESS DENIED ⛔\n-- FORBIDDEN: Your HWID is not authorized for this script\n-- This access attempt has been logged\n-- Contact the script owner to request authorization',
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
-        }
-      );
-    }
-
-    console.log('Script access granted:', { scriptId, scriptName: script.script_name });
-
-    // Return the script content
+    // MAXIMUM SECURITY: Deny all access attempts
+    console.log('Access denied (maximum security mode):', { scriptId, scriptName: script.script_name, hwid });
     return new Response(
-      script.script_key,
+      '-- ⛔ ACCESS DENIED ⛔\n-- MAXIMUM SECURITY: This script is protected by DefendLua\n-- Direct raw access is disabled for all users\n-- This access attempt has been logged\n-- Please use the authorized client application',
       { 
-        status: 200, 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'text/plain',
-          'Cache-Control': 'no-cache'
-        } 
+        status: 403, 
+        headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
       }
     );
 
