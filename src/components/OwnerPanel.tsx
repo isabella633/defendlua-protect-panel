@@ -43,6 +43,8 @@ protectedFunction()`);
   const [isSaving, setIsSaving] = useState(false);
   const [hwidList, setHwidList] = useState<string[]>([]);
   const [newHwid, setNewHwid] = useState("");
+  const [ipList, setIpList] = useState<string[]>([]);
+  const [newIp, setNewIp] = useState("");
   const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'enterprise'>('free');
   const [userId, setUserId] = useState<string>("");
   const { toast } = useToast();
@@ -77,7 +79,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from('scripts')
-      .select('script_name, script_key, hwid_list')
+      .select('script_name, script_key, hwid_list, ip_list')
       .eq('id', scriptId)
       .single();
 
@@ -85,6 +87,7 @@ protectedFunction()`);
       setScriptName(data.script_name);
       setSourceCode(data.script_key);
       setHwidList(data.hwid_list || []);
+      setIpList(data.ip_list || []);
     }
   };
 
@@ -96,7 +99,8 @@ protectedFunction()`);
       .update({ 
         script_name: scriptName,
         script_key: sourceCode,
-        hwid_list: hwidList
+        hwid_list: hwidList,
+        ip_list: ipList
       })
       .eq('id', scriptId);
 
@@ -140,6 +144,45 @@ protectedFunction()`);
     setHwidList(hwidList.filter(h => h !== hwid));
     toast({
       title: "HWID Removed",
+      description: "Remember to save your changes.",
+    });
+  };
+
+  const addIp = () => {
+    if (!newIp.trim()) return;
+    
+    // Basic IP validation
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (!ipRegex.test(newIp.trim())) {
+      toast({
+        title: "Invalid IP",
+        description: "Please enter a valid IPv4 address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (ipList.includes(newIp.trim())) {
+      toast({
+        title: "Already exists",
+        description: "This IP is already in the whitelist.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIpList([...ipList, newIp.trim()]);
+    setNewIp("");
+    toast({
+      title: "IP Added",
+      description: "Remember to save your changes.",
+    });
+  };
+
+  const removeIp = (ip: string) => {
+    setIpList(ipList.filter(i => i !== ip));
+    toast({
+      title: "IP Removed",
       description: "Remember to save your changes.",
     });
   };
@@ -290,6 +333,51 @@ protectedFunction()`);
                     </div>
                   </div>
                 </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">IP Whitelist</label>
+                  <div className="space-y-2">
+                    {ipList.length === 0 ? (
+                      <Alert className="border-accent/20 bg-accent/5">
+                        <AlertDescription className="text-accent text-sm">
+                          Empty = no IP restrictions
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {ipList.map((ip) => (
+                          <div key={ip} className="flex items-center justify-between bg-muted/50 p-2 rounded border border-border/50">
+                            <span className="text-sm font-mono">{ip}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeIp(ip)}
+                              className="h-6 w-6"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        value={newIp}
+                        onChange={(e) => setNewIp(e.target.value)}
+                        placeholder="Enter IP to whitelist"
+                        onKeyDown={(e) => e.key === 'Enter' && addIp()}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={addIp}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -379,9 +467,9 @@ protectedFunction()`);
                     
                     <div className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-3">
                       <div>
-                        <h4 className="font-medium mb-2 text-accent">🔒 HWID Protection Enabled</h4>
+                        <h4 className="font-medium mb-2 text-accent">🔒 Dual Protection Active</h4>
                         <p className="text-sm text-muted-foreground">
-                          Replace <code className="text-primary">YOUR_HWID</code> with the whitelisted hardware ID.
+                          Replace <code className="text-primary">YOUR_HWID</code> with the whitelisted hardware ID. Both HWID and IP must be authorized.
                         </p>
                       </div>
                       
