@@ -26,8 +26,7 @@ Deno.serve(async (req) => {
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
       const baseUrl = url.origin + url.pathname;
-      const collectorScript = `
-      local function getHWID()
+      const collectorScript = `local function getHWID()
     if gethwid then
         return gethwid()
     elseif getexecutorname then
@@ -39,9 +38,7 @@ end
 
 local hwid = getHWID()
 
-local scriptUrl = 
-    "https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script/38a69116-1bbb-4ddb-a74d-41406f9565cc?key="
-    .. hwid
+local scriptUrl = "${baseUrl}?key=" .. hwid
 
 local ok, result = pcall(function()
     return game:HttpGet(scriptUrl)
@@ -60,7 +57,6 @@ else
     print("Failed to load protected script")
     print("Your HWID: " .. hwid)
 end
-
 `;
       return new Response(collectorScript, {
         status: 200,
