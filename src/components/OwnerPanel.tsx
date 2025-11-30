@@ -572,7 +572,7 @@ protectedFunction()`);
                             const urlParts = baseUrl.split("/");
                             const scriptId = urlParts[urlParts.length - 1];
                             const baseWithoutId = baseUrl.replace("/" + scriptId, "");
-                            const obfuscatedScript = `loadstring(game:HttpGet("${baseWithoutId}/".."${scriptId}".."?key="..(gethwid and gethwid()or"unknown")))()`;
+                            const obfuscatedScript = `local _a,_b,_c=string.char(103,101,116,104,119,105,100),string.char(111,114),string.char(117,110,107,110,111,119,110);loadstring(game:HttpGet("${baseWithoutId}/".."${scriptId}".."?key="..(_G[_a]and _G[_a]()_b _c)))()`;
                             copyToClipboard(obfuscatedScript, "Loader script");
                           }}
                           className="w-full"
