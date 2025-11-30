@@ -54,8 +54,10 @@ if ok then
     end
 else
     print("⛔ ACCESS DENIED ⛔")
-    print("Failed to load protected script")
-    print("Your HWID: " .. hwid)
+    print("Your execution attempt has been logged to the owner.")
+    print("Failed to load protected script.")
+    print("Contact the owner for access.")
+
 end
 `;
       return new Response(collectorScript, {
