@@ -16,8 +16,6 @@ Deno.serve(async (req) => {
     const scriptId = url.pathname.split("/").pop();
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
 
-    console.log("Raw script request:", { scriptId, hwid: hwid ? "provided" : "missing" });
-
     if (!scriptId) {
       return new Response('print("⛔ ACCESS DENIED ⛔")\nprint("ERROR: Script ID not provided")', {
         status: 400,
@@ -25,15 +23,51 @@ Deno.serve(async (req) => {
       });
     }
 
+    // If no HWID provided, return HWID collector script (Stage 1)
     if (!hwid) {
-      return new Response(
-        'print("⛔ ACCESS DENIED ⛔")\nprint("UNAUTHORIZED: This script is protected by DefendLua")\nnprint("Contact script owner for authorization")',
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
-        },
-      );
+      console.log("Stage 1 - Serving HWID collector:", { scriptId });
+      const baseUrl = url.origin + url.pathname;
+      const collectorScript = `-- DefendLua Protected Script Loader
+-- Stage 1: HWID Collection
+local function getHWID()
+    if gethwid then
+        return gethwid()
+    elseif getexecutorname then
+        return getexecutorname() .. "_" .. tostring(game.JobId):sub(1,8)
+    else
+        return "unknown_" .. tostring(game.JobId):sub(1,8)
+    end
+end
+
+local hwid = getHWID()
+local scriptUrl = "${baseUrl}?key=" .. hwid
+
+-- Stage 2: Load protected script with HWID
+local success, result = pcall(function()
+    return game:HttpGet(scriptUrl)
+end)
+
+if success then
+    local loadSuccess, loadError = pcall(function()
+        loadstring(result)()
+    end)
+    if not loadSuccess then
+        print("⛔ Script Execution Error ⛔")
+        print(tostring(loadError))
+    end
+else
+    print("⛔ ACCESS DENIED ⛔")
+    print("Failed to load protected script")
+    print("Your HWID: " .. hwid)
+end`;
+      
+      return new Response(collectorScript, {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
     }
+
+    console.log("Stage 2 - Validating access:", { scriptId, hwid: "provided" });
 
     // Create Supabase client with service role to bypass RLS
     const supabaseAdmin = createClient(

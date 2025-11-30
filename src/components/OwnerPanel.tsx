@@ -560,8 +560,7 @@ protectedFunction()`);
                         <div className="space-y-2">
                           <h4 className="font-medium text-lg">Protected Script Loader</h4>
                           <p className="text-sm text-muted-foreground">
-                            Copy and distribute this script to your users. Access is controlled via your whitelist
-                            settings.
+                            Copy and distribute this simple loader. HWID collection and validation happens server-side automatically - maximum protection with zero exposed logic.
                           </p>
                         </div>
                         <Button
@@ -569,17 +568,20 @@ protectedFunction()`);
                           size="lg"
                           onClick={() => {
                             const baseUrl = rawLink.replace("?key=YOUR_HWID", "");
-                            const urlParts = baseUrl.split("/");
-                            const scriptId = urlParts[urlParts.length - 1];
-                            const baseWithoutId = baseUrl.replace("/" + scriptId, "");
-                            const obfuscatedScript = `local _a,_b,_c=string.char(103,101,116,104,119,105,100),string.char(111,114),string.char(117,110,107,110,111,119,110);loadstring(game:HttpGet("${baseWithoutId}/".."${scriptId}".."?key="..(_G[_a]and _G[_a]()_b _c)))()`;
-                            copyToClipboard(obfuscatedScript, "Loader script");
+                            const simpleLoader = `loadstring(game:HttpGet("${baseUrl}"))()`;
+                            copyToClipboard(simpleLoader, "Loader script");
                           }}
                           className="w-full"
                         >
                           <Copy className="w-4 h-4 mr-2" />
                           Copy Script Loader
                         </Button>
+                        <Alert className="border-primary/20 bg-primary/5 text-left">
+                          <Shield className="h-4 w-4 text-primary" />
+                          <AlertDescription className="text-primary text-xs">
+                            <strong>Two-Stage Protection:</strong> Users see only a simple loader. The server automatically collects HWID, validates access, and serves your script - all protection logic stays hidden server-side.
+                          </AlertDescription>
+                        </Alert>
                       </div>
                     </div>
                   </CardContent>
