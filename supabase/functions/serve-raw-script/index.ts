@@ -57,7 +57,6 @@ else
     print("Your execution attempt has been logged to the owner.")
     print("Failed to load protected script.")
     print("Contact the owner for access.")
-
 end
 `;
       return new Response(collectorScript, {
