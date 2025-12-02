@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const scriptId = url.pathname.split("/").pop();
+    const scriptId = url.searchParams.get("id");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
 
     if (!scriptId) {
@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
-      const baseUrl = url.origin + url.pathname;
+      const functionUrl = `${url.origin}/functions/v1/serve-raw-script`;
       const collectorScript = `local function getHWID()
     if gethwid then
         return gethwid()
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 end
 
 local hwid = getHWID()
-local scriptUrl = "${baseUrl}?key=" .. hwid
+local scriptUrl = "${functionUrl}?id=${scriptId}&key=" .. hwid
 
 local ok, result = pcall(function()
     return game:HttpGet(scriptUrl)
