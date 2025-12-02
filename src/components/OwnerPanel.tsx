@@ -61,7 +61,7 @@ protectedFunction()`);
     // Generate raw link pointing to edge function
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const projectId = supabaseUrl?.split("//")[1]?.split(".")[0];
-    setRawLink(`https://${projectId}.supabase.co/functions/v1/serve-raw-script/${scriptId}?key=YOUR_HWID`);
+    setRawLink(`https://${projectId}.supabase.co/functions/v1/serve-raw-script?id=${scriptId}`);
 
     // Load script data including HWID list
     loadScriptData();
