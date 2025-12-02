@@ -37,26 +37,37 @@ Deno.serve(async (req) => {
 end
 
 local hwid = getHWID()
-
 local scriptUrl = "${baseUrl}?key=" .. hwid
 
 local ok, result = pcall(function()
     return game:HttpGet(scriptUrl)
 end)
 
-if ok then
-    local loadOK, loadErr = pcall(function()
-        loadstring(result)()
-    end)
-    if not loadOK then
-        print("⛔ Script Execution Error ⛔")
-        print(loadErr)
-    end
-else
+if not ok then
     print("⛔ ACCESS DENIED ⛔")
     print("Your execution attempt has been logged to the owner.")
     print("Failed to load protected script.")
     print("Contact the owner for access.")
+    return
+end
+
+if not result or result == "" then
+    print("⛔ ERROR: Empty response from server ⛔")
+    return
+end
+
+local fn, loadErr = loadstring(result)
+if not fn then
+    print("⛔ Script Execution Error ⛔")
+    print("Failed to parse script: " .. tostring(loadErr))
+    print("Response preview: " .. tostring(result):sub(1, 100))
+    return
+end
+
+local runOK, runErr = pcall(fn)
+if not runOK then
+    print("⛔ Runtime Error ⛔")
+    print(tostring(runErr))
 end
 `;
       return new Response(collectorScript, {
