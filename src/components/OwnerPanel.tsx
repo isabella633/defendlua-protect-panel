@@ -22,6 +22,7 @@ import {
   X,
   History,
   Ban,
+  Bell,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -55,7 +56,17 @@ protectedFunction()`);
   const [accessLogs, setAccessLogs] = useState<any[]>([]);
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "enterprise">("free");
   const [userId, setUserId] = useState<string>("");
+  const [webhookUrl, setWebhookUrl] = useState("");
   const { toast } = useToast();
+
+  const getHwidLimit = (plan: string) => {
+    switch (plan) {
+      case 'free': return 10;
+      case 'pro': return 100;
+      case 'enterprise': return 999999;
+      default: return 10;
+    }
+  };
 
   useEffect(() => {
     // Generate raw link pointing to edge function
@@ -89,7 +100,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from("scripts")
-      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access")
+      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url")
       .eq("id", scriptId)
       .single();
 
@@ -100,6 +111,7 @@ protectedFunction()`);
       setIpList(data.ip_list || []);
       setHwidBlacklist(data.hwid_blacklist || []);
       setPublicAccess(data.public_access || false);
+      setWebhookUrl((data as any).webhook_url || "");
     }
 
     // Load access logs
@@ -118,16 +130,23 @@ protectedFunction()`);
   const handleSave = async () => {
     setIsSaving(true);
 
+    const updateData: any = {
+      script_name: scriptName,
+      script_key: sourceCode,
+      hwid_list: hwidList,
+      ip_list: ipList,
+      hwid_blacklist: hwidBlacklist,
+      public_access: publicAccess,
+    };
+
+    // Only include webhook_url for Pro/Enterprise plans
+    if (userPlan === "pro" || userPlan === "enterprise") {
+      updateData.webhook_url = webhookUrl || null;
+    }
+
     const { error } = await supabase
       .from("scripts")
-      .update({
-        script_name: scriptName,
-        script_key: sourceCode,
-        hwid_list: hwidList,
-        ip_list: ipList,
-        hwid_blacklist: hwidBlacklist,
-        public_access: publicAccess,
-      })
+      .update(updateData)
       .eq("id", scriptId);
 
     setIsSaving(false);
@@ -148,6 +167,16 @@ protectedFunction()`);
 
   const addHwid = () => {
     if (!newHwid.trim()) return;
+
+    const hwidLimit = getHwidLimit(userPlan);
+    if (hwidList.length >= hwidLimit) {
+      toast({
+        title: "HWID Limit Reached",
+        description: `Your ${userPlan} plan allows ${hwidLimit} HWIDs per script. ${userPlan === 'free' ? 'Upgrade to Pro for 100 HWIDs.' : userPlan === 'pro' ? 'Upgrade to Enterprise for unlimited.' : ''}`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (hwidList.includes(newHwid.trim())) {
       toast({
@@ -353,7 +382,9 @@ protectedFunction()`);
                 </Alert>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">HWID Whitelist</label>
+                  <label className="text-sm font-medium mb-2 block">
+                    HWID Whitelist ({hwidList.length}/{getHwidLimit(userPlan) === 999999 ? '∞' : getHwidLimit(userPlan)})
+                  </label>
                   <div className="space-y-2">
                     {hwidList.length === 0 ? (
                       <Alert className="border-accent/20 bg-accent/5">
@@ -439,6 +470,28 @@ protectedFunction()`);
                         </p>
                       </div>
                       <Switch checked={publicAccess} onCheckedChange={setPublicAccess} />
+                    </div>
+                  </div>
+                )}
+
+                {(userPlan === "pro" || userPlan === "enterprise") && (
+                  <div>
+                    <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                      <Bell className="w-4 h-4" />
+                      Discord Webhook
+                    </label>
+                    <div className="space-y-2">
+                      <Input
+                        value={webhookUrl}
+                        onChange={(e) => setWebhookUrl(e.target.value)}
+                        placeholder="https://discord.com/api/webhooks/..."
+                        className="font-mono text-xs"
+                      />
+                      <Alert className="border-primary/20 bg-primary/5">
+                        <AlertDescription className="text-xs text-primary">
+                          Access logs will be sent to this Discord webhook. You can also blacklist HWIDs by reacting to the webhook message.
+                        </AlertDescription>
+                      </Alert>
                     </div>
                   </div>
                 )}

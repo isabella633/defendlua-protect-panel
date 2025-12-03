@@ -124,6 +124,7 @@ export type Database = {
           script_key: string
           script_name: string
           updated_at: string | null
+          webhook_url: string | null
         }
         Insert: {
           created_at?: string | null
@@ -136,6 +137,7 @@ export type Database = {
           script_key: string
           script_name: string
           updated_at?: string | null
+          webhook_url?: string | null
         }
         Update: {
           created_at?: string | null
@@ -148,6 +150,7 @@ export type Database = {
           script_key?: string
           script_name?: string
           updated_at?: string | null
+          webhook_url?: string | null
         }
         Relationships: [
           {

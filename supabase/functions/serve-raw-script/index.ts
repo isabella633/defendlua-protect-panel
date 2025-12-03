@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     // Fetch script data
     const { data: script, error } = await supabaseAdmin
       .from("scripts")
-      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id")
+      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url")
       .eq("id", scriptId)
       .single();
 
@@ -88,6 +88,49 @@ Deno.serve(async (req) => {
     const ipList = script.ip_list || [];
     const hwidBlacklist = script.hwid_blacklist || [];
     const publicAccess = script.public_access || false;
+    const webhookUrl = (script as any).webhook_url;
+
+    // Helper function to send Discord webhook
+    const sendDiscordWebhook = async (status: string, reason: string, color: number) => {
+      if (!webhookUrl || (userPlan !== "pro" && userPlan !== "enterprise")) return;
+      
+      try {
+        const embed = {
+          title: `🛡️ DefendLua Access Log`,
+          description: `**Script:** ${script.script_name}`,
+          color: color,
+          fields: [
+            { name: "Status", value: status, inline: true },
+            { name: "Reason", value: reason, inline: true },
+            { name: "HWID", value: `\`${hwid}\``, inline: false },
+            { name: "IP Address", value: `\`${clientIp}\``, inline: true },
+            { name: "Script ID", value: `\`${scriptId}\``, inline: true },
+          ],
+          timestamp: new Date().toISOString(),
+          footer: { text: "DefendLua Protection System" }
+        };
+
+        await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            embeds: [embed],
+            components: status === "denied" ? [] : [{
+              type: 1,
+              components: [{
+                type: 2,
+                style: 4,
+                label: "🚫 Blacklist this HWID",
+                custom_id: `blacklist_${scriptId}_${hwid}`
+              }]
+            }]
+          })
+        });
+        console.log("Discord webhook sent successfully");
+      } catch (webhookError) {
+        console.error("Failed to send Discord webhook:", webhookError);
+      }
+    };
 
     // Helper function to log access attempts
     const logAccess = async (status: string, reason?: string) => {
@@ -98,6 +141,10 @@ Deno.serve(async (req) => {
         status,
         reason,
       });
+
+      // Send Discord webhook for Pro/Enterprise users
+      const color = status === "allowed" ? 0x00ff00 : 0xff0000; // Green for allowed, red for denied
+      await sendDiscordWebhook(status.toUpperCase(), reason || "N/A", color);
     };
 
     // Check blacklist first (applies to all plans)
