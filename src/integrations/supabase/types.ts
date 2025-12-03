@@ -247,7 +247,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_create_script: { Args: { user_id_param: string }; Returns: boolean }
+      count_user_scripts: { Args: { user_id_param: string }; Returns: number }
       generate_activation_code: { Args: never; Returns: string }
+      get_hwid_limit: { Args: { user_id_param: string }; Returns: number }
+      get_script_limit: { Args: { user_id_param: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
