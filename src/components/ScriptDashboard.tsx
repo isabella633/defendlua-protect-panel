@@ -221,12 +221,16 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                         <p className="text-foreground">• Unlimited scripts</p>
                         <p className="text-foreground">• Up to 100 HWIDs per script</p>
                         <p className="text-foreground">• Advanced protection</p>
+                        <p className="text-foreground">• Discord webhook logging</p>
+                        <p className="text-foreground">• Public access mode</p>
                       </>
                     ) : (
                       <>
                         <p className="text-foreground">• Unlimited scripts</p>
                         <p className="text-foreground">• Unlimited HWIDs per script</p>
                         <p className="text-foreground">• Enterprise-grade protection</p>
+                        <p className="text-foreground">• Discord webhook logging</p>
+                        <p className="text-foreground">• Public access mode</p>
                         <p className="text-foreground">• Custom branding</p>
                       </>
                     )}
@@ -551,12 +555,16 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                               <p className="text-foreground">• Unlimited scripts</p>
                               <p className="text-foreground">• Up to 100 HWIDs per script</p>
                               <p className="text-foreground">• Advanced protection</p>
+                              <p className="text-foreground">• Discord webhook logging</p>
+                              <p className="text-foreground">• Public access mode</p>
                             </>
                           ) : (
                             <>
                               <p className="text-foreground">• Unlimited scripts</p>
                               <p className="text-foreground">• Unlimited HWIDs per script</p>
                               <p className="text-foreground">• Enterprise-grade protection</p>
+                              <p className="text-foreground">• Discord webhook logging</p>
+                              <p className="text-foreground">• Public access mode</p>
                               <p className="text-foreground">• Custom branding</p>
                             </>
                           )}

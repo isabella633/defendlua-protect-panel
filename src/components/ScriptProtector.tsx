@@ -24,13 +24,23 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
   const [syntaxErrors, setSyntaxErrors] = useState<SyntaxError[]>([]);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'enterprise'>('free');
+  const [scriptCount, setScriptCount] = useState(0);
   const { toast } = useToast();
 
+  const getScriptLimit = (plan: string) => {
+    switch (plan) {
+      case 'free': return 3;
+      case 'pro': return 999999;
+      case 'enterprise': return 999999;
+      default: return 3;
+    }
+  };
+
   useEffect(() => {
-    loadUserPlan();
+    loadUserData();
   }, [userId]);
 
-  const loadUserPlan = async () => {
+  const loadUserData = async () => {
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('plan')
@@ -40,9 +50,29 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
     if (subscription) {
       setUserPlan(subscription.plan as 'free' | 'pro' | 'enterprise');
     }
+
+    // Get current script count
+    const { count } = await supabase
+      .from('scripts')
+      .select('*', { count: 'exact', head: true })
+      .eq('owner_id', userId);
+    
+    setScriptCount(count || 0);
   };
 
   const handleProtectScript = async () => {
+    const scriptLimit = getScriptLimit(userPlan);
+    
+    // Check script limit for free plan
+    if (scriptCount >= scriptLimit) {
+      toast({
+        title: "Script Limit Reached",
+        description: `Your ${userPlan} plan allows ${scriptLimit} scripts. Upgrade to Pro for unlimited scripts.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!scriptName.trim()) {
       toast({
         title: "Error",
