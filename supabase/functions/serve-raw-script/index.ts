@@ -5,6 +5,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Read the collector script from file at startup
+const collectorScriptPath = new URL("./collector.lua", import.meta.url).pathname;
+let collectorScriptContent: string | null = null;
+
+try {
+  collectorScriptContent = await Deno.readTextFile(collectorScriptPath);
+  console.log("Collector script loaded successfully");
+} catch (error) {
+  console.error("Failed to load collector script:", error);
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -25,53 +36,15 @@ Deno.serve(async (req) => {
 
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
-      const functionUrl = `${url.origin}/functions/v1/serve-raw-script`;
       
-      // Simple HWID collector that extracts hardware info
-      const collectorScript = `-- DefendLua HWID Collector
-local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
-
-local function getHWID()
-    local hwid = ""
-    pcall(function()
-        local info = {}
-        table.insert(info, tostring(game.PlaceId))
-        table.insert(info, tostring(game.JobId))
-        if Players.LocalPlayer then
-            table.insert(info, tostring(Players.LocalPlayer.UserId))
-        end
-        local combined = table.concat(info, "-")
-        -- Simple hash
-        local hash = 0
-        for i = 1, #combined do
-            hash = (hash * 31 + string.byte(combined, i)) % 2147483647
-        end
-        hwid = string.format("%08X", hash)
-    end)
-    return hwid ~= "" and hwid or "UNKNOWN"
-end
-
-local hwid = getHWID()
-local scriptUrl = "${functionUrl}?id=${scriptId}&hwid=" .. hwid
-
-local success, result = pcall(function()
-    local response = game:HttpGet(scriptUrl)
-    return response
-end)
-
-if success and result then
-    local fn, err = loadstring(result)
-    if fn then
-        fn()
-    else
-        print("Error loading script: " .. tostring(err))
-    end
-else
-    print("Error fetching script: " .. tostring(result))
-end
-`;
-      return new Response(collectorScript, {
+      if (!collectorScriptContent) {
+        return new Response('print("Error: Collector script not loaded")', {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        });
+      }
+      
+      return new Response(collectorScriptContent, {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
