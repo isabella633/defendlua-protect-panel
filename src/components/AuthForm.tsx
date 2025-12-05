@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,18 @@ import { Shield, Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// Zod validation schemas
+const loginSchema = z.object({
+  email: z.string().trim().email("Please enter a valid email address").max(255, "Email must be less than 255 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters").max(128, "Password must be less than 128 characters"),
+});
+
+const signupSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().trim().email("Please enter a valid email address").max(255, "Email must be less than 255 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters").max(128, "Password must be less than 128 characters"),
+});
+
 interface AuthFormProps {
   onSuccess: () => void;
   onBack: () => void;
@@ -15,26 +28,43 @@ interface AuthFormProps {
 
 const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>, type: 'login' | 'signup') => {
     e.preventDefault();
     setIsLoading(true);
+    setErrors({});
     
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     
     try {
+      // Validate input with Zod before sending to Supabase
       if (type === 'signup') {
         const name = formData.get('name') as string;
+        const validation = signupSchema.safeParse({ name, email, password });
+        
+        if (!validation.success) {
+          const fieldErrors: Record<string, string> = {};
+          validation.error.errors.forEach((err) => {
+            if (err.path[0]) {
+              fieldErrors[err.path[0] as string] = err.message;
+            }
+          });
+          setErrors(fieldErrors);
+          setIsLoading(false);
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email: validation.data.email,
+          password: validation.data.password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
-              full_name: name,
+              full_name: validation.data.name,
             }
           }
         });
@@ -46,9 +76,23 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
           description: "You have successfully signed up to DefendLua.",
         });
       } else {
+        const validation = loginSchema.safeParse({ email, password });
+        
+        if (!validation.success) {
+          const fieldErrors: Record<string, string> = {};
+          validation.error.errors.forEach((err) => {
+            if (err.path[0]) {
+              fieldErrors[err.path[0] as string] = err.message;
+            }
+          });
+          setErrors(fieldErrors);
+          setIsLoading(false);
+          return;
+        }
+
         const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: validation.data.email,
+          password: validation.data.password,
         });
         
         if (error) throw error;
@@ -113,10 +157,11 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                         name="email"
                         type="email"
                         placeholder="your@email.com"
-                        className="pl-10"
+                        className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
                         required
                       />
                     </div>
+                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
@@ -127,11 +172,12 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                         name="password"
                         type="password"
                         placeholder="Enter your password"
-                        className="pl-10"
+                        className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
                         required
                         minLength={6}
                       />
                     </div>
+                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                   </div>
                   <Button
                     type="submit" 
@@ -163,10 +209,11 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                         name="name"
                         type="text"
                         placeholder="John Doe"
-                        className="pl-10"
+                        className={`pl-10 ${errors.name ? 'border-destructive' : ''}`}
                         required
                       />
                     </div>
+                    {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
@@ -177,10 +224,11 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                         name="email"
                         type="email"
                         placeholder="your@email.com"
-                        className="pl-10"
+                        className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
                         required
                       />
                     </div>
+                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
@@ -191,11 +239,12 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                         name="password"
                         type="password"
                         placeholder="Create a strong password"
-                        className="pl-10"
+                        className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
                         required
                         minLength={6}
                       />
                     </div>
+                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                   </div>
                   <Button 
                     type="submit" 
