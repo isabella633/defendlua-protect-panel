@@ -139,11 +139,19 @@ const Purchase = () => {
               {[
                 "Unlimited scripts",
                 "Up to 100 HWIDs per script",
-                "Advanced analytics",
+                "🔔 Discord webhook logging",
+                "Real-time access notifications",
+                "Public access mode (auto-whitelist)",
+                "HWID whitelist management",
+                "IP whitelist management",
+                "HWID blacklist management",
+                "Advanced analytics dashboard",
                 "Priority support",
-                "30-day access logs",
+                "30-day log retention",
                 "Custom branding",
                 "API access",
+                "100 AI questions per session",
+                "Priority AI responses (2000 tokens)",
               ].map((feature, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
