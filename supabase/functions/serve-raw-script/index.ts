@@ -5,91 +5,55 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple HWID collector script - collects hardware ID and calls back with it
-const collectorScriptContent = `-- DefendLua HWID Collector v2.0
-local HttpService = game:GetService("HttpService")
+// Generate collector script with embedded script ID
+const generateCollectorScript = (scriptId: string) => `-- DefendLua HWID Collector v2.1
 local Players = game:GetService("Players")
-local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 
--- Get HWID using multiple methods for reliability
+local SCRIPT_ID = "${scriptId}"
+
 local function getHWID()
     local hwid = nil
     
-    -- Method 1: Try executor's HWID function
     pcall(function()
-        if identifyexecutor then
-            local name, _ = identifyexecutor()
-            if gethwid then hwid = gethwid() end
-            if not hwid and getexecutorhwid then hwid = getexecutorhwid() end
-            if not hwid and HWID then hwid = HWID end
-        end
+        if gethwid then hwid = gethwid() end
+        if not hwid and getexecutorhwid then hwid = getexecutorhwid() end
+        if not hwid and HWID then hwid = HWID end
     end)
     
-    -- Method 2: Fallback to game-based identifier
     if not hwid then
         pcall(function()
             local player = Players.LocalPlayer
             if player then
-                hwid = tostring(player.UserId) .. "_" .. tostring(game.PlaceId) .. "_" .. tostring(game.JobId):sub(1, 8)
+                hwid = tostring(player.UserId) .. "_" .. tostring(game.PlaceId)
             end
         end)
     end
     
-    -- Method 3: Final fallback
     if not hwid then
-        hwid = "UNKNOWN_" .. tostring(tick())
+        hwid = "FALLBACK_" .. tostring(math.floor(tick()))
     end
     
     return hwid
 end
 
--- Get current script URL parameters
-local scriptUrl = nil
-pcall(function()
-    scriptUrl = getgenv().__DEFENDLUA_SCRIPT_URL or nil
+local hwid = getHWID()
+local url = "https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=" .. SCRIPT_ID .. "&key=" .. hwid
+
+local success, result = pcall(function()
+    return game:HttpGet(url)
 end)
 
--- Parse script ID from URL if available
-local scriptId = nil
-if scriptUrl then
-    scriptId = scriptUrl:match("[?&]id=([^&]+)")
-end
-
--- If no script URL stored, we need to get it from the loadstring call
-if not scriptId then
-    -- The script ID should be passed in the original loadstring URL
-    local args = {...}
-    if args[1] then
-        scriptId = tostring(args[1])
-    end
-end
-
-local hwid = getHWID()
-
-if scriptId and hwid then
-    local baseUrl = "https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script"
-    local fullUrl = baseUrl .. "?id=" .. scriptId .. "&key=" .. hwid
-    
-    local success, result = pcall(function()
-        return game:HttpGet(fullUrl)
-    end)
-    
-    if success and result then
-        local fn, err = loadstring(result)
-        if fn then
-            fn()
-        else
-            warn("[DefendLua] Script load error: " .. tostring(err))
-        end
+if success and result then
+    local fn, err = loadstring(result)
+    if fn then
+        fn()
     else
-        warn("[DefendLua] Failed to fetch script: " .. tostring(result))
+        warn("[DefendLua] Script error: " .. tostring(err))
     end
 else
-    warn("[DefendLua] Missing script ID or HWID")
+    warn("[DefendLua] Fetch failed: " .. tostring(result))
 end
 `;
-
-console.log("Collector script embedded successfully");
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -111,15 +75,9 @@ Deno.serve(async (req) => {
 
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
-
-      if (!collectorScriptContent) {
-        return new Response('print("Error: Collector script not loaded")', {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
-        });
-      }
-
-      return new Response(collectorScriptContent, {
+      
+      const collectorScript = generateCollectorScript(scriptId);
+      return new Response(collectorScript, {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
