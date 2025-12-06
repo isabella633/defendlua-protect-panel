@@ -5,117 +5,267 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Moonsec/LuArmor-style heavy obfuscation for collector script
-const generateCollectorScript = (scriptId: string) => {
-  // String encryption using XOR cipher with rotating key
-  const encryptString = (str: string, key: number): number[] => {
-    const chars: number[] = [];
-    for (let i = 0; i < str.length; i++) {
-      chars.push(str.charCodeAt(i) ^ ((key + i * 7) % 256));
-    }
-    return chars;
-  };
+// ═══════════════════════════════════════════════════════════════════════════════
+// MoonSec-Style Obfuscated Loader Generator v4.0
+// Professional anti-exploit protection with layered obfuscation
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  const key = Math.floor(Math.random() * 200) + 50;
-  const scriptIdEnc = encryptString(scriptId, key);
-  const urlBase = encryptString(`https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=`, key);
-  const keyParam = encryptString(`&key=`, key);
+const generateCollectorScript = (scriptId: string): string => {
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SECTION 1: Encryption Engine
+  // ─────────────────────────────────────────────────────────────────────────────
   
-  // Generate random variable names - MUST start with a letter
-  const randVar = () => {
-    const startChars = 'IlOQZXYWVUCqzxywvuc'; // Letters only for start
-    const midChars = 'Il1O0QqZzXxYyWwVvUuCc'; // Can include confusing chars after
-    let result = startChars[Math.floor(Math.random() * startChars.length)];
-    for (let i = 0; i < 8 + Math.floor(Math.random() * 5); i++) {
-      result += midChars[Math.floor(Math.random() * midChars.length)];
+  // Primary XOR encryption with rotating key and salt
+  const encryptString = (str: string, primaryKey: number, salt: number): number[] => {
+    const encrypted: number[] = [];
+    for (let i = 0; i < str.length; i++) {
+      const rotatingKey = (primaryKey + (i * 7) + (salt * 3)) % 256;
+      encrypted.push(str.charCodeAt(i) ^ rotatingKey);
     }
-    return result;
+    return encrypted;
   };
 
-  // Create all variable names upfront
-  const vars: Record<string, string> = {};
-  const varNames = [
-    'xorFn', 'chrFn', 'concatFn', 'keyVal', 'scriptIdData', 'urlData', 'keyParamData',
-    'decryptFn', 'resultArr', 'idx', 'val', 'gameRef', 'svcFn', 'playersRef', 'playerRef',
-    'hwidVal', 'getHwidFn', 'tostrFn', 'floorFn', 'tickFn', 'pcallFn', 'loadstrFn', 
-    'warnFn', 'execFn', 'urlStr', 'respStr', 'successBool', 'funcRef', 'errMsg',
-    'junkA', 'junkB', 'loopIdx', 'tempVar', 'coroRef'
-  ];
-  varNames.forEach(name => vars[name] = randVar());
+  // Secondary layer encryption for extra protection
+  const encryptWithShuffle = (str: string, key: number): { data: number[], map: number[] } => {
+    const encrypted = encryptString(str, key, 13);
+    // Create index mapping for shuffle
+    const indices = encrypted.map((_, i) => i);
+    // Fisher-Yates shuffle with seeded random
+    const seededRandom = (seed: number, i: number) => ((seed * 1103515245 + 12345 + i) >>> 16) % 32768;
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = seededRandom(key, i) % (i + 1);
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    return { data: encrypted, map: indices };
+  };
 
-  // Build the obfuscated Lua script - clean and valid syntax
-  return `local ${vars.xorFn}=bit32 and bit32.bxor or function(a,b)
-local r,p=0,1
-while a>0 or b>0 do
-local x,y=a%2,b%2
-if x~=y then r=r+p end
-a,b,p=math.floor(a/2),math.floor(b/2),p*2
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SECTION 2: Variable Name Obfuscation Engine
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  // MoonSec-style confusing variable names (Il1O0 pattern)
+  const usedNames = new Set<string>();
+  const generateObfuscatedName = (minLen = 12, maxLen = 18): string => {
+    const startChars = 'IlOoQqZzXxYyWwVvUuCc'; // Must start with letter
+    const bodyChars = 'Il1O0QqZzXxYyWwVvUuCc_'; // Body can include confusing chars
+    
+    let name: string;
+    let attempts = 0;
+    do {
+      const length = minLen + Math.floor(Math.random() * (maxLen - minLen));
+      name = startChars[Math.floor(Math.random() * startChars.length)];
+      for (let i = 1; i < length; i++) {
+        name += bodyChars[Math.floor(Math.random() * bodyChars.length)];
+      }
+      attempts++;
+    } while (usedNames.has(name) && attempts < 100);
+    
+    usedNames.add(name);
+    return name;
+  };
+
+  // Generate all variable names upfront
+  const v: Record<string, string> = {};
+  const varList = [
+    // Core functions
+    'xorFunc', 'chrFunc', 'concatFunc', 'byteFunc', 'lenFunc', 'subFunc',
+    // Encryption related
+    'primaryKey', 'saltVal', 'decryptFunc', 'decryptResult', 'decryptIdx', 'decryptVal', 'decryptTemp',
+    // Data arrays
+    'urlData', 'scriptIdData', 'keyParamData', 'hwidPrefixData',
+    // Game references
+    'gameRef', 'svcFunc', 'playersRef', 'playerRef', 'httpSvc',
+    // Utility functions
+    'tostrFunc', 'floorFunc', 'randomFunc', 'tickFunc', 'waitFunc',
+    'pcallFunc', 'loadstrFunc', 'warnFunc', 'printFunc', 'typeFunc',
+    // HWID related
+    'hwidVal', 'getHwidFunc', 'hwidFallback', 'hwidCheck',
+    // Execution
+    'mainExec', 'urlBuilder', 'fullUrl', 'httpResponse', 'successFlag', 'loadedFunc', 'loadErr',
+    // Coroutine
+    'coroThread', 'coroResult', 'coroErr',
+    // Junk variables
+    'junk1', 'junk2', 'junk3', 'junk4', 'junk5', 'junk6', 'junk7', 'junk8',
+    'deadLoop', 'fakeTable', 'ghostFunc', 'phantomVal', 'shadowArr',
+    // Loop variables  
+    'loopI', 'loopJ', 'loopK', 'tempA', 'tempB', 'tempC',
+    // Anti-tamper
+    'integrityCheck', 'envCheck', 'antiDebug'
+  ];
+  varList.forEach(name => v[name] = generateObfuscatedName());
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SECTION 3: Encrypt All Strings
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  const primaryKey = Math.floor(Math.random() * 200) + 50;
+  const saltVal = Math.floor(Math.random() * 50) + 10;
+  
+  const urlBase = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=`;
+  const keyParamStr = `&key=`;
+  const hwidPrefix = ``;
+  
+  const urlEncrypted = encryptString(urlBase, primaryKey, saltVal);
+  const scriptIdEncrypted = encryptString(scriptId, primaryKey, saltVal);
+  const keyParamEncrypted = encryptString(keyParamStr, primaryKey, saltVal);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SECTION 4: Junk Code Generator
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  const generateJunkBlock = (complexity: number): string => {
+    const blocks: string[] = [];
+    
+    // Dead loop that does nothing
+    blocks.push(`local ${v.junk1}=0;for ${v.loopI}=1,${Math.floor(Math.random() * 20) + 5} do ${v.junk1}=${v.junk1}+(${v.loopI}*0);end`);
+    
+    // Fake table population
+    blocks.push(`local ${v.fakeTable}={};for ${v.loopJ}=1,${Math.floor(Math.random() * 15) + 3} do ${v.fakeTable}[${v.loopJ}]=((${v.loopJ}*${Math.floor(Math.random() * 999)})*0);end`);
+    
+    // Ghost function that returns nothing useful
+    blocks.push(`local ${v.ghostFunc}=(function(${v.tempA},${v.tempB})local ${v.tempC}=(${v.tempA} or 0)+(${v.tempB} or 0);return ${v.tempC}*0;end)`);
+    
+    // Phantom calculation
+    blocks.push(`local ${v.phantomVal}=(function()local ${v.shadowArr}={${Array(8).fill(0).map(() => Math.floor(Math.random() * 999)).join(',')}};local ${v.tempA}=0;for ${v.loopK},${v.tempB} in pairs(${v.shadowArr}) do ${v.tempA}=${v.tempA}+(${v.tempB}*0);end;return ${v.tempA};end)()`);
+    
+    // Dead coroutine
+    blocks.push(`local ${v.junk5}=coroutine.wrap(function()local ${v.junk6}=0;for ${v.loopI}=1,${Math.floor(Math.random() * 5) + 2} do ${v.junk6}=${v.junk6}+0;coroutine.yield();end;return ${v.junk6};end);pcall(function()for ${v.loopJ}=1,${Math.floor(Math.random() * 3) + 1} do ${v.junk5}();end;end)`);
+    
+    // Math garbage
+    blocks.push(`local ${v.junk7}=math.floor(math.random()*0)*${Math.floor(Math.random() * 9999)}`);
+    blocks.push(`local ${v.junk8}=(${Math.floor(Math.random() * 999)}*0)+(${Math.floor(Math.random() * 999)}*0)`);
+    
+    // Shuffle and return based on complexity
+    const shuffled = blocks.sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(complexity, blocks.length)).join('\n');
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SECTION 5: Generate Anti-Tamper Checks
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  const antiTamperBlock = `
+local ${v.integrityCheck}=(function()
+local ${v.tempA}=0
+for ${v.loopI}=1,${primaryKey} do ${v.tempA}=${v.tempA}+1 end
+return ${v.tempA}==${primaryKey}
+end)()
+local ${v.envCheck}=(function()
+return type(game)=="userdata" and type(game.GetService)=="function"
+end)()
+if not ${v.integrityCheck} or not ${v.envCheck} then return end`;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SECTION 6: Build The Obfuscated Lua Script
+  // ─────────────────────────────────────────────────────────────────────────────
+  
+  const headerComment = `--[[${'═'.repeat(60)}]]
+--[[ DefendLua Protection System v4.0 - MoonSec Style ]]
+--[[ ${Array(56).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('')} ]]
+--[[${'═'.repeat(60)}]]`;
+
+  const luaScript = `${headerComment}
+${generateJunkBlock(2)}
+local ${v.xorFunc}=bit32 and bit32.bxor or function(${v.tempA},${v.tempB})
+local ${v.decryptResult},${v.decryptIdx}=0,1
+while ${v.tempA}>0 or ${v.tempB}>0 do
+local ${v.loopI},${v.loopJ}=${v.tempA}%2,${v.tempB}%2
+if ${v.loopI}~=${v.loopJ} then ${v.decryptResult}=${v.decryptResult}+${v.decryptIdx} end
+${v.tempA},${v.tempB},${v.decryptIdx}=math.floor(${v.tempA}/2),math.floor(${v.tempB}/2),${v.decryptIdx}*2
 end
-return r
+return ${v.decryptResult}
 end
-local ${vars.chrFn}=string.char
-local ${vars.concatFn}=table.concat
-local ${vars.tostrFn}=tostring
-local ${vars.floorFn}=math.floor
-local ${vars.tickFn}=tick or os.clock
-local ${vars.pcallFn}=pcall
-local ${vars.loadstrFn}=loadstring
-local ${vars.warnFn}=warn or print
-local ${vars.gameRef}=game
-local ${vars.svcFn}=${vars.gameRef}.GetService
-local ${vars.playersRef}=${vars.svcFn}(${vars.gameRef},"Players")
-local ${vars.keyVal}=${key}
-local ${vars.scriptIdData}={${scriptIdEnc.join(',')}}
-local ${vars.urlData}={${urlBase.join(',')}}
-local ${vars.keyParamData}={${keyParam.join(',')}}
-local ${vars.decryptFn}=function(${vars.tempVar})
-local ${vars.resultArr}={}
-for ${vars.idx}=1,#${vars.tempVar} do
-local ${vars.val}=${vars.tempVar}[${vars.idx}]
-${vars.resultArr}[${vars.idx}]=${vars.chrFn}(${vars.xorFn}(${vars.val},(${vars.keyVal}+(${vars.idx}-1)*7)%256))
+${generateJunkBlock(2)}
+local ${v.chrFunc}=string.char
+local ${v.concatFunc}=table.concat
+local ${v.byteFunc}=string.byte
+local ${v.lenFunc}=string.len
+local ${v.subFunc}=string.sub
+local ${v.tostrFunc}=tostring
+local ${v.floorFunc}=math.floor
+local ${v.randomFunc}=math.random
+local ${v.tickFunc}=tick or os.clock
+local ${v.pcallFunc}=pcall
+local ${v.loadstrFunc}=loadstring
+local ${v.warnFunc}=warn or print
+local ${v.typeFunc}=type
+${generateJunkBlock(2)}
+local ${v.gameRef}=game
+local ${v.svcFunc}=${v.gameRef}.GetService
+local ${v.playersRef}=${v.svcFunc}(${v.gameRef},"Players")
+${antiTamperBlock}
+${generateJunkBlock(3)}
+local ${v.primaryKey}=${primaryKey}
+local ${v.saltVal}=${saltVal}
+local ${v.urlData}={${urlEncrypted.join(',')}}
+local ${v.scriptIdData}={${scriptIdEncrypted.join(',')}}
+local ${v.keyParamData}={${keyParamEncrypted.join(',')}}
+${generateJunkBlock(2)}
+local ${v.decryptFunc}=function(${v.decryptTemp})
+local ${v.decryptResult}={}
+for ${v.decryptIdx}=1,#${v.decryptTemp} do
+local ${v.decryptVal}=${v.decryptTemp}[${v.decryptIdx}]
+local ${v.loopK}=(${v.primaryKey}+((${v.decryptIdx}-1)*7)+(${v.saltVal}*3))%256
+${v.decryptResult}[${v.decryptIdx}]=${v.chrFunc}(${v.xorFunc}(${v.decryptVal},${v.loopK}))
 end
-return ${vars.concatFn}(${vars.resultArr})
+return ${v.concatFunc}(${v.decryptResult})
 end
-local ${vars.getHwidFn}=function()
-local ${vars.hwidVal}=nil
-${vars.pcallFn}(function()
-if gethwid then ${vars.hwidVal}=gethwid() end
-if not ${vars.hwidVal} and getexecutorhwid then ${vars.hwidVal}=getexecutorhwid() end
-if not ${vars.hwidVal} and HWID then ${vars.hwidVal}=HWID end
+${generateJunkBlock(2)}
+local ${v.getHwidFunc}=function()
+local ${v.hwidVal}=nil
+${v.pcallFunc}(function()
+if gethwid then ${v.hwidVal}=gethwid() end
+if not ${v.hwidVal} and getexecutorhwid then ${v.hwidVal}=getexecutorhwid() end
+if not ${v.hwidVal} and get_hwid then ${v.hwidVal}=get_hwid() end
+if not ${v.hwidVal} and HWID then ${v.hwidVal}=HWID end
+if not ${v.hwidVal} and Cryptic then ${v.pcallFunc}(function() ${v.hwidVal}=Cryptic:GetHWID() end) end
+if not ${v.hwidVal} and syn then ${v.pcallFunc}(function() ${v.hwidVal}=syn.hwid() end) end
+if not ${v.hwidVal} and fluxus then ${v.pcallFunc}(function() ${v.hwidVal}=fluxus:GetHWID() end) end
 end)
-if not ${vars.hwidVal} then
-${vars.pcallFn}(function()
-local ${vars.playerRef}=${vars.playersRef}.LocalPlayer
-if ${vars.playerRef} then
-${vars.hwidVal}=${vars.tostrFn}(${vars.playerRef}.UserId).."_"..${vars.tostrFn}(${vars.gameRef}.PlaceId)
+if not ${v.hwidVal} then
+${v.pcallFunc}(function()
+local ${v.playerRef}=${v.playersRef}.LocalPlayer
+if ${v.playerRef} then
+${v.hwidVal}=${v.tostrFunc}(${v.playerRef}.UserId).."_"..${v.tostrFunc}(${v.gameRef}.PlaceId).."_"..${v.tostrFunc}(${v.gameRef}.JobId):sub(1,8)
 end
 end)
 end
-if not ${vars.hwidVal} then
-${vars.hwidVal}="FB_"..${vars.tostrFn}(${vars.floorFn}(${vars.tickFn}()*1000))
+if not ${v.hwidVal} then
+${v.hwidVal}="DL_"..${v.tostrFunc}(${v.floorFunc}(${v.tickFunc}()*10000)).."_"..${v.tostrFunc}(${v.floorFunc}(${v.randomFunc}()*99999))
 end
-return ${vars.hwidVal}
+return ${v.hwidVal}
 end
-local ${vars.execFn}=function()
-local ${vars.hwidVal}=${vars.getHwidFn}()
-local ${vars.urlStr}=${vars.decryptFn}(${vars.urlData})..${vars.decryptFn}(${vars.scriptIdData})..${vars.decryptFn}(${vars.keyParamData})..${vars.hwidVal}
-local ${vars.successBool},${vars.respStr}=${vars.pcallFn}(function()
-return ${vars.gameRef}:HttpGet(${vars.urlStr})
+${generateJunkBlock(3)}
+local ${v.mainExec}=function()
+local ${v.hwidVal}=${v.getHwidFunc}()
+local ${v.urlBuilder}=${v.decryptFunc}(${v.urlData})
+local ${v.tempA}=${v.decryptFunc}(${v.scriptIdData})
+local ${v.tempB}=${v.decryptFunc}(${v.keyParamData})
+local ${v.fullUrl}=${v.urlBuilder}..${v.tempA}..${v.tempB}..${v.hwidVal}
+local ${v.successFlag},${v.httpResponse}=${v.pcallFunc}(function()
+return ${v.gameRef}:HttpGet(${v.fullUrl})
 end)
-if ${vars.successBool} and ${vars.respStr} then
-local ${vars.funcRef},${vars.errMsg}=${vars.loadstrFn}(${vars.respStr})
-if ${vars.funcRef} then
-${vars.funcRef}()
+if ${v.successFlag} and ${v.httpResponse} and ${v.lenFunc}(${v.httpResponse})>0 then
+local ${v.loadedFunc},${v.loadErr}=${v.pcallFunc}(${v.loadstrFunc},${v.httpResponse})
+if ${v.loadedFunc} and ${v.typeFunc}(${v.loadErr})=="function" then
+local ${v.tempC}=${v.pcallFunc}(${v.loadErr})
+if not ${v.tempC} then
+${v.warnFunc}("[DL] Execution error")
+end
 else
-${vars.warnFn}("[DefendLua] "..${vars.tostrFn}(${vars.errMsg} or "Error"))
+${v.warnFunc}("[DL] Load error: "..${v.tostrFunc}(${v.loadErr} or "unknown"))
 end
 else
-${vars.warnFn}("[DefendLua] Request failed")
+${v.warnFunc}("[DL] Request failed: "..${v.tostrFunc}(${v.httpResponse} or "timeout"))
 end
 end
-local ${vars.coroRef}=coroutine.create(${vars.execFn})
-coroutine.resume(${vars.coroRef})
+${generateJunkBlock(2)}
+local ${v.coroThread}=coroutine.create(${v.mainExec})
+local ${v.coroResult},${v.coroErr}=coroutine.resume(${v.coroThread})
+if not ${v.coroResult} then ${v.warnFunc}("[DL] "..${v.tostrFunc}(${v.coroErr})) end
 `;
+
+  return luaScript;
 };
 
 Deno.serve(async (req) => {
