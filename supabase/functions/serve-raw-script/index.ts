@@ -21,12 +21,13 @@ const generateCollectorScript = (scriptId: string) => {
   const urlBase = encryptString(`https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=`, key);
   const keyParam = encryptString(`&key=`, key);
   
-  // Generate random variable names (LuArmor style - mixed Il1O0)
+  // Generate random variable names - MUST start with a letter
   const randVar = () => {
-    const chars = 'Il1O0QqZzXxYyWwVvUuCc';
-    let result = chars[Math.floor(Math.random() * 5)]; // Start with letter
-    for (let i = 0; i < 10 + Math.floor(Math.random() * 6); i++) {
-      result += chars[Math.floor(Math.random() * chars.length)];
+    const startChars = 'IlOQZXYWVUCqzxywvuc'; // Letters only for start
+    const midChars = 'Il1O0QqZzXxYyWwVvUuCc'; // Can include confusing chars after
+    let result = startChars[Math.floor(Math.random() * startChars.length)];
+    for (let i = 0; i < 8 + Math.floor(Math.random() * 5); i++) {
+      result += midChars[Math.floor(Math.random() * midChars.length)];
     }
     return result;
   };
@@ -34,27 +35,16 @@ const generateCollectorScript = (scriptId: string) => {
   // Create all variable names upfront
   const vars: Record<string, string> = {};
   const varNames = [
-    'xorFn', 'chrFn', 'concatFn', 'key', 'scriptIdData', 'urlData', 'keyParamData',
-    'decryptFn', 'result', 'i', 'v', 'game', 'svc', 'players', 'player',
-    'hwid', 'getHwidFn', 'tostr', 'floor', 'tick', 'pcallFn', 'loadstrFn', 
-    'warnFn', 'execFn', 'url', 'response', 'success', 'fn', 'err',
-    'junk1', 'junk2', 'junk3', 'junk4', 'loop', 'tmp', 'coro'
+    'xorFn', 'chrFn', 'concatFn', 'keyVal', 'scriptIdData', 'urlData', 'keyParamData',
+    'decryptFn', 'resultArr', 'idx', 'val', 'gameRef', 'svcFn', 'playersRef', 'playerRef',
+    'hwidVal', 'getHwidFn', 'tostrFn', 'floorFn', 'tickFn', 'pcallFn', 'loadstrFn', 
+    'warnFn', 'execFn', 'urlStr', 'respStr', 'successBool', 'funcRef', 'errMsg',
+    'junkA', 'junkB', 'loopIdx', 'tempVar', 'coroRef'
   ];
   varNames.forEach(name => vars[name] = randVar());
 
-  // Generate junk code that actually runs without errors
-  const junk = [
-    `local ${vars.junk1}=0;for ${vars.loop}=1,${Math.floor(Math.random()*10)+5} do ${vars.junk1}=${vars.junk1}+(${vars.loop}*0);end;`,
-    `local ${vars.junk2}={};for ${vars.loop}=1,${Math.floor(Math.random()*8)+3} do ${vars.junk2}[${vars.loop}]=(${vars.loop}*0);end;`,
-    `local ${vars.junk3}=(function()return (${Math.floor(Math.random()*999)}*0);end)();`,
-    `local ${vars.junk4}=coroutine.wrap(function()return 0;end);pcall(${vars.junk4});`
-  ];
-
-  // Build the obfuscated Lua script
-  return `--[[${'='.repeat(40)} DefendLua v3.1 ${'='.repeat(40)}]]
---[[${Array(80).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('')}]]
-${junk[0]}
-local ${vars.xorFn}=bit32 and bit32.bxor or function(a,b)
+  // Build the obfuscated Lua script - clean and valid syntax
+  return `local ${vars.xorFn}=bit32 and bit32.bxor or function(a,b)
 local r,p=0,1
 while a>0 or b>0 do
 local x,y=a%2,b%2
@@ -63,71 +53,68 @@ a,b,p=math.floor(a/2),math.floor(b/2),p*2
 end
 return r
 end
-${junk[1]}
 local ${vars.chrFn}=string.char
 local ${vars.concatFn}=table.concat
-local ${vars.tostr}=tostring
-local ${vars.floor}=math.floor
-local ${vars.tick}=tick or os.clock
+local ${vars.tostrFn}=tostring
+local ${vars.floorFn}=math.floor
+local ${vars.tickFn}=tick or os.clock
 local ${vars.pcallFn}=pcall
 local ${vars.loadstrFn}=loadstring
 local ${vars.warnFn}=warn or print
-${junk[2]}
-local ${vars.game}=game
-local ${vars.svc}=${vars.game}.GetService
-local ${vars.players}=${vars.svc}(${vars.game},"Players")
-${junk[3]}
-local ${vars.key}=${key}
+local ${vars.gameRef}=game
+local ${vars.svcFn}=${vars.gameRef}.GetService
+local ${vars.playersRef}=${vars.svcFn}(${vars.gameRef},"Players")
+local ${vars.keyVal}=${key}
 local ${vars.scriptIdData}={${scriptIdEnc.join(',')}}
 local ${vars.urlData}={${urlBase.join(',')}}
 local ${vars.keyParamData}={${keyParam.join(',')}}
-local ${vars.decryptFn}=function(${vars.tmp})
-local ${vars.result}={}
-for ${vars.i}=1,#${vars.tmp} do
-local ${vars.v}=${vars.tmp}[${vars.i}]
-${vars.result}[${vars.i}]=${vars.chrFn}(${vars.xorFn}(${vars.v},(${vars.key}+(${vars.i}-1)*7)%256))
+local ${vars.decryptFn}=function(${vars.tempVar})
+local ${vars.resultArr}={}
+for ${vars.idx}=1,#${vars.tempVar} do
+local ${vars.val}=${vars.tempVar}[${vars.idx}]
+${vars.resultArr}[${vars.idx}]=${vars.chrFn}(${vars.xorFn}(${vars.val},(${vars.keyVal}+(${vars.idx}-1)*7)%256))
 end
-return ${vars.concatFn}(${vars.result})
+return ${vars.concatFn}(${vars.resultArr})
 end
 local ${vars.getHwidFn}=function()
-local ${vars.hwid}=nil
+local ${vars.hwidVal}=nil
 ${vars.pcallFn}(function()
-if gethwid then ${vars.hwid}=gethwid()end
-if not ${vars.hwid} and getexecutorhwid then ${vars.hwid}=getexecutorhwid()end
-if not ${vars.hwid} and HWID then ${vars.hwid}=HWID end
+if gethwid then ${vars.hwidVal}=gethwid() end
+if not ${vars.hwidVal} and getexecutorhwid then ${vars.hwidVal}=getexecutorhwid() end
+if not ${vars.hwidVal} and HWID then ${vars.hwidVal}=HWID end
 end)
-if not ${vars.hwid} then
+if not ${vars.hwidVal} then
 ${vars.pcallFn}(function()
-local ${vars.player}=${vars.players}.LocalPlayer
-if ${vars.player} then
-${vars.hwid}=${vars.tostr}(${vars.player}.UserId).."_"..${vars.tostr}(${vars.game}.PlaceId)
+local ${vars.playerRef}=${vars.playersRef}.LocalPlayer
+if ${vars.playerRef} then
+${vars.hwidVal}=${vars.tostrFn}(${vars.playerRef}.UserId).."_"..${vars.tostrFn}(${vars.gameRef}.PlaceId)
 end
 end)
 end
-if not ${vars.hwid} then
-${vars.hwid}="FB_"..${vars.tostr}(${vars.floor}(${vars.tick}()*1000))
+if not ${vars.hwidVal} then
+${vars.hwidVal}="FB_"..${vars.tostrFn}(${vars.floorFn}(${vars.tickFn}()*1000))
 end
-return ${vars.hwid}
+return ${vars.hwidVal}
 end
 local ${vars.execFn}=function()
-local ${vars.hwid}=${vars.getHwidFn}()
-local ${vars.url}=${vars.decryptFn}(${vars.urlData})..${vars.decryptFn}(${vars.scriptIdData})..${vars.decryptFn}(${vars.keyParamData})..${vars.hwid}
-local ${vars.success},${vars.response}=${vars.pcallFn}(function()
-return ${vars.game}:HttpGet(${vars.url})
+local ${vars.hwidVal}=${vars.getHwidFn}()
+local ${vars.urlStr}=${vars.decryptFn}(${vars.urlData})..${vars.decryptFn}(${vars.scriptIdData})..${vars.decryptFn}(${vars.keyParamData})..${vars.hwidVal}
+local ${vars.successBool},${vars.respStr}=${vars.pcallFn}(function()
+return ${vars.gameRef}:HttpGet(${vars.urlStr})
 end)
-if ${vars.success} and ${vars.response} then
-local ${vars.fn},${vars.err}=${vars.loadstrFn}(${vars.response})
-if ${vars.fn} then
-${vars.fn}()
+if ${vars.successBool} and ${vars.respStr} then
+local ${vars.funcRef},${vars.errMsg}=${vars.loadstrFn}(${vars.respStr})
+if ${vars.funcRef} then
+${vars.funcRef}()
 else
-${vars.warnFn}("[DefendLua] Error: "..${vars.tostr}(${vars.err} or "unknown"))
+${vars.warnFn}("[DefendLua] "..${vars.tostrFn}(${vars.errMsg} or "Error"))
 end
 else
 ${vars.warnFn}("[DefendLua] Request failed")
 end
 end
-local ${vars.coro}=coroutine.create(${vars.execFn})
-coroutine.resume(${vars.coro})
+local ${vars.coroRef}=coroutine.create(${vars.execFn})
+coroutine.resume(${vars.coroRef})
 `;
 };
 
