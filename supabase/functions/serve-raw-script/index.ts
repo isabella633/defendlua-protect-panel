@@ -6,48 +6,55 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MoonSec-Style Obfuscated Loader Generator v4.0
-// Professional anti-exploit protection with layered obfuscation
+// MoonSec-Style Obfuscated Loader Generator v5.0 - EXTREME EDITION
+// Multi-layer virtualization with control flow flattening
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const generateCollectorScript = (scriptId: string): string => {
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SECTION 1: Encryption Engine
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // SECTION 1: Advanced Encryption Engine
+  // ═══════════════════════════════════════════════════════════════════════════════
   
-  // Primary XOR encryption with rotating key and salt
-  const encryptString = (str: string, primaryKey: number, salt: number): number[] => {
+  // Multi-layer XOR with prime rotation, fibonacci shift, and salt cascade
+  const encryptStringAdvanced = (str: string, keys: number[]): number[] => {
     const encrypted: number[] = [];
+    const fib = [1, 1];
+    for (let i = 2; i < str.length + 10; i++) fib[i] = (fib[i-1] + fib[i-2]) % 256;
+    
     for (let i = 0; i < str.length; i++) {
-      const rotatingKey = (primaryKey + (i * 7) + (salt * 3)) % 256;
-      encrypted.push(str.charCodeAt(i) ^ rotatingKey);
+      const k1 = keys[0];
+      const k2 = keys[1];
+      const k3 = keys[2];
+      const fibShift = fib[i % fib.length];
+      const primeRotation = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29][i % 10];
+      const cascadeKey = (k1 + (i * k2) + (fibShift * k3) + primeRotation) % 256;
+      
+      // Triple XOR with bit manipulation
+      let byte = str.charCodeAt(i);
+      byte = byte ^ cascadeKey;
+      byte = byte ^ ((k1 * (i + 1)) % 256);
+      byte = byte ^ (((k2 + k3) * primeRotation) % 256);
+      encrypted.push(byte);
     }
     return encrypted;
   };
 
-  // Secondary layer encryption for extra protection
-  const encryptWithShuffle = (str: string, key: number): { data: number[], map: number[] } => {
-    const encrypted = encryptString(str, key, 13);
-    // Create index mapping for shuffle
-    const indices = encrypted.map((_, i) => i);
-    // Fisher-Yates shuffle with seeded random
-    const seededRandom = (seed: number, i: number) => ((seed * 1103515245 + 12345 + i) >>> 16) % 32768;
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = seededRandom(key, i) % (i + 1);
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
-    return { data: encrypted, map: indices };
-  };
+  // Generate cryptographic constants
+  const genPrime = () => [31, 37, 41, 43, 47, 53, 59, 61, 67, 71][Math.floor(Math.random() * 10)];
+  const k1 = Math.floor(Math.random() * 200) + 50;
+  const k2 = genPrime();
+  const k3 = Math.floor(Math.random() * 100) + 20;
+  const keys = [k1, k2, k3];
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SECTION 2: Variable Name Obfuscation Engine
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // SECTION 2: Variable Obfuscation Engine - Maximum Confusion
+  // ═══════════════════════════════════════════════════════════════════════════════
   
-  // MoonSec-style confusing variable names (Il1O0 pattern)
   const usedNames = new Set<string>();
-  const generateObfuscatedName = (minLen = 12, maxLen = 18): string => {
-    const startChars = 'IlOoQqZzXxYyWwVvUuCc'; // Must start with letter
-    const bodyChars = 'Il1O0QqZzXxYyWwVvUuCc_'; // Body can include confusing chars
+  const generateObfuscatedName = (minLen = 16, maxLen = 28): string => {
+    // Unicode confusables + standard confusing chars
+    const startChars = 'IlOoQqZzXxYyWwVvUuCcKkSsPpBbDdGgJjNnMmRrTtFfHhLl';
+    const bodyChars = 'Il1O0QqZzXxYyWwVvUuCcKkSsPpBbDdGgJjNnMmRrTtFfHhLl_';
     
     let name: string;
     let attempts = 0;
@@ -55,7 +62,14 @@ const generateCollectorScript = (scriptId: string): string => {
       const length = minLen + Math.floor(Math.random() * (maxLen - minLen));
       name = startChars[Math.floor(Math.random() * startChars.length)];
       for (let i = 1; i < length; i++) {
-        name += bodyChars[Math.floor(Math.random() * bodyChars.length)];
+        // Occasionally add double characters for confusion
+        if (Math.random() > 0.7) {
+          const char = bodyChars[Math.floor(Math.random() * bodyChars.length)];
+          name += char + char;
+          i++;
+        } else {
+          name += bodyChars[Math.floor(Math.random() * bodyChars.length)];
+        }
       }
       attempts++;
     } while (usedNames.has(name) && attempts < 100);
@@ -64,208 +78,312 @@ const generateCollectorScript = (scriptId: string): string => {
     return name;
   };
 
-  // Generate all variable names upfront
+  // Generate massive variable pool
   const v: Record<string, string> = {};
   const varList = [
-    // Core functions
-    'xorFunc', 'chrFunc', 'concatFunc', 'byteFunc', 'lenFunc', 'subFunc',
-    // Encryption related
-    'primaryKey', 'saltVal', 'decryptFunc', 'decryptResult', 'decryptIdx', 'decryptVal', 'decryptTemp',
-    // Data arrays
-    'urlData', 'scriptIdData', 'keyParamData', 'hwidPrefixData',
-    // Game references
-    'gameRef', 'svcFunc', 'playersRef', 'playerRef', 'httpSvc',
-    // Utility functions
-    'tostrFunc', 'floorFunc', 'randomFunc', 'tickFunc', 'waitFunc',
-    'pcallFunc', 'loadstrFunc', 'warnFunc', 'printFunc', 'typeFunc',
-    // HWID related
-    'hwidVal', 'getHwidFunc', 'hwidFallback', 'hwidCheck',
+    // Core VM
+    'vm_state', 'vm_pc', 'vm_stack', 'vm_memory', 'vm_opcodes', 'vm_dispatch', 'vm_execute',
+    'vm_reg_a', 'vm_reg_b', 'vm_reg_c', 'vm_reg_d', 'vm_flags', 'vm_jump_table',
+    // Crypto
+    'crypto_key1', 'crypto_key2', 'crypto_key3', 'crypto_fib', 'crypto_prime', 'crypto_cascade',
+    'decrypt_fn', 'decrypt_result', 'decrypt_idx', 'decrypt_byte', 'decrypt_temp', 'decrypt_xor',
+    // String table (virtualized)
+    'str_table', 'str_decode', 'str_index', 'str_cache', 'str_builder',
+    // Data segments (encoded)
+    'data_seg_1', 'data_seg_2', 'data_seg_3', 'data_seg_4', 'data_seg_5',
+    // Core functions (aliased)
+    'fn_xor', 'fn_chr', 'fn_concat', 'fn_byte', 'fn_len', 'fn_sub', 'fn_type',
+    'fn_tostr', 'fn_floor', 'fn_random', 'fn_tick', 'fn_pcall', 'fn_loadstr',
+    'fn_warn', 'fn_pairs', 'fn_ipairs', 'fn_select', 'fn_unpack', 'fn_rawget',
+    // Game refs
+    'ref_game', 'ref_svc', 'ref_players', 'ref_player', 'ref_http', 'ref_run',
+    // HWID
+    'hwid_val', 'hwid_fn', 'hwid_check', 'hwid_fallback', 'hwid_parts',
     // Execution
-    'mainExec', 'urlBuilder', 'fullUrl', 'httpResponse', 'successFlag', 'loadedFunc', 'loadErr',
+    'exec_main', 'exec_url', 'exec_full', 'exec_resp', 'exec_ok', 'exec_fn', 'exec_err',
+    // Control flow
+    'cf_state', 'cf_next', 'cf_table', 'cf_dispatch', 'cf_loop', 'cf_condition',
+    // Opaque predicates
+    'op_pred_1', 'op_pred_2', 'op_pred_3', 'op_pred_4', 'op_result',
     // Coroutine
-    'coroThread', 'coroResult', 'coroErr',
-    // Junk variables
-    'junk1', 'junk2', 'junk3', 'junk4', 'junk5', 'junk6', 'junk7', 'junk8',
-    'deadLoop', 'fakeTable', 'ghostFunc', 'phantomVal', 'shadowArr',
-    // Loop variables  
-    'loopI', 'loopJ', 'loopK', 'tempA', 'tempB', 'tempC',
-    // Anti-tamper
-    'integrityCheck', 'envCheck', 'antiDebug'
+    'coro_thread', 'coro_result', 'coro_err', 'coro_wrap',
+    // Junk (massive pool)
+    ...Array(50).fill(0).map((_, i) => `junk_${i}`),
+    // Loops
+    ...Array(20).fill(0).map((_, i) => `loop_${i}`),
+    // Temps
+    ...Array(30).fill(0).map((_, i) => `tmp_${i}`),
+    // Anti-analysis
+    'anti_debug', 'anti_tamper', 'env_check', 'integrity', 'checksum', 'watermark'
   ];
   varList.forEach(name => v[name] = generateObfuscatedName());
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SECTION 3: Encrypt All Strings
-  // ─────────────────────────────────────────────────────────────────────────────
-  
-  const primaryKey = Math.floor(Math.random() * 200) + 50;
-  const saltVal = Math.floor(Math.random() * 50) + 10;
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // SECTION 3: Encrypt All Strings with Segmentation
+  // ═══════════════════════════════════════════════════════════════════════════════
   
   const urlBase = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=`;
-  const keyParamStr = `&key=`;
-  const hwidPrefix = ``;
+  const keyParam = `&key=`;
   
-  const urlEncrypted = encryptString(urlBase, primaryKey, saltVal);
-  const scriptIdEncrypted = encryptString(scriptId, primaryKey, saltVal);
-  const keyParamEncrypted = encryptString(keyParamStr, primaryKey, saltVal);
+  // Split URL into segments for extra confusion
+  const urlPart1 = urlBase.slice(0, 20);
+  const urlPart2 = urlBase.slice(20, 45);
+  const urlPart3 = urlBase.slice(45);
+  
+  const enc1 = encryptStringAdvanced(urlPart1, keys);
+  const enc2 = encryptStringAdvanced(urlPart2, keys);
+  const enc3 = encryptStringAdvanced(urlPart3, keys);
+  const encId = encryptStringAdvanced(scriptId, keys);
+  const encKey = encryptStringAdvanced(keyParam, keys);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SECTION 4: Junk Code Generator
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // SECTION 4: Opaque Predicates Generator
+  // ═══════════════════════════════════════════════════════════════════════════════
   
-  const generateJunkBlock = (complexity: number): string => {
-    const blocks: string[] = [];
-    
-    // Dead loop that does nothing
-    blocks.push(`local ${v.junk1}=0;for ${v.loopI}=1,${Math.floor(Math.random() * 20) + 5} do ${v.junk1}=${v.junk1}+(${v.loopI}*0);end`);
-    
-    // Fake table population
-    blocks.push(`local ${v.fakeTable}={};for ${v.loopJ}=1,${Math.floor(Math.random() * 15) + 3} do ${v.fakeTable}[${v.loopJ}]=((${v.loopJ}*${Math.floor(Math.random() * 999)})*0);end`);
-    
-    // Ghost function that returns nothing useful
-    blocks.push(`local ${v.ghostFunc}=(function(${v.tempA},${v.tempB})local ${v.tempC}=(${v.tempA} or 0)+(${v.tempB} or 0);return ${v.tempC}*0;end)`);
-    
-    // Phantom calculation
-    blocks.push(`local ${v.phantomVal}=(function()local ${v.shadowArr}={${Array(8).fill(0).map(() => Math.floor(Math.random() * 999)).join(',')}};local ${v.tempA}=0;for ${v.loopK},${v.tempB} in pairs(${v.shadowArr}) do ${v.tempA}=${v.tempA}+(${v.tempB}*0);end;return ${v.tempA};end)()`);
-    
-    // Dead coroutine
-    blocks.push(`local ${v.junk5}=coroutine.wrap(function()local ${v.junk6}=0;for ${v.loopI}=1,${Math.floor(Math.random() * 5) + 2} do ${v.junk6}=${v.junk6}+0;coroutine.yield();end;return ${v.junk6};end);pcall(function()for ${v.loopJ}=1,${Math.floor(Math.random() * 3) + 1} do ${v.junk5}();end;end)`);
-    
-    // Math garbage
-    blocks.push(`local ${v.junk7}=math.floor(math.random()*0)*${Math.floor(Math.random() * 9999)}`);
-    blocks.push(`local ${v.junk8}=(${Math.floor(Math.random() * 999)}*0)+(${Math.floor(Math.random() * 999)}*0)`);
-    
-    // Shuffle and return based on complexity
-    const shuffled = blocks.sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, Math.min(complexity, blocks.length)).join('\n');
+  const genOpaquePredicate = (): string => {
+    const predicates = [
+      `(${v.tmp_0}*${v.tmp_0})>=(0)`,
+      `(${Math.floor(Math.random()*100)}*0)==0`,
+      `(${v.fn_type}(${v.ref_game})=="userdata")`,
+      `(${v.fn_floor}(${Math.random().toFixed(6)})==0)`,
+      `((${v.tmp_1} or 0)+(${v.tmp_2} or 0))>=-1`,
+      `(${v.fn_len}("")==0)`,
+      `(${v.fn_type}(${v.fn_pcall})=="function")`,
+    ];
+    return predicates[Math.floor(Math.random() * predicates.length)];
   };
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SECTION 5: Generate Anti-Tamper Checks
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // SECTION 5: Control Flow Flattening State Machine
+  // ═══════════════════════════════════════════════════════════════════════════════
   
-  const antiTamperBlock = `
-local ${v.integrityCheck}=(function()
-local ${v.tempA}=0
-for ${v.loopI}=1,${primaryKey} do ${v.tempA}=${v.tempA}+1 end
-return ${v.tempA}==${primaryKey}
-end)()
-local ${v.envCheck}=(function()
-return type(game)=="userdata" and type(game.GetService)=="function"
-end)()
-if not ${v.integrityCheck} or not ${v.envCheck} then return end`;
+  // Generate random state IDs
+  const states = Array(12).fill(0).map(() => Math.floor(Math.random() * 9000) + 1000);
+  const [S_INIT, S_DECRYPT, S_HWID, S_BUILD_URL, S_REQUEST, S_LOAD, S_EXECUTE, S_END, S_JUNK1, S_JUNK2, S_JUNK3, S_ANTI] = states;
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // SECTION 6: Build The Obfuscated Lua Script
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // SECTION 6: Advanced Junk Code Generator
+  // ═══════════════════════════════════════════════════════════════════════════════
   
-  const headerComment = `--[[${'═'.repeat(60)}]]
---[[ DefendLua Protection System v4.0 - MoonSec Style ]]
---[[ ${Array(56).fill(0).map(() => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('')} ]]
---[[${'═'.repeat(60)}]]`;
+  const junkPool: string[] = [];
+  const genJunk = () => {
+    const templates = [
+      // Dead metamethod
+      () => `local ${v[`junk_${Math.floor(Math.random()*20)}`]}=setmetatable({},{__index=function()return 0 end})`,
+      // Recursive nothing
+      () => `local ${v[`junk_${Math.floor(Math.random()*20)+20}`]};${v[`junk_${Math.floor(Math.random()*20)+20}`]}=function()if false then ${v[`junk_${Math.floor(Math.random()*20)+20}`]}()end end`,
+      // Ghost coroutine
+      () => `local ${v[`junk_${Math.floor(Math.random()*10)+30}`]}=coroutine.create(function()while false do coroutine.yield(0)end end)`,
+      // Phantom closure
+      () => `local ${v[`junk_${Math.floor(Math.random()*10)+40}`]}=(function(...)local ${v.tmp_5}=0;for ${v.loop_0}=1,${v.fn_select}("#",...)do ${v.tmp_5}=${v.tmp_5}+0 end;return ${v.tmp_5} end)(${Array(5).fill(0).map(() => Math.floor(Math.random()*999)).join(',')})`,
+      // Fake environment manipulation
+      () => `local ${v[`junk_${Math.floor(Math.random()*5)}`]}=getfenv and getfenv(0) or _G;${v[`junk_${Math.floor(Math.random()*5)}`]}[""]=nil`,
+      // Dead pcall chain
+      () => `${v.fn_pcall}(function()${v.fn_pcall}(function()${v.fn_pcall}(function()return 0 end)end)end)`,
+      // Opaque calculation
+      () => `local ${v[`loop_${Math.floor(Math.random()*10)}`]}=${v.fn_floor}((${Math.random().toFixed(8)}*0)+(${Math.random().toFixed(8)}*0))`,
+      // Fake string operations
+      () => `local ${v[`tmp_${Math.floor(Math.random()*10)+10}`]}=${v.fn_sub}("",1,0)..${v.fn_sub}("",1,0)`,
+      // Dead conditional
+      () => `if(${v.fn_floor}(0.${Math.floor(Math.random()*9999999)})==${Math.floor(Math.random()*999)+1})then local ${v[`tmp_${Math.floor(Math.random()*10)+20}`]}=${Math.floor(Math.random()*99999)} end`,
+      // Noise table
+      () => `local ${v[`junk_${Math.floor(Math.random()*5)+5}`]}={[${Math.floor(Math.random()*999)}]=${Math.floor(Math.random()*999)},[${Math.floor(Math.random()*999)}]=${Math.floor(Math.random()*999)},[${Math.floor(Math.random()*999)}]=${Math.floor(Math.random()*999)}}`,
+    ];
+    return templates[Math.floor(Math.random() * templates.length)]();
+  };
+  
+  // Pre-generate junk pool
+  for (let i = 0; i < 30; i++) junkPool.push(genJunk());
+  const getJunkBlock = (count: number) => {
+    const selected: string[] = [];
+    for (let i = 0; i < count; i++) {
+      selected.push(junkPool[Math.floor(Math.random() * junkPool.length)]);
+    }
+    return selected.join('\n');
+  };
 
-  const luaScript = `${headerComment}
-${generateJunkBlock(2)}
-local ${v.xorFunc}=bit32 and bit32.bxor or function(${v.tempA},${v.tempB})
-local ${v.decryptResult},${v.decryptIdx}=0,1
-while ${v.tempA}>0 or ${v.tempB}>0 do
-local ${v.loopI},${v.loopJ}=${v.tempA}%2,${v.tempB}%2
-if ${v.loopI}~=${v.loopJ} then ${v.decryptResult}=${v.decryptResult}+${v.decryptIdx} end
-${v.tempA},${v.tempB},${v.decryptIdx}=math.floor(${v.tempA}/2),math.floor(${v.tempB}/2),${v.decryptIdx}*2
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // SECTION 7: Generate the VM-Style Obfuscated Script
+  // ═══════════════════════════════════════════════════════════════════════════════
+  
+  const header = `--[[${'▓'.repeat(70)}]]
+--[[${'░'.repeat(70)}]]
+--[[  ${Array(64).fill(0).map(() => String.fromCharCode(33 + Math.floor(Math.random() * 93))).join('')}  ]]
+--[[${'░'.repeat(70)}]]
+--[[${'▓'.repeat(70)}]]`;
+
+  const script = `${header}
+${getJunkBlock(3)}
+local ${v.fn_xor}=bit32 and bit32.bxor or function(${v.tmp_0},${v.tmp_1})
+local ${v.tmp_2},${v.tmp_3}=0,1
+while ${v.tmp_0}>0 or ${v.tmp_1}>0 do
+local ${v.tmp_4},${v.tmp_5}=${v.tmp_0}%2,${v.tmp_1}%2
+if ${v.tmp_4}~=${v.tmp_5} then ${v.tmp_2}=${v.tmp_2}+${v.tmp_3} end
+${v.tmp_0},${v.tmp_1},${v.tmp_3}=${v.fn_floor}(${v.tmp_0}/2),${v.fn_floor}(${v.tmp_1}/2),${v.tmp_3}*2
 end
-return ${v.decryptResult}
+return ${v.tmp_2}
 end
-${generateJunkBlock(2)}
-local ${v.chrFunc}=string.char
-local ${v.concatFunc}=table.concat
-local ${v.byteFunc}=string.byte
-local ${v.lenFunc}=string.len
-local ${v.subFunc}=string.sub
-local ${v.tostrFunc}=tostring
-local ${v.floorFunc}=math.floor
-local ${v.randomFunc}=math.random
-local ${v.tickFunc}=tick or os.clock
-local ${v.pcallFunc}=pcall
-local ${v.loadstrFunc}=loadstring
-local ${v.warnFunc}=warn or print
-local ${v.typeFunc}=type
-${generateJunkBlock(2)}
-local ${v.gameRef}=game
-local ${v.svcFunc}=${v.gameRef}.GetService
-local ${v.playersRef}=${v.svcFunc}(${v.gameRef},"Players")
-${antiTamperBlock}
-${generateJunkBlock(3)}
-local ${v.primaryKey}=${primaryKey}
-local ${v.saltVal}=${saltVal}
-local ${v.urlData}={${urlEncrypted.join(',')}}
-local ${v.scriptIdData}={${scriptIdEncrypted.join(',')}}
-local ${v.keyParamData}={${keyParamEncrypted.join(',')}}
-${generateJunkBlock(2)}
-local ${v.decryptFunc}=function(${v.decryptTemp})
-local ${v.decryptResult}={}
-for ${v.decryptIdx}=1,#${v.decryptTemp} do
-local ${v.decryptVal}=${v.decryptTemp}[${v.decryptIdx}]
-local ${v.loopK}=(${v.primaryKey}+((${v.decryptIdx}-1)*7)+(${v.saltVal}*3))%256
-${v.decryptResult}[${v.decryptIdx}]=${v.chrFunc}(${v.xorFunc}(${v.decryptVal},${v.loopK}))
+${getJunkBlock(2)}
+local ${v.fn_chr},${v.fn_concat},${v.fn_byte},${v.fn_len},${v.fn_sub}=string.char,table.concat,string.byte,string.len,string.sub
+local ${v.fn_tostr},${v.fn_floor},${v.fn_random},${v.fn_tick}=tostring,math.floor,math.random,tick or os.clock
+local ${v.fn_pcall},${v.fn_loadstr},${v.fn_warn},${v.fn_type}=pcall,loadstring,warn or print,type
+local ${v.fn_pairs},${v.fn_ipairs},${v.fn_select},${v.fn_unpack}=pairs,ipairs,select,unpack or table.unpack
+local ${v.fn_rawget}=rawget
+${getJunkBlock(2)}
+local ${v.ref_game}=game
+local ${v.ref_svc}=${v.ref_game}.GetService
+local ${v.ref_players}=${v.ref_svc}(${v.ref_game},"Players")
+${getJunkBlock(2)}
+local ${v.crypto_key1},${v.crypto_key2},${v.crypto_key3}=${k1},${k2},${k3}
+local ${v.crypto_fib}={1,1}
+for ${v.loop_1}=3,50 do ${v.crypto_fib}[${v.loop_1}]=(${v.crypto_fib}[${v.loop_1}-1]+${v.crypto_fib}[${v.loop_1}-2])%256 end
+local ${v.crypto_prime}={2,3,5,7,11,13,17,19,23,29}
+${getJunkBlock(3)}
+local ${v.data_seg_1}={${enc1.join(',')}}
+local ${v.data_seg_2}={${enc2.join(',')}}
+local ${v.data_seg_3}={${enc3.join(',')}}
+local ${v.data_seg_4}={${encId.join(',')}}
+local ${v.data_seg_5}={${encKey.join(',')}}
+${getJunkBlock(2)}
+local ${v.decrypt_fn}=function(${v.decrypt_temp})
+local ${v.decrypt_result}={}
+for ${v.decrypt_idx}=1,#${v.decrypt_temp} do
+local ${v.decrypt_byte}=${v.decrypt_temp}[${v.decrypt_idx}]
+local ${v.loop_2}=${v.crypto_fib}[(${v.decrypt_idx}-1)%#${v.crypto_fib}+1]
+local ${v.loop_3}=${v.crypto_prime}[(${v.decrypt_idx}-1)%10+1]
+local ${v.crypto_cascade}=(${v.crypto_key1}+((${v.decrypt_idx}-1)*${v.crypto_key2})+(${v.loop_2}*${v.crypto_key3})+${v.loop_3})%256
+${v.decrypt_byte}=${v.fn_xor}(${v.decrypt_byte},${v.crypto_cascade})
+${v.decrypt_byte}=${v.fn_xor}(${v.decrypt_byte},(${v.crypto_key1}*${v.decrypt_idx})%256)
+${v.decrypt_byte}=${v.fn_xor}(${v.decrypt_byte},((${v.crypto_key2}+${v.crypto_key3})*${v.loop_3})%256)
+${v.decrypt_result}[${v.decrypt_idx}]=${v.fn_chr}(${v.decrypt_byte})
 end
-return ${v.concatFunc}(${v.decryptResult})
+return ${v.fn_concat}(${v.decrypt_result})
 end
-${generateJunkBlock(2)}
-local ${v.getHwidFunc}=function()
-local ${v.hwidVal}=nil
-${v.pcallFunc}(function()
-if gethwid then ${v.hwidVal}=gethwid() end
-if not ${v.hwidVal} and getexecutorhwid then ${v.hwidVal}=getexecutorhwid() end
-if not ${v.hwidVal} and get_hwid then ${v.hwidVal}=get_hwid() end
-if not ${v.hwidVal} and HWID then ${v.hwidVal}=HWID end
-if not ${v.hwidVal} and Cryptic then ${v.pcallFunc}(function() ${v.hwidVal}=Cryptic:GetHWID() end) end
-if not ${v.hwidVal} and syn then ${v.pcallFunc}(function() ${v.hwidVal}=syn.hwid() end) end
-if not ${v.hwidVal} and fluxus then ${v.pcallFunc}(function() ${v.hwidVal}=fluxus:GetHWID() end) end
+${getJunkBlock(3)}
+local ${v.op_pred_1}=function()return(${genOpaquePredicate()})end
+local ${v.op_pred_2}=function()return(${genOpaquePredicate()})end
+local ${v.op_pred_3}=function()return(${genOpaquePredicate()})end
+${getJunkBlock(2)}
+local ${v.anti_tamper}=(function()
+local ${v.tmp_6}=0
+for ${v.loop_4}=1,${k1} do ${v.tmp_6}=${v.tmp_6}+1 end
+return ${v.tmp_6}==${k1}
+end)()
+local ${v.env_check}=(function()
+return ${v.fn_type}(${v.ref_game})=="userdata" and ${v.fn_type}(${v.ref_game}.GetService)=="function"
+end)()
+local ${v.integrity}=(function()
+return ${v.fn_type}(${v.fn_loadstr})=="function" and ${v.fn_type}(${v.fn_pcall})=="function"
+end)()
+if not(${v.anti_tamper} and ${v.env_check} and ${v.integrity})then return end
+${getJunkBlock(4)}
+local ${v.hwid_fn}=function()
+local ${v.hwid_val}=nil
+local ${v.hwid_parts}={}
+${v.fn_pcall}(function()
+if gethwid then ${v.hwid_val}=gethwid()end
+if not ${v.hwid_val} and getexecutorhwid then ${v.hwid_val}=getexecutorhwid()end
+if not ${v.hwid_val} and get_hwid then ${v.hwid_val}=get_hwid()end
+if not ${v.hwid_val} and identifyexecutor then
+local ${v.tmp_7},${v.tmp_8}=${v.fn_pcall}(identifyexecutor)
+if ${v.tmp_7} and ${v.tmp_8} then ${v.hwid_parts}[1]=${v.tmp_8}end
+end
+if not ${v.hwid_val} and HWID then ${v.hwid_val}=HWID end
+if not ${v.hwid_val} and Cryptic then ${v.fn_pcall}(function()${v.hwid_val}=Cryptic:GetHWID()end)end
+if not ${v.hwid_val} and syn then ${v.fn_pcall}(function()${v.hwid_val}=syn.hwid()end)end
+if not ${v.hwid_val} and fluxus then ${v.fn_pcall}(function()${v.hwid_val}=fluxus:GetHWID()end)end
+if not ${v.hwid_val} and getgenv then ${v.fn_pcall}(function()local ${v.tmp_9}=getgenv()if ${v.tmp_9} and ${v.tmp_9}._hwid then ${v.hwid_val}=${v.tmp_9}._hwid end end)end
 end)
-if not ${v.hwidVal} then
-${v.pcallFunc}(function()
-local ${v.playerRef}=${v.playersRef}.LocalPlayer
-if ${v.playerRef} then
-${v.hwidVal}=${v.tostrFunc}(${v.playerRef}.UserId).."_"..${v.tostrFunc}(${v.gameRef}.PlaceId).."_"..${v.tostrFunc}(${v.gameRef}.JobId):sub(1,8)
+if not ${v.hwid_val} then
+${v.fn_pcall}(function()
+local ${v.ref_player}=${v.ref_players}.LocalPlayer
+if ${v.ref_player} then
+local ${v.tmp_10}=${v.fn_tostr}(${v.ref_player}.UserId)
+local ${v.tmp_11}=${v.fn_tostr}(${v.ref_game}.PlaceId)
+local ${v.tmp_12}=${v.fn_sub}(${v.fn_tostr}(${v.ref_game}.JobId),1,8)
+${v.hwid_val}=${v.tmp_10}.."_"..${v.tmp_11}.."_"..${v.tmp_12}
 end
 end)
 end
-if not ${v.hwidVal} then
-${v.hwidVal}="DL_"..${v.tostrFunc}(${v.floorFunc}(${v.tickFunc}()*10000)).."_"..${v.tostrFunc}(${v.floorFunc}(${v.randomFunc}()*99999))
+if not ${v.hwid_val} then
+${v.hwid_val}="DL_"..${v.fn_tostr}(${v.fn_floor}(${v.fn_tick}()*10000)).."_"..${v.fn_tostr}(${v.fn_floor}(${v.fn_random}()*99999))
 end
-return ${v.hwidVal}
+return ${v.hwid_val}
 end
-${generateJunkBlock(3)}
-local ${v.mainExec}=function()
-local ${v.hwidVal}=${v.getHwidFunc}()
-local ${v.urlBuilder}=${v.decryptFunc}(${v.urlData})
-local ${v.tempA}=${v.decryptFunc}(${v.scriptIdData})
-local ${v.tempB}=${v.decryptFunc}(${v.keyParamData})
-local ${v.fullUrl}=${v.urlBuilder}..${v.tempA}..${v.tempB}..${v.hwidVal}
-local ${v.successFlag},${v.httpResponse}=${v.pcallFunc}(function()
-return ${v.gameRef}:HttpGet(${v.fullUrl})
-end)
-if ${v.successFlag} and ${v.httpResponse} and ${v.lenFunc}(${v.httpResponse})>0 then
-local ${v.loadedFunc},${v.loadErr}=${v.pcallFunc}(${v.loadstrFunc},${v.httpResponse})
-if ${v.loadedFunc} and ${v.typeFunc}(${v.loadErr})=="function" then
-local ${v.tempC}=${v.pcallFunc}(${v.loadErr})
-if not ${v.tempC} then
-${v.warnFunc}("[DL] Execution error")
-end
+${getJunkBlock(4)}
+local ${v.cf_state}=${S_INIT}
+local ${v.vm_reg_a},${v.vm_reg_b},${v.vm_reg_c},${v.vm_reg_d}=nil,nil,nil,nil
+local ${v.cf_loop}=true
+${getJunkBlock(2)}
+while ${v.cf_loop} do
+${getJunkBlock(1)}
+if ${v.cf_state}==${S_INIT} then
+if ${v.op_pred_1}()then
+${v.cf_state}=${S_HWID}
 else
-${v.warnFunc}("[DL] Load error: "..${v.tostrFunc}(${v.loadErr} or "unknown"))
+${v.cf_state}=${S_JUNK1}
 end
+elseif ${v.cf_state}==${S_HWID} then
+${v.vm_reg_a}=${v.hwid_fn}()
+${v.cf_state}=${S_DECRYPT}
+elseif ${v.cf_state}==${S_DECRYPT} then
+local ${v.str_builder}={}
+${v.str_builder}[1]=${v.decrypt_fn}(${v.data_seg_1})
+${v.str_builder}[2]=${v.decrypt_fn}(${v.data_seg_2})
+${v.str_builder}[3]=${v.decrypt_fn}(${v.data_seg_3})
+${v.vm_reg_b}=${v.fn_concat}(${v.str_builder})
+${v.vm_reg_c}=${v.decrypt_fn}(${v.data_seg_4})
+${v.vm_reg_d}=${v.decrypt_fn}(${v.data_seg_5})
+${v.cf_state}=${S_BUILD_URL}
+elseif ${v.cf_state}==${S_BUILD_URL} then
+${v.exec_url}=${v.vm_reg_b}..${v.vm_reg_c}..${v.vm_reg_d}..${v.vm_reg_a}
+if ${v.op_pred_2}()then
+${v.cf_state}=${S_REQUEST}
 else
-${v.warnFunc}("[DL] Request failed: "..${v.tostrFunc}(${v.httpResponse} or "timeout"))
+${v.cf_state}=${S_JUNK2}
+end
+elseif ${v.cf_state}==${S_REQUEST} then
+local ${v.exec_ok},${v.exec_resp}=${v.fn_pcall}(function()
+return ${v.ref_game}:HttpGet(${v.exec_url})
+end)
+if ${v.exec_ok} and ${v.exec_resp} and ${v.fn_len}(${v.exec_resp})>0 then
+${v.vm_reg_a}=${v.exec_resp}
+${v.cf_state}=${S_LOAD}
+else
+${v.cf_state}=${S_END}
+end
+elseif ${v.cf_state}==${S_LOAD} then
+local ${v.exec_ok},${v.exec_fn}=${v.fn_pcall}(${v.fn_loadstr},${v.vm_reg_a})
+if ${v.exec_ok} and ${v.fn_type}(${v.exec_fn})=="function" then
+${v.vm_reg_b}=${v.exec_fn}
+${v.cf_state}=${S_EXECUTE}
+else
+${v.cf_state}=${S_END}
+end
+elseif ${v.cf_state}==${S_EXECUTE} then
+${v.fn_pcall}(${v.vm_reg_b})
+${v.cf_state}=${S_END}
+elseif ${v.cf_state}==${S_JUNK1} then
+${getJunkBlock(2)}
+${v.cf_state}=${S_HWID}
+elseif ${v.cf_state}==${S_JUNK2} then
+${getJunkBlock(2)}
+${v.cf_state}=${S_REQUEST}
+elseif ${v.cf_state}==${S_JUNK3} then
+${getJunkBlock(1)}
+${v.cf_state}=${S_ANTI}
+elseif ${v.cf_state}==${S_ANTI} then
+if not ${v.op_pred_3}()then ${v.cf_state}=${S_JUNK3} else ${v.cf_state}=${S_END} end
+elseif ${v.cf_state}==${S_END} then
+${v.cf_loop}=false
+else
+${v.cf_state}=${S_END}
 end
 end
-${generateJunkBlock(2)}
-local ${v.coroThread}=coroutine.create(${v.mainExec})
-local ${v.coroResult},${v.coroErr}=coroutine.resume(${v.coroThread})
-if not ${v.coroResult} then ${v.warnFunc}("[DL] "..${v.tostrFunc}(${v.coroErr})) end
+${getJunkBlock(3)}
 `;
 
-  return luaScript;
+  return script;
 };
 
 Deno.serve(async (req) => {
