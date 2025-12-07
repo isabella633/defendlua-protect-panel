@@ -342,9 +342,16 @@ Deno.serve(async (req) => {
     const publicAccess = script.public_access || false;
     const webhookUrl = (script as any).webhook_url;
 
-    // Helper function to send Discord webhook
+    // Helper function to send Discord webhook with URL validation
     const sendDiscordWebhook = async (status: string, reason: string, color: number) => {
       if (!webhookUrl || (userPlan !== "pro" && userPlan !== "enterprise")) return;
+      
+      // Validate Discord webhook URL to prevent SSRF
+      const discordWebhookRegex = /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/;
+      if (!discordWebhookRegex.test(webhookUrl)) {
+        console.warn("Invalid Discord webhook URL format, skipping webhook notification");
+        return;
+      }
       
       try {
         const embed = {

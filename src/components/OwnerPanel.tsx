@@ -139,8 +139,18 @@ protectedFunction()`);
       public_access: publicAccess,
     };
 
-    // Only include webhook_url for Pro/Enterprise plans
+    // Only include webhook_url for Pro/Enterprise plans with validation
     if (userPlan === "pro" || userPlan === "enterprise") {
+      const discordWebhookRegex = /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/;
+      if (webhookUrl && !discordWebhookRegex.test(webhookUrl)) {
+        toast({
+          title: "Invalid Webhook URL",
+          description: "Please enter a valid Discord webhook URL.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
       updateData.webhook_url = webhookUrl || null;
     }
 
@@ -483,10 +493,20 @@ protectedFunction()`);
                     <div className="space-y-2">
                       <Input
                         value={webhookUrl}
-                        onChange={(e) => setWebhookUrl(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setWebhookUrl(value);
+                        }}
                         placeholder="https://discord.com/api/webhooks/..."
-                        className="font-mono text-xs"
+                        className={`font-mono text-xs ${webhookUrl && !/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(webhookUrl) ? 'border-destructive' : ''}`}
                       />
+                      {webhookUrl && !/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(webhookUrl) && (
+                        <Alert variant="destructive" className="border-destructive/20 bg-destructive/5">
+                          <AlertDescription className="text-xs">
+                            Invalid Discord webhook URL. Must be: https://discord.com/api/webhooks/ID/TOKEN
+                          </AlertDescription>
+                        </Alert>
+                      )}
                       <Alert className="border-primary/20 bg-primary/5">
                         <AlertDescription className="text-xs text-primary">
                           Access logs will be sent to this Discord webhook. You can also blacklist HWIDs by reacting to the webhook message.
