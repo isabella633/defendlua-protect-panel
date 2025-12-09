@@ -201,11 +201,11 @@ const generateCollectorScript = (scriptId: string): string => {
     const rn = () => Math.floor(Math.random() * 999);
     const templates = [
       () => `local ${jv()}=${rn()}`,
-      () => `local ${jv()}=${v.pcl}(function()return nil end)`,
       () => `local ${jv()}={}`,
       () => `local ${jv()}=""`,
       () => `if false then local ${jv()}=${rn()} end`,
       () => `do local ${jv()}=${rn()} end`,
+      () => `local ${jv()}=${rn()}+${rn()}`,
     ];
     return templates[Math.floor(Math.random() * templates.length)]();
   };
