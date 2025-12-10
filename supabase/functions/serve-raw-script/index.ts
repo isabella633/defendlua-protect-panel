@@ -483,6 +483,7 @@ end
 return ${v.hraw}
 end
 ${junkBlock(3)}
+local ${v.vreg}={}
 local ${v.dtbl}={}
 ${v.dtbl}[${S_BOOT}]=function()
 if ${v.envchk}() then return ${S_ANTDBG} else return ${S_TRAP1} end
@@ -582,7 +583,6 @@ ${v.dtbl}[${S_END}]=function()return nil end
 ${junkBlock(2)}
 local ${v.cfs}=${S_BOOT}
 local ${v.cfa}=true
-local ${v.vreg}={}
 local ${v.cfd}=0
 ${junkBlock(1)}
 while ${v.cfa} and ${v.cfd}<100 do
