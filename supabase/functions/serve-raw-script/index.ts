@@ -6,152 +6,227 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DefendLua Obfuscation Engine v11.0 - Reliable Protection
+// DefendLua Obfuscation Engine v12.0 - Maximum Annoyance Protection
+// Features: Random nonsense vars, dead code, over-nesting, XOR strings, 
+// inline functions, math-based control flow
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const generateCollectorScript = (scriptId: string): string => {
   const usedNames = new Set<string>();
   
-  const generateName = (minLen = 12, maxLen = 20): string => {
-    const chars = ['I', 'l', '1', 'O', '0', '_'];
-    const prefixes = ['_', '__', 'l', 'I', 'O', '_l', 'll', 'II'];
+  // Ultra-confusing variable name generator
+  const genVar = (minLen = 15, maxLen = 25): string => {
+    const confuse = ['l', 'I', '1', 'O', '0', 'o', '_', 'Il', 'lI', 'O0', '0O'];
+    const prefixes = ['_', '__', '___', 'l', 'I', 'O', '_l', '_I', 'll', 'II', 'OO', 
+      'lIl', 'IlI', 'O0O', '_lI', '_Il', 'l1l', 'I1I', '_O0', 'lll', 'III'];
     let name: string;
     let attempts = 0;
     do {
       const length = minLen + Math.floor(Math.random() * (maxLen - minLen));
       name = prefixes[Math.floor(Math.random() * prefixes.length)];
       while (name.length < length) {
-        name += chars[Math.floor(Math.random() * chars.length)];
+        name += confuse[Math.floor(Math.random() * confuse.length)];
       }
-      name += '_' + Math.floor(Math.random() * 9999).toString(36);
+      name += Math.floor(Math.random() * 99999).toString(36);
       attempts++;
-    } while (usedNames.has(name) && attempts < 50);
+    } while (usedNames.has(name) && attempts < 100);
     usedNames.add(name);
     return name;
   };
 
-  // Generate encryption key
-  const key = Math.floor(Math.random() * 200) + 50;
+  // XOR key - different each generation
+  const xorKey = Math.floor(Math.random() * 150) + 50;
+  const xorKey2 = Math.floor(Math.random() * 100) + 25;
   
-  // Simple XOR encryption
-  const encrypt = (str: string): number[] => {
-    const result: number[] = [];
+  // XOR encrypt string
+  const xorEnc = (str: string): number[] => {
+    const r: number[] = [];
     for (let i = 0; i < str.length; i++) {
-      result.push(str.charCodeAt(i) ^ ((key + i * 7) % 256));
+      r.push(str.charCodeAt(i) ^ ((xorKey + i * xorKey2) % 256));
     }
-    return result;
+    return r;
   };
   
   const url = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
-  const encryptedUrl = encrypt(url);
+  const encUrl = xorEnc(url);
   
-  // Variable names
+  // Math constants for control flow obfuscation
+  const mathA = Math.floor(Math.random() * 10000) + 1000;
+  const mathB = Math.floor(Math.random() * 100) + 10;
+  const mathC = (mathA * mathB) % 997;
+  const mathD = (mathA + mathB) % 503;
+  const mathE = (mathA * 2 + 1) % 251;
+  
+  // Generate lots of variables
   const v: Record<string, string> = {};
-  const vars = ['bxor', 'chr', 'byte', 'sub', 'cat', 'floor', 'pcall', 'load', 'type', 
-    'tick', 'tostr', 'game', 'plrs', 'key', 'decrypt', 'url', 'data', 'hwid', 
-    'res', 'fn', 'lp', 'uid', 'pid', 'jid', 'gid', 't1', 't2', 't3'];
-  vars.forEach(name => v[name] = generateName());
-  
-  // Junk code generator
-  const junk = (): string => {
-    const jv = generateName(8, 12);
+  const varList = [
+    'xor', 'chr', 'byte', 'sub', 'cat', 'flr', 'pcl', 'ld', 'typ', 'tck', 'tstr', 'tnum',
+    'gm', 'pl', 'k1', 'k2', 'd', 'dec', 'hw', 'ur', 'rs', 'fn', 'lp', 'ui', 'pi', 'ji', 'gi',
+    'a', 'b', 'c', 'e', 'f', 'g', 'h', 'i', 'j', 'm', 'n', 'p', 'q', 'r', 's', 'w', 'x', 'y', 'z',
+    'ma', 'mb', 'mc', 'md', 'me', 'cf', 'nst', 'wrp', 'inv',
+    ...Array.from({length: 30}, (_, i) => `t${i}`),
+    ...Array.from({length: 20}, (_, i) => `jnk${i}`)
+  ];
+  varList.forEach(name => v[name] = genVar());
+
+  // Dead code generator - runs but does nothing useful
+  const deadCode = (): string => {
+    const dv1 = genVar(8, 12);
+    const dv2 = genVar(8, 12);
+    const dv3 = genVar(8, 12);
+    const n1 = Math.floor(Math.random() * 999999);
+    const n2 = Math.floor(Math.random() * 50) + 5;
     const templates = [
-      `local ${jv}=${Math.floor(Math.random() * 99999)}`,
-      `local ${jv}=nil`,
-      `local ${jv}={}`,
-      `if false then local ${jv}=1 end`,
+      `if (${n1}%2==0) then local ${dv1}=0 for ${dv2}=1,${n2} do ${dv1}=${dv1}+${dv2} end end`,
+      `do local ${dv1}={} for ${dv2}=1,${n2} do ${dv1}[${dv2}]=${dv2}*${n2} end end`,
+      `local ${dv1}=(function(${dv2})local ${dv3}=0 for _=1,${n2} do ${dv3}=${dv3}+1 end return ${dv3} end)(${n1})`,
+      `repeat local ${dv1}=${n1} ${dv1}=${dv1}+1 until true`,
+      `for ${dv1}=1,1 do local ${dv2}=${n1}*0 end`,
+      `if ${n1}>999999999 then local ${dv1}=${n2} end`,
+      `local ${dv1}=(${n1}*0)+(${n2}*0)+0`,
+      `do local ${dv1}=nil local ${dv2}=nil if ${dv1}==nil then ${dv2}=${n1} end end`,
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   };
   
-  const junkLines = (n: number): string => Array(n).fill(0).map(() => junk()).join('\n');
+  const deadBlock = (n: number): string => Array(n).fill(0).map(() => deadCode()).join('\n');
+  
+  // Inline wrapper generator
+  const wrapCall = (call: string): string => {
+    const wv = genVar(10, 15);
+    return `(function(${wv})return ${wv}()end)(function()return ${call} end)`;
+  };
+  
+  // Over-nested structure
+  const nest = (code: string, depth: number = 2): string => {
+    let result = code;
+    for (let i = 0; i < depth; i++) {
+      const nv = genVar(8, 12);
+      result = `do local ${nv}=1 repeat if ${nv}==1 then\n${result}\nend ${nv}=${nv}+1 until ${nv}>1 end`;
+    }
+    return result;
+  };
 
-  const script = `--[[DefendLua Protected v11]]
-${junkLines(3)}
-local ${v.bxor}=bit32 and bit32.bxor or function(a,b)
-local c,d=0,1
-while a>0 or b>0 do
-local e,f=a%2,b%2
-if e~=f then c=c+d end
-a,b,d=math.floor(a/2),math.floor(b/2),d*2
+  const script = `--[=[DL_v12_${Math.random().toString(36).slice(2)}]=]
+${deadBlock(5)}
+local ${v.xor}=bit32 and bit32.bxor or(function()
+${deadBlock(2)}
+return function(${v.a},${v.b})
+local ${v.c},${v.e}=0,1
+${deadBlock(1)}
+while ${v.a}>0 or ${v.b}>0 do
+local ${v.f},${v.g}=${v.a}%2,${v.b}%2
+if ${v.f}~=${v.g} then ${v.c}=${v.c}+${v.e} end
+${v.a},${v.b},${v.e}=math.floor(${v.a}/2),math.floor(${v.b}/2),${v.e}*2
 end
-return c
+return ${v.c}
 end
-${junkLines(2)}
-local ${v.chr}=string.char
-local ${v.byte}=string.byte
-local ${v.sub}=string.sub
-local ${v.cat}=table.concat
-local ${v.floor}=math.floor
-local ${v.pcall}=pcall
-local ${v.load}=loadstring or load
-local ${v.type}=type
-local ${v.tick}=tick or os.clock
-local ${v.tostr}=tostring
-${junkLines(2)}
-local ${v.game}=game
-local ${v.plrs}=${v.game}:GetService("Players")
-${junkLines(1)}
-local ${v.key}=${key}
-local ${v.data}={${encryptedUrl.join(',')}}
-${junkLines(2)}
-local ${v.decrypt}=function(${v.t1})
-local ${v.t2}={}
-for ${v.t3}=1,#${v.t1} do
-${v.t2}[${v.t3}]=${v.chr}(${v.bxor}(${v.t1}[${v.t3}],(${v.key}+(${v.t3}-1)*7)%256))
+end)()
+${deadBlock(3)}
+local ${v.chr}=(function(${v.t0})return ${v.t0}.char end)(string)
+local ${v.byte}=(function(${v.t1})return ${v.t1}.byte end)(string)
+local ${v.sub}=(function(${v.t2})return ${v.t2}.sub end)(string)
+local ${v.cat}=(function(${v.t3})return ${v.t3}.concat end)(table)
+local ${v.flr}=(function(${v.t4})return ${v.t4}.floor end)(math)
+local ${v.pcl}=(function()return pcall end)()
+local ${v.ld}=(function()return loadstring or load end)()
+local ${v.typ}=(function()return type end)()
+local ${v.tck}=(function()return tick or os.clock end)()
+local ${v.tstr}=(function()return tostring end)()
+local ${v.tnum}=(function()return tonumber end)()
+${deadBlock(4)}
+local ${v.gm}=(function(${v.t5})
+${deadBlock(1)}
+return ${v.t5}
+end)(game)
+local ${v.pl}=(function(${v.t6})
+${deadBlock(1)}
+return ${v.t6}:GetService("Players")
+end)(${v.gm})
+${deadBlock(3)}
+local ${v.k1},${v.k2}=${xorKey},${xorKey2}
+local ${v.d}={${encUrl.join(',')}}
+${deadBlock(2)}
+local ${v.ma},${v.mb},${v.mc},${v.md},${v.me}=${mathA},${mathB},${mathC},${mathD},${mathE}
+${deadBlock(2)}
+local ${v.cf}=(function()
+return{
+[${mathA}*${mathB}%997]=function(${v.t7})return ${v.t7}()end,
+[(${mathA}+${mathB})%503]=function(${v.t8})return not ${v.t8} end,
+[(${mathA}*2+1)%251]=function(${v.t9},${v.t10})return ${v.t9}..${v.t10} end,
+}
+end)()
+${deadBlock(3)}
+local ${v.dec}=(function()
+${deadBlock(1)}
+return function(${v.t11})
+local ${v.t12}={}
+${deadBlock(1)}
+${nest(`for ${v.t13}=1,#${v.t11} do
+${v.t12}[${v.t13}]=${v.chr}(${v.xor}(${v.t11}[${v.t13}],(${v.k1}+(${v.t13}-1)*${v.k2})%256))
+end`)}
+return ${v.cat}(${v.t12})
 end
-return ${v.cat}(${v.t2})
+end)()
+${deadBlock(4)}
+local ${v.hw}=nil
+${deadBlock(2)}
+${nest(`${v.pcl}(function()
+${deadBlock(1)}
+if gethwid then ${v.hw}=${wrapCall('gethwid()')} end
+if not ${v.hw} and getexecutorhwid then ${v.hw}=${wrapCall('getexecutorhwid()')} end
+if not ${v.hw} and get_hwid then ${v.hw}=${wrapCall('get_hwid()')} end
+${deadBlock(1)}
+if not ${v.hw} and identifyexecutor then
+local ${v.t14},${v.t15}=${v.pcl}(identifyexecutor)
+if ${v.t14} and ${v.t15} then ${v.hw}=${v.cf}[${v.md}](${v.t15},${v.tstr}(${v.flr}(${v.tck}()*1000)))end
 end
-${junkLines(2)}
-local ${v.hwid}=nil
-${v.pcall}(function()
-if gethwid then ${v.hwid}=gethwid()end
-if not ${v.hwid} and getexecutorhwid then ${v.hwid}=getexecutorhwid()end
-if not ${v.hwid} and get_hwid then ${v.hwid}=get_hwid()end
-if not ${v.hwid} and identifyexecutor then
-local ok,name=${v.pcall}(identifyexecutor)
-if ok and name then ${v.hwid}=name..${v.tostr}(${v.floor}(${v.tick}()*1000))end
-end
-if not ${v.hwid} and HWID then ${v.hwid}=HWID end
-if not ${v.hwid} and syn then ${v.pcall}(function()${v.hwid}=syn.hwid()end)end
-if not ${v.hwid} and fluxus then ${v.pcall}(function()${v.hwid}=fluxus:GetHWID()end)end
-if not ${v.hwid} and Cryptic then ${v.pcall}(function()${v.hwid}=Cryptic:GetHWID()end)end
-end)
-${junkLines(1)}
-if not ${v.hwid} then
-${v.pcall}(function()
-local ${v.lp}=${v.plrs}.LocalPlayer
+if not ${v.hw} and HWID then ${v.hw}=HWID end
+${deadBlock(1)}
+if not ${v.hw} and syn then ${v.pcl}(function()${v.hw}=syn.hwid()end)end
+if not ${v.hw} and fluxus then ${v.pcl}(function()${v.hw}=fluxus:GetHWID()end)end
+if not ${v.hw} and Cryptic then ${v.pcl}(function()${v.hw}=Cryptic:GetHWID()end)end
+end)`)}
+${deadBlock(3)}
+${nest(`if not ${v.hw} then
+${v.pcl}(function()
+${deadBlock(1)}
+local ${v.lp}=${v.pl}.LocalPlayer
 if ${v.lp} then
-local ${v.uid}=${v.tostr}(${v.lp}.UserId)
-local ${v.pid}=${v.tostr}(${v.game}.PlaceId)
-local ${v.jid}=${v.sub}(${v.tostr}(${v.game}.JobId),1,8)
-local ${v.gid}=${v.tostr}(${v.game}.GameId)
-${v.hwid}=${v.uid}.."_"..${v.pid}.."_"..${v.jid}.."_"..${v.gid}
+local ${v.ui}=${v.tstr}(${v.lp}.UserId)
+local ${v.pi}=${v.tstr}(${v.gm}.PlaceId)
+local ${v.ji}=${v.sub}(${v.tstr}(${v.gm}.JobId),1,8)
+local ${v.gi}=${v.tstr}(${v.gm}.GameId)
+${v.hw}=${v.cf}[${v.md}](${v.cf}[${v.md}](${v.cf}[${v.md}](${v.ui},"_"),${v.cf}[${v.md}](${v.pi},"_")),${v.cf}[${v.md}](${v.ji},"_"))
+${v.hw}=${v.cf}[${v.md}](${v.hw},${v.gi})
 end
 end)
-end
-${junkLines(1)}
-if not ${v.hwid} then
-${v.hwid}="DL_"..${v.tostr}(${v.floor}(${v.tick}()*100000)).."_"..${v.tostr}(math.random(100000,999999))
-end
-${junkLines(2)}
-local ${v.url}=${v.decrypt}(${v.data})..${v.hwid}
-${junkLines(1)}
-local ${v.res}=nil
-${v.pcall}(function()
-${v.res}=${v.game}:HttpGet(${v.url})
-end)
-${junkLines(1)}
-if ${v.res} and #${v.res}>10 then
+end`)}
+${deadBlock(2)}
+${nest(`if not ${v.hw} then
+${v.hw}=${v.cf}[${v.md}]("DL_",${v.cf}[${v.md}](${v.tstr}(${v.flr}(${v.tck}()*100000)),"_"))
+${v.hw}=${v.cf}[${v.md}](${v.hw},${v.tstr}(math.random(100000,999999)))
+end`)}
+${deadBlock(4)}
+local ${v.ur}=${v.cf}[${v.md}](${v.cf}[${v.mc}](function()return ${v.dec}(${v.d})end),${v.hw})
+${deadBlock(2)}
+local ${v.rs}=nil
+${nest(`${v.pcl}(function()
+${deadBlock(1)}
+${v.rs}=${v.gm}:HttpGet(${v.ur})
+end)`)}
+${deadBlock(3)}
+${nest(`if ${v.rs} and #${v.rs}>10 then
 local ${v.fn}=nil
-${v.pcall}(function()
-${v.fn}=${v.load}(${v.res})
+${deadBlock(1)}
+${v.pcl}(function()
+${v.fn}=${v.ld}(${v.rs})
 end)
-if ${v.fn} and ${v.type}(${v.fn})=="function" then
-${v.pcall}(${v.fn})
+if ${v.fn} and ${v.typ}(${v.fn})=="function" then
+${v.pcl}(${v.fn})
 end
-end
-${junkLines(3)}
+end`)}
+${deadBlock(5)}
 `;
 
   return script;
