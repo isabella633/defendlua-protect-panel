@@ -6,10 +6,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Code, AlertTriangle, ArrowLeft, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Shield, Code, AlertTriangle, ArrowLeft, CheckCircle2, XCircle, AlertCircle, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import LuaCodeEditor from "@/components/LuaCodeEditor";
-import { checkLuaSyntax, getSyntaxSummary, type SyntaxError } from "@/lib/luaSyntaxChecker";
+import { checkLuaSyntax, getSyntaxSummary, applyAllAutoFixes, applyAutoFix, type SyntaxError } from "@/lib/luaSyntaxChecker";
 import { supabase } from "@/integrations/supabase/client";
 import LuaCodeAssistant from "./LuaCodeAssistant";
 
@@ -163,6 +163,26 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
     }
   };
 
+  const handleAutoFixAll = () => {
+    const fixedCode = applyAllAutoFixes(luaCode, syntaxErrors);
+    setLuaCode(fixedCode);
+    toast({
+      title: "Auto-Fix Applied",
+      description: `Fixed ${syntaxSummary.fixableCount} issue${syntaxSummary.fixableCount !== 1 ? 's' : ''}.`,
+    });
+  };
+
+  const handleAutoFixSingle = (error: SyntaxError) => {
+    if (error.autoFix) {
+      const fixedCode = applyAutoFix(luaCode, error.line, error.autoFix);
+      setLuaCode(fixedCode);
+      toast({
+        title: "Fixed",
+        description: error.autoFix.description,
+      });
+    }
+  };
+
   const getSyntaxStatusBadge = () => {
     if (!luaCode.trim()) {
       return (
@@ -228,7 +248,7 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
 
           <Card className="border-border/50 shadow-lg">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <CardTitle className="flex items-center space-x-2">
                     <Code className="w-5 h-5 text-security-primary" />
@@ -238,14 +258,28 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
                     Paste your Lua script below. Real-time syntax validation is enabled.
                   </CardDescription>
                 </div>
-                {getSyntaxStatusBadge()}
+                <div className="flex items-center gap-2">
+                  {getSyntaxStatusBadge()}
+                  {syntaxSummary.fixableCount > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAutoFixAll}
+                      className="text-primary border-primary/30 hover:bg-primary/10"
+                    >
+                      <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                      Fix {syntaxSummary.fixableCount} issue{syntaxSummary.fixableCount !== 1 ? 's' : ''}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <Alert className="border-primary/20 bg-primary/5">
                 <AlertTriangle className="h-4 w-4 text-primary" />
                 <AlertDescription className="text-primary">
-                  <strong>Real-Time Syntax Checking:</strong> Your code is continuously scanned for Lua syntax errors and common mistakes.
+                  <strong>Real-Time Syntax Checking:</strong> Your code is continuously scanned for Lua syntax errors. 
+                  Hover over line numbers with error icons to see details.
                 </AlertDescription>
               </Alert>
 
@@ -267,40 +301,67 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
                 <LuaCodeEditor
                   value={luaCode}
                   onChange={setLuaCode}
+                  syntaxErrors={syntaxErrors}
                 />
               </div>
 
-              {/* Real-time error display */}
+              {/* Real-time error display with auto-fix buttons */}
               {syntaxErrors.length > 0 && (
                 <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <AlertTriangle className="w-4 h-4 text-destructive" />
-                    <span>Syntax Issues Detected</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <AlertTriangle className="w-4 h-4 text-destructive" />
+                      <span>Syntax Issues Detected</span>
+                    </div>
+                    {syntaxSummary.fixableCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleAutoFixAll}
+                        className="text-xs h-7"
+                      >
+                        <Wand2 className="w-3 h-3 mr-1" />
+                        Fix All ({syntaxSummary.fixableCount})
+                      </Button>
+                    )}
                   </div>
                   <div className="max-h-[200px] overflow-y-auto space-y-2">
-                    {syntaxErrors.slice(0, 10).map((error, index) => (
+                    {syntaxErrors.slice(0, 15).map((error, index) => (
                       <div 
                         key={index} 
-                        className={`flex items-start gap-2 text-sm p-2 rounded ${
+                        className={`flex items-start justify-between gap-2 text-sm p-2 rounded ${
                           error.severity === 'error' 
                             ? 'bg-destructive/10 text-destructive' 
                             : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
                         }`}
                       >
-                        {error.severity === 'error' ? (
-                          <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                        ) : (
-                          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                        )}
-                        <div>
-                          <span className="font-semibold">Line {error.line}:</span>{" "}
-                          <span>{error.message}</span>
+                        <div className="flex items-start gap-2 flex-1">
+                          {error.severity === 'error' ? (
+                            <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                          )}
+                          <div>
+                            <span className="font-semibold">Line {error.line}:</span>{" "}
+                            <span>{error.message}</span>
+                          </div>
                         </div>
+                        {error.autoFix && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAutoFixSingle(error)}
+                            className="h-6 px-2 text-xs shrink-0 hover:bg-background/50"
+                          >
+                            <Wand2 className="w-3 h-3 mr-1" />
+                            Fix
+                          </Button>
+                        )}
                       </div>
                     ))}
-                    {syntaxErrors.length > 10 && (
+                    {syntaxErrors.length > 15 && (
                       <p className="text-xs text-muted-foreground text-center pt-2">
-                        ... and {syntaxErrors.length - 10} more issue{syntaxErrors.length - 10 !== 1 ? 's' : ''}
+                        ... and {syntaxErrors.length - 15} more issue{syntaxErrors.length - 15 !== 1 ? 's' : ''}
                       </p>
                     )}
                   </div>
@@ -346,27 +407,39 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
                       {syntaxSummary.warningCount} warning{syntaxSummary.warningCount !== 1 ? 's' : ''}
                     </span>
                   )}.
+                  {syntaxSummary.fixableCount > 0 && (
+                    <span className="text-muted-foreground">
+                      {' '}({syntaxSummary.fixableCount} can be auto-fixed)
+                    </span>
+                  )}
                 </p>
                 
                 <div className="max-h-[250px] overflow-y-auto space-y-2 bg-muted/50 rounded-md p-3">
                   {syntaxErrors.map((error, index) => (
                     <div 
                       key={index} 
-                      className={`flex items-start gap-2 text-sm p-2 rounded ${
+                      className={`flex items-start justify-between gap-2 text-sm p-2 rounded ${
                         error.severity === 'error' 
                           ? 'bg-destructive/10' 
                           : 'bg-yellow-500/10'
                       }`}
                     >
-                      {error.severity === 'error' ? (
-                        <XCircle className="w-4 h-4 mt-0.5 shrink-0 text-destructive" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-yellow-600" />
-                      )}
-                      <div>
-                        <span className="font-semibold text-foreground">Line {error.line}:</span>{" "}
-                        <span className="text-muted-foreground">{error.message}</span>
+                      <div className="flex items-start gap-2 flex-1">
+                        {error.severity === 'error' ? (
+                          <XCircle className="w-4 h-4 mt-0.5 shrink-0 text-destructive" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-yellow-600" />
+                        )}
+                        <div>
+                          <span className="font-semibold text-foreground">Line {error.line}:</span>{" "}
+                          <span className="text-muted-foreground">{error.message}</span>
+                        </div>
                       </div>
+                      {error.autoFix && (
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          Fixable
+                        </Badge>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -381,8 +454,21 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            {syntaxSummary.fixableCount > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleAutoFixAll();
+                  setShowErrorDialog(false);
+                }}
+                className="w-full sm:w-auto order-first sm:order-none"
+              >
+                <Wand2 className="w-4 h-4 mr-2" />
+                Auto-Fix {syntaxSummary.fixableCount} Issues
+              </Button>
+            )}
             <AlertDialogCancel className="w-full sm:w-auto">
-              Go Back & Fix Issues
+              Go Back & Fix
             </AlertDialogCancel>
             <AlertDialogAction 
               onClick={proceedWithProtection} 

@@ -2,6 +2,13 @@ export interface SyntaxError {
   line: number;
   message: string;
   severity: 'error' | 'warning';
+  autoFix?: AutoFix;
+}
+
+export interface AutoFix {
+  description: string;
+  search: string;
+  replace: string;
 }
 
 export function checkLuaSyntax(code: string): SyntaxError[] {
@@ -92,14 +99,11 @@ export function checkLuaSyntax(code: string): SyntaxError[] {
     
     // Track block structures (only if not inside a string)
     blockStarters.forEach(keyword => {
-      // Match keyword as whole word, not inside strings
       const regex = new RegExp(`\\b${keyword}\\b`);
       if (regex.test(lineWithoutStrings)) {
-        // Don't count 'end' on the same line for inline functions
         if (!lineWithoutStrings.includes('end')) {
           blockStack.push({ keyword, line: lineNum });
         } else {
-          // Check if there's a matching end on the same line
           const keywordCount = (lineWithoutStrings.match(new RegExp(`\\b${keyword}\\b`, 'g')) || []).length;
           const endCount = (lineWithoutStrings.match(/\bend\b/g) || []).length;
           if (keywordCount > endCount) {
@@ -133,9 +137,8 @@ export function checkLuaSyntax(code: string): SyntaxError[] {
       }
     }
     
-    // Check for 'then' after if/elseif (only if not a multi-line statement)
+    // Check for 'then' after if/elseif
     if (/\b(if|elseif)\b/.test(lineWithoutStrings) && !lineWithoutStrings.includes('then')) {
-      // Check if it's likely a complete statement
       if (!trimmed.endsWith(',') && !trimmed.endsWith('and') && !trimmed.endsWith('or')) {
         errors.push({ line: lineNum, message: "Missing 'then' after if/elseif statement", severity: 'error' });
       }
@@ -153,30 +156,97 @@ export function checkLuaSyntax(code: string): SyntaxError[] {
       errors.push({ line: lineNum, message: "Possible assignment in condition (use '==' for comparison)", severity: 'warning' });
     }
     
-    // Check for != instead of ~=
+    // Check for != instead of ~= (with auto-fix)
     if (lineWithoutStrings.includes('!=')) {
-      errors.push({ line: lineNum, message: "Use '~=' instead of '!=' for not-equal comparison", severity: 'error' });
+      const match = line.match(/!=/);
+      if (match) {
+        errors.push({ 
+          line: lineNum, 
+          message: "Use '~=' instead of '!=' for not-equal comparison", 
+          severity: 'error',
+          autoFix: {
+            description: "Replace '!=' with '~='",
+            search: '!=',
+            replace: '~='
+          }
+        });
+      }
     }
     
-    // Check for && instead of 'and'
+    // Check for && instead of 'and' (with auto-fix)
     if (lineWithoutStrings.includes('&&')) {
-      errors.push({ line: lineNum, message: "Use 'and' instead of '&&' for logical AND", severity: 'error' });
+      errors.push({ 
+        line: lineNum, 
+        message: "Use 'and' instead of '&&' for logical AND", 
+        severity: 'error',
+        autoFix: {
+          description: "Replace '&&' with 'and'",
+          search: '&&',
+          replace: ' and '
+        }
+      });
     }
     
-    // Check for || instead of 'or'
+    // Check for || instead of 'or' (with auto-fix)
     if (lineWithoutStrings.includes('||')) {
-      errors.push({ line: lineNum, message: "Use 'or' instead of '||' for logical OR", severity: 'error' });
+      errors.push({ 
+        line: lineNum, 
+        message: "Use 'or' instead of '||' for logical OR", 
+        severity: 'error',
+        autoFix: {
+          description: "Replace '||' with 'or'",
+          search: '||',
+          replace: ' or '
+        }
+      });
     }
     
-    // Check for ! instead of 'not' (but not in strings or !=)
-    if (/(?<![~=])!(?!=)/.test(lineWithoutStrings)) {
-      errors.push({ line: lineNum, message: "Use 'not' instead of '!' for logical NOT", severity: 'warning' });
+    // Check for ! instead of 'not' (with auto-fix)
+    const notMatch = lineWithoutStrings.match(/(?<![~=])!(?!=)(\w+)/);
+    if (notMatch) {
+      errors.push({ 
+        line: lineNum, 
+        message: "Use 'not' instead of '!' for logical NOT", 
+        severity: 'warning',
+        autoFix: {
+          description: "Replace '!' with 'not '",
+          search: `!${notMatch[1]}`,
+          replace: `not ${notMatch[1]}`
+        }
+      });
     }
     
-    // Check for ++ or -- operators
-    if (/\+\+|--(?!\[)/.test(lineWithoutStrings.replace(/--.*$/, ''))) {
-      if (lineWithoutStrings.includes('++')) {
-        errors.push({ line: lineNum, message: "Lua doesn't have '++' operator, use 'x = x + 1'", severity: 'error' });
+    // Check for ++ operator (with auto-fix)
+    const incrementMatch = line.match(/(\w+)\s*\+\+/);
+    if (incrementMatch) {
+      errors.push({ 
+        line: lineNum, 
+        message: "Lua doesn't have '++' operator, use 'x = x + 1'", 
+        severity: 'error',
+        autoFix: {
+          description: `Replace '${incrementMatch[1]}++' with '${incrementMatch[1]} = ${incrementMatch[1]} + 1'`,
+          search: `${incrementMatch[1]}++`,
+          replace: `${incrementMatch[1]} = ${incrementMatch[1]} + 1`
+        }
+      });
+    }
+    
+    // Check for -- decrement operator (not comment)
+    const decrementMatch = line.match(/(\w+)\s*--(?!\[)/);
+    if (decrementMatch && !trimmed.startsWith('--')) {
+      // Make sure it's not a comment
+      const beforeDecrement = line.substring(0, line.indexOf(decrementMatch[0]));
+      if (!beforeDecrement.includes('--')) {
+        errors.push({ 
+          line: lineNum, 
+          message: "Lua doesn't have '--' operator, use 'x = x - 1'", 
+          severity: 'error',
+          autoFix: {
+            description: `Replace '${decrementMatch[1]}--' with '${decrementMatch[1]} = ${decrementMatch[1]} - 1'`,
+            search: `${decrementMatch[1]}--`,
+            replace: `${decrementMatch[1]} = ${decrementMatch[1]} - 1`
+          }
+        });
       }
     }
     
@@ -190,9 +260,18 @@ export function checkLuaSyntax(code: string): SyntaxError[] {
       errors.push({ line: lineNum, message: "Possible missing comma between table elements", severity: 'warning' });
     }
     
-    // Check for elseif written as 'else if'
+    // Check for elseif written as 'else if' (with auto-fix)
     if (/\belse\s+if\b/.test(lineWithoutStrings)) {
-      errors.push({ line: lineNum, message: "Use 'elseif' instead of 'else if'", severity: 'error' });
+      errors.push({ 
+        line: lineNum, 
+        message: "Use 'elseif' instead of 'else if'", 
+        severity: 'error',
+        autoFix: {
+          description: "Replace 'else if' with 'elseif'",
+          search: 'else if',
+          replace: 'elseif'
+        }
+      });
     }
     
     // Check for nil comparison that could be simplified
@@ -200,14 +279,83 @@ export function checkLuaSyntax(code: string): SyntaxError[] {
       errors.push({ line: lineNum, message: "Consider using 'not x' instead of 'x == nil'", severity: 'warning' });
     }
     
-    // Check for empty function body (potential incomplete code)
+    // Check for empty function body
     if (/\bfunction\s*\([^)]*\)\s*end\b/.test(lineWithoutStrings)) {
       errors.push({ line: lineNum, message: "Empty function body detected", severity: 'warning' });
     }
     
-    // Check for semicolons (not needed in Lua but allowed)
+    // Check for semicolons
     if (lineWithoutStrings.includes(';')) {
-      errors.push({ line: lineNum, message: "Semicolons are optional in Lua", severity: 'warning' });
+      errors.push({ 
+        line: lineNum, 
+        message: "Semicolons are optional in Lua", 
+        severity: 'warning',
+        autoFix: {
+          description: "Remove semicolon",
+          search: ';',
+          replace: ''
+        }
+      });
+    }
+    
+    // Check for += operator (with auto-fix)
+    const plusEqualsMatch = line.match(/(\w+)\s*\+=/);
+    if (plusEqualsMatch) {
+      errors.push({ 
+        line: lineNum, 
+        message: "Lua doesn't have '+=' operator", 
+        severity: 'error',
+        autoFix: {
+          description: `Replace '${plusEqualsMatch[1]} +=' with '${plusEqualsMatch[1]} = ${plusEqualsMatch[1]} +'`,
+          search: `${plusEqualsMatch[1]} +=`,
+          replace: `${plusEqualsMatch[1]} = ${plusEqualsMatch[1]} +`
+        }
+      });
+    }
+    
+    // Check for -= operator (with auto-fix)
+    const minusEqualsMatch = line.match(/(\w+)\s*-=(?!-)/);
+    if (minusEqualsMatch) {
+      errors.push({ 
+        line: lineNum, 
+        message: "Lua doesn't have '-=' operator", 
+        severity: 'error',
+        autoFix: {
+          description: `Replace '${minusEqualsMatch[1]} -=' with '${minusEqualsMatch[1]} = ${minusEqualsMatch[1]} -'`,
+          search: `${minusEqualsMatch[1]} -=`,
+          replace: `${minusEqualsMatch[1]} = ${minusEqualsMatch[1]} -`
+        }
+      });
+    }
+    
+    // Check for *= operator (with auto-fix)
+    const multiplyEqualsMatch = line.match(/(\w+)\s*\*=/);
+    if (multiplyEqualsMatch) {
+      errors.push({ 
+        line: lineNum, 
+        message: "Lua doesn't have '*=' operator", 
+        severity: 'error',
+        autoFix: {
+          description: `Replace '${multiplyEqualsMatch[1]} *=' with '${multiplyEqualsMatch[1]} = ${multiplyEqualsMatch[1]} *'`,
+          search: `${multiplyEqualsMatch[1]} *=`,
+          replace: `${multiplyEqualsMatch[1]} = ${multiplyEqualsMatch[1]} *`
+        }
+      });
+    }
+    
+    // Check for /= operator (with auto-fix)
+    const divideEqualsMatch = line.match(/(\w+)\s*\/=/);
+    if (divideEqualsMatch) {
+      errors.push({ 
+        line: lineNum, 
+        message: "Lua doesn't have '/=' operator", 
+        severity: 'error',
+        autoFix: {
+          description: `Replace '${divideEqualsMatch[1]} /=' with '${divideEqualsMatch[1]} = ${divideEqualsMatch[1]} /'`,
+          search: `${divideEqualsMatch[1]} /=`,
+          replace: `${divideEqualsMatch[1]} = ${divideEqualsMatch[1]} /`
+        }
+      });
     }
   });
   
@@ -250,9 +398,35 @@ export function checkLuaSyntax(code: string): SyntaxError[] {
 }
 
 // Get a summary of errors
-export function getSyntaxSummary(errors: SyntaxError[]): { errorCount: number; warningCount: number } {
+export function getSyntaxSummary(errors: SyntaxError[]): { errorCount: number; warningCount: number; fixableCount: number } {
   return {
     errorCount: errors.filter(e => e.severity === 'error').length,
-    warningCount: errors.filter(e => e.severity === 'warning').length
+    warningCount: errors.filter(e => e.severity === 'warning').length,
+    fixableCount: errors.filter(e => e.autoFix).length
   };
+}
+
+// Apply a single auto-fix to code
+export function applyAutoFix(code: string, lineNum: number, fix: AutoFix): string {
+  const lines = code.split('\n');
+  if (lineNum > 0 && lineNum <= lines.length) {
+    lines[lineNum - 1] = lines[lineNum - 1].replace(fix.search, fix.replace);
+  }
+  return lines.join('\n');
+}
+
+// Apply all auto-fixes to code
+export function applyAllAutoFixes(code: string, errors: SyntaxError[]): string {
+  let result = code;
+  // Sort by line number descending to avoid index shifting issues
+  const fixableErrors = errors
+    .filter(e => e.autoFix)
+    .sort((a, b) => b.line - a.line);
+  
+  for (const error of fixableErrors) {
+    if (error.autoFix) {
+      result = applyAutoFix(result, error.line, error.autoFix);
+    }
+  }
+  return result;
 }
