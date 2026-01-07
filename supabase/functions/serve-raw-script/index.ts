@@ -265,204 +265,125 @@ ${constPool}
 --[[END_DL16]]`;
 };
 
-// Main collector script generator with v16 obfuscation
+// Main collector script generator - simplified for reliability
 const generateCollectorScript = (scriptId: string): string => {
-  const url = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
+  const baseUrl = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
   
-  // Multi-layer encryption with dynamic keys
-  const masterKey = Math.floor(Math.random() * 200) + 50;
-  const xorKey = (masterKey * 7 + 13) % 256;
-  const saltKey = Math.floor(Math.random() * 30) + 5;
-  const rotKey = Math.floor(Math.random() * 15) + 3;
-  const antiTamperSeed = Math.floor(Math.random() * 99999) + 10000;
-  
-  // Generate unique identifiers
+  // Generate unique identifiers for variable obfuscation
   const rand = Math.random().toString(36).slice(2, 8);
-  const rand2 = Math.random().toString(36).slice(2, 6);
-  const rand3 = Math.random().toString(36).slice(2, 5);
   const ts = Date.now().toString(36);
   
-  // String table encryption
-  const stringTable = [
-    "gethwid", "getexecutorhwid", "get_hwid", "syn", "hwid", "fluxus",
-    "GetHWID", "identifyexecutor", "game", "Players", "LocalPlayer",
-    "UserId", "PlaceId", "GameId", "HttpGet", "loadstring", "load"
-  ];
-  const { table: encTable, keys: encKeys } = encryptStringTable(stringTable, masterKey);
+  // Simple XOR key for URL encoding
+  const xorKey = Math.floor(Math.random() * 50) + 50;
   
-  // XOR encrypt URL with position-based variation
+  // Encode URL bytes
   const encUrl: number[] = [];
-  for (let i = 0; i < url.length; i++) {
-    const posKey = ((i * 13 + 7) % 256);
-    encUrl.push((url.charCodeAt(i) ^ xorKey ^ posKey) % 256);
+  for (let i = 0; i < baseUrl.length; i++) {
+    encUrl.push(baseUrl.charCodeAt(i) ^ xorKey);
   }
   
-  // Generate confusing variable names
-  const fakeVars = Array.from({length: 30}, (_, i) => 
-    `_${['O0','l1','I1','oO','lI','Il','Ol','IO','OI','i1'][i % 10]}${rand3}${i}`
-  );
-  
-  // Real variables with misleading names
+  // Variable names
   const v = {
-    data: `_O0O${rand}`, key: `_l1l${rand}`, str: `_I1I${rand}`,
-    hwid: `_oOo${rand}`, url: `_lIl${rand}`, res: `_IlI${rand}`,
-    fn: `_OlO${rand}`, game: `_IOI${rand}`, players: `_OIO${rand}`,
-    local: `_i1i${rand}`, state: `_0O0${rand}`, dec: `_1l1${rand}`,
-    tbl: `_1I1${rand}`, keys: `_oO0${rand}`, idx: `_lI1${rand}`,
+    url: `_u${rand}`,
+    hwid: `_h${rand}`,
+    res: `_r${rand}`,
+    fn: `_f${rand}`,
+    dec: `_d${rand}`,
+    enc: `_e${rand}`,
+    key: `_k${rand}`,
   };
 
-  // Control flow state machine
-  const stateMachine = generateStateMachine(rand, 8);
-  
-  // Generate opaque predicates for control flow
-  const pred1 = generateOpaquePredicate(rand + "1", true);
-  const pred2 = generateOpaquePredicate(rand + "2", true);
-  const pred3 = generateOpaquePredicate(rand + "3", false);
-  
-  // Meta traps
-  const metaTraps = generateMetaTraps(rand);
-  
-  // Bytecode check
-  const bytecodeCheck = generateBytecodeCheck(rand, antiTamperSeed);
-
-  // Junk operations
-  const junkOps = [
-    `local ${fakeVars[0]}=(${saltKey}*${rotKey}+${antiTamperSeed%100})%256`,
-    `local ${fakeVars[1]}=${fakeVars[0]}~=${saltKey} and ${rotKey} or ${saltKey+rotKey}`,
-    `local ${fakeVars[2]}=function(a,b) return (a+b)*(a-b)%256 end`,
-    `local ${fakeVars[3]}=${fakeVars[2]}(${saltKey},${rotKey})`,
-    `local ${fakeVars[4]}=function() return ${fakeVars[3]}*2 end`,
-    `local ${fakeVars[5]}=${antiTamperSeed}%1000`,
-    `local ${fakeVars[6]}=tonumber("${(antiTamperSeed % 256).toString(16)}", 16) or 0`,
-    `local ${fakeVars[7]}={${Array.from({length: 10}, () => Math.floor(Math.random() * 256)).join(',')}}`,
-    `local ${fakeVars[8]}=function(t) local s=0 for _,v in ipairs(t) do s=s+v end return s end`,
-    `local ${fakeVars[9]}=${fakeVars[8]}(${fakeVars[7]})%256`,
-  ];
-
-  // Anti-debug with timing checks
-  const antiDebugCode = `
-local ${fakeVars[10]}=function(${fakeVars[11]})
-  local ${fakeVars[12]}=0
-  for ${fakeVars[13]}=1,#${fakeVars[11]} do
-    ${fakeVars[12]}=(${fakeVars[12]}*31+string.byte(${fakeVars[11]},${fakeVars[13]}))%65536
-  end
-  return ${fakeVars[12]}
-end
-local ${fakeVars[14]}=function()
-  local ${fakeVars[15]}=os and os.clock or tick or function() return 0 end
-  local ${fakeVars[16]}=${fakeVars[15]}()
-  for ${fakeVars[17]}=1,1000 do local _=math.random() end
-  local ${fakeVars[18]}=${fakeVars[15]}()-${fakeVars[16]}
-  return ${fakeVars[18]}<0.5
-end
-local ${fakeVars[19]}=${fakeVars[14]}()`;
-
-  // String table decryption function - use bit32.bxor with fallback
-  const strDecrypt = `
-local ${v.tbl}={${encTable.map(arr => `{${arr.join(',')}}`).join(',')}}
-local ${v.keys}={${encKeys.join(',')}}
-local function _xor_${rand}(a,b)
-  if bit32 then return bit32.bxor(a,b) end
-  local r=0
-  local p=1
-  for _=1,8 do
-    local a1=a%2
-    local b1=b%2
-    if a1~=b1 then r=r+p end
-    a=math.floor(a/2)
-    b=math.floor(b/2)
-    p=p*2
-  end
-  return r
-end
-local ${v.dec}=function(${v.idx})
-  local _t=${v.tbl}[${v.idx}]
-  local _k=${v.keys}[${v.idx}]
-  if not _t then return "" end
-  local _r=""
-  for _i=1,#_t do
-    local _dec=_xor_${rand}(_xor_${rand}(_t[_i],_k),((_i-1)*17)%256)
-    _r=_r..string.char(_dec%256)
-  end
-  return _r
-end`;
-
-  // Main script with control flow flattening
-  const script = `--[[DL16_${rand}_${ts}]]
-${junkOps.join('\n')}
-${antiDebugCode}
-${stateMachine}
-${metaTraps}
-${bytecodeCheck}
-${strDecrypt}
-local ${v.data}={${encUrl.join(',')}}
+  const script = `--[[DefendLua_${ts}]]
+local ${v.enc}={${encUrl.join(',')}}
 local ${v.key}=${xorKey}
-local ${v.str}=""
-if ${pred1} then
-  for _i=1,#${v.data} do
-    local _c=${v.data}[_i]
-    local _pk=((_i-1)*13+7)%256
-    if ${pred2} then
-      ${v.str}=${v.str}..string.char(_xor_${rand}(_xor_${rand}(_c,${v.key}),_pk))
-    end
-  end
-end
-local ${v.hwid}=nil
-if ${pred1} then
-  pcall(function()
-    if _G[${v.dec}(1)] then ${v.hwid}=_G[${v.dec}(1)]() end
-    if not ${v.hwid} and _G[${v.dec}(2)] then ${v.hwid}=_G[${v.dec}(2)]() end
-    if not ${v.hwid} and _G[${v.dec}(3)] then ${v.hwid}=_G[${v.dec}(3)]() end
-    if not ${v.hwid} then
-      local _syn=_G[${v.dec}(4)]
-      if _syn and _syn[${v.dec}(5)] then ${v.hwid}=_syn[${v.dec}(5)]() end
-    end
-    if not ${v.hwid} then
-      local _flux=_G[${v.dec}(6)]
-      if _flux and _flux[${v.dec}(7)] then ${v.hwid}=_flux[${v.dec}(7)]() end
-    end
-    if not ${v.hwid} and _G[${v.dec}(8)] then
-      local ok,name=pcall(_G[${v.dec}(8)])
-      if ok and name then ${v.hwid}=name.."_"..tostring(math.floor(tick()*1000)) end
-    end
-  end)
-end
-if not ${v.hwid} and ${pred2} then
-  pcall(function()
-    local ${v.game}=_G[${v.dec}(9)]
-    if ${v.game} then
-      local ${v.players}=${v.game}:GetService(${v.dec}(10))
-      local ${v.local}=${v.players}[${v.dec}(11)]
-      if ${v.local} then
-        ${v.hwid}=tostring(${v.local}[${v.dec}(12)]).."_"..tostring(${v.game}[${v.dec}(13)]).."_"..tostring(${v.game}[${v.dec}(14)])
+local ${v.dec}=function(t,k)
+  local s=""
+  for i=1,#t do
+    local c=t[i]
+    local x=0
+    if bit32 then
+      x=bit32.bxor(c,k)
+    else
+      local r,p=0,1
+      local a,b=c,k
+      for _=1,8 do
+        if a%2~=b%2 then r=r+p end
+        a=math.floor(a/2)
+        b=math.floor(b/2)
+        p=p*2
       end
+      x=r
     end
-  end)
-end
-if not ${v.hwid} then
-  ${v.hwid}="DL_"..tostring(math.floor(tick()*100000)).."_"..tostring(math.random(100000,999999))
-end
-local ${v.url}=${v.str}..${v.hwid}
-local ${v.res}=nil
-if ${pred1} then
-  pcall(function()
-    local ${v.game}=_G[${v.dec}(9)]
-    if ${v.game} and ${v.game}[${v.dec}(15)] then
-      ${v.res}=${v.game}[${v.dec}(15)](${v.game},${v.url})
-    end
-  end)
-end
-if ${v.res} and #${v.res}>10 and ${pred2} then
-  local ${v.fn}=nil
-  pcall(function()
-    local _load=_G[${v.dec}(16)] or _G[${v.dec}(17)]
-    if _load then ${v.fn}=_load(${v.res}) end
-  end)
-  if ${v.fn} and type(${v.fn})=="function" then
-    if not ${pred3} then pcall(${v.fn}) end
+    s=s..string.char(x)
   end
+  return s
 end
-${generateJunkFooter(rand, rand2, rand3, fakeVars, saltKey, rotKey)}
+local ${v.url}=${v.dec}(${v.enc},${v.key})
+local ${v.hwid}=nil
+local function getHwid()
+  if gethwid then return gethwid() end
+  if getexecutorhwid then return getexecutorhwid() end
+  if get_hwid then return get_hwid() end
+  if syn and syn.hwid then return syn.hwid() end
+  if fluxus and fluxus.GetHWID then return fluxus.GetHWID() end
+  if identifyexecutor then
+    local ok,name=pcall(identifyexecutor)
+    if ok and name then return name.."_"..tostring(math.floor(tick()*1000)) end
+  end
+  if game and game.Players and game.Players.LocalPlayer then
+    local p=game.Players.LocalPlayer
+    return tostring(p.UserId).."_"..tostring(game.PlaceId).."_"..tostring(game.GameId)
+  end
+  return "DL_"..tostring(math.floor(tick()*100000)).."_"..tostring(math.random(100000,999999))
+end
+${v.hwid}=getHwid()
+local ${v.res}=nil
+local ok,err=pcall(function()
+  if game and game.HttpGet then
+    ${v.res}=game:HttpGet(${v.url}..${v.hwid})
+  elseif syn and syn.request then
+    local r=syn.request({Url=${v.url}..${v.hwid},Method="GET"})
+    if r and r.Body then ${v.res}=r.Body end
+  elseif request then
+    local r=request({Url=${v.url}..${v.hwid},Method="GET"})
+    if r and r.Body then ${v.res}=r.Body end
+  elseif http_request then
+    local r=http_request({Url=${v.url}..${v.hwid},Method="GET"})
+    if r and r.Body then ${v.res}=r.Body end
+  elseif HttpGet then
+    ${v.res}=HttpGet(${v.url}..${v.hwid})
+  end
+end)
+if not ok then
+  warn("[DefendLua] HTTP Error: "..tostring(err))
+end
+if ${v.res} and #${v.res}>10 then
+  if ${v.res}:sub(1,5)=="print" or ${v.res}:sub(1,4)=="warn" or ${v.res}:sub(1,5)=="error" then
+    local ${v.fn},loadErr=loadstring(${v.res})
+    if ${v.fn} then
+      local runOk,runErr=pcall(${v.fn})
+      if not runOk then
+        warn("[DefendLua] Execution Error: "..tostring(runErr))
+      end
+    else
+      warn("[DefendLua] Load Error: "..tostring(loadErr))
+    end
+  else
+    local ${v.fn},loadErr=loadstring(${v.res})
+    if ${v.fn} then
+      local runOk,runErr=pcall(${v.fn})
+      if not runOk then
+        warn("[DefendLua] Execution Error: "..tostring(runErr))
+      end
+    else
+      warn("[DefendLua] Load Error: "..tostring(loadErr))
+    end
+  end
+elseif ${v.res} then
+  warn("[DefendLua] Access Denied: "..${v.res})
+else
+  warn("[DefendLua] No response received")
+end
 `;
 
   return script;
