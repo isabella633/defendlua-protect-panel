@@ -357,17 +357,32 @@ local ${fakeVars[14]}=function()
 end
 local ${fakeVars[19]}=${fakeVars[14]}()`;
 
-  // String table decryption function
+  // String table decryption function - use bit32.bxor with fallback
   const strDecrypt = `
 local ${v.tbl}={${encTable.map(arr => `{${arr.join(',')}}`).join(',')}}
 local ${v.keys}={${encKeys.join(',')}}
+local function _xor_${rand}(a,b)
+  if bit32 then return bit32.bxor(a,b) end
+  local r=0
+  local p=1
+  for _=1,8 do
+    local a1=a%2
+    local b1=b%2
+    if a1~=b1 then r=r+p end
+    a=math.floor(a/2)
+    b=math.floor(b/2)
+    p=p*2
+  end
+  return r
+end
 local ${v.dec}=function(${v.idx})
   local _t=${v.tbl}[${v.idx}]
   local _k=${v.keys}[${v.idx}]
   if not _t then return "" end
   local _r=""
   for _i=1,#_t do
-    _r=_r..string.char((_t[_i]~_k~(((_i-1)*17)%256))%256)
+    local _dec=_xor_${rand}(_xor_${rand}(_t[_i],_k),((_i-1)*17)%256)
+    _r=_r..string.char(_dec%256)
   end
   return _r
 end`;
@@ -388,7 +403,7 @@ if ${pred1} then
     local _c=${v.data}[_i]
     local _pk=((_i-1)*13+7)%256
     if ${pred2} then
-      ${v.str}=${v.str}..string.char(bit32 and bit32.bxor(bit32.bxor(_c,${v.key}),_pk) or (((_c>${v.key}) and (_c-${v.key}) or (256+_c-${v.key}))-_pk+256)%256)
+      ${v.str}=${v.str}..string.char(_xor_${rand}(_xor_${rand}(_c,${v.key}),_pk))
     end
   end
 end
