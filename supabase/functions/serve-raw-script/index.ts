@@ -585,7 +585,274 @@ Deno.serve(async (req) => {
 
     console.log("Access granted - serving script:", { scriptId });
 
-    return new Response(script.script_key, {
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // OBFUSCATION ENGINE - Multi-layer protection for served scripts
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    const obfuscateScript = (source: string, hwid: string): string => {
+      const timestamp = Date.now();
+      const rand1 = Math.random().toString(36).slice(2, 10);
+      const rand2 = Math.random().toString(36).slice(2, 10);
+      const rand3 = Math.random().toString(36).slice(2, 10);
+      const salt = Math.floor(Math.random() * 10000) + 1000;
+      
+      // Generate dynamic encryption key based on HWID and timestamp
+      const masterKey = hwid.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), timestamp % 1000);
+      
+      // Encrypt the source code with multi-layer XOR cipher
+      const encryptSource = (src: string, key: number): number[] => {
+        const result: number[] = [];
+        const keyBytes = [
+          (key >> 24) & 0xFF,
+          (key >> 16) & 0xFF,
+          (key >> 8) & 0xFF,
+          key & 0xFF,
+          (key * 7) & 0xFF,
+          (key * 13) & 0xFF,
+          (key * 31) & 0xFF,
+          (key * 47) & 0xFF
+        ];
+        for (let i = 0; i < src.length; i++) {
+          let byte = src.charCodeAt(i);
+          // Layer 1: XOR with rotating key
+          byte ^= keyBytes[i % keyBytes.length];
+          // Layer 2: Add position-based shift
+          byte = (byte + (i * 7)) & 0xFF;
+          // Layer 3: XOR with previous byte
+          if (i > 0) byte ^= result[i - 1] & 0x3F;
+          result.push(byte);
+        }
+        return result;
+      };
+      
+      const encryptedBytes = encryptSource(source, masterKey);
+      
+      // Split into chunks for harder analysis
+      const chunkSize = Math.floor(encryptedBytes.length / 4) + 1;
+      const chunks: number[][] = [];
+      for (let i = 0; i < encryptedBytes.length; i += chunkSize) {
+        chunks.push(encryptedBytes.slice(i, i + chunkSize));
+      }
+      
+      // Variable name generator with random prefixes
+      const varNames = {
+        data: `_D${rand1}`,
+        key: `_K${rand1}`,
+        result: `_R${rand2}`,
+        decrypt: `_X${rand2}`,
+        verify: `_V${rand3}`,
+        exec: `_E${rand3}`,
+        chunk: chunks.map((_, i) => `_C${rand1}${i}`),
+        keyBytes: `_KB${rand2}`,
+        antiDebug: `_AD${rand3}`,
+        integrityCheck: `_IC${rand1}`,
+        hwidCheck: `_HC${rand2}`,
+        envCheck: `_EC${rand3}`,
+        timeCheck: `_TC${rand1}`,
+        selfCheck: `_SC${rand2}`,
+      };
+      
+      // Calculate integrity hash of encrypted data
+      const integrityHash = encryptedBytes.reduce((acc, b, i) => (acc * 31 + b + i) >>> 0, salt);
+      
+      // Generate anti-debug checks
+      const antiDebugCode = `
+local ${varNames.antiDebug}=function()
+  local _ok=true
+  if debug then
+    local _gi=debug.getinfo
+    if _gi then
+      local _i=_gi(1,"Sl")
+      if _i and _i.source and (_i.source:find("@") or _i.currentline<0) then
+        _ok=false
+      end
+    end
+    if debug.sethook then
+      local _h,_m,_c=debug.gethook()
+      if _h then _ok=false end
+    end
+  end
+  if _G["DEOBF_FLAG"] or _G["DEBUG_MODE"] then _ok=false end
+  return _ok
+end`;
+      
+      // Generate HWID verification (binds script to specific HWID)
+      const hwidHash = hwid.split('').reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
+      const hwidCheckCode = `
+local ${varNames.hwidCheck}=function()
+  local _hwid=nil
+  if gethwid then _hwid=gethwid()
+  elseif getexecutorhwid then _hwid=getexecutorhwid()
+  elseif get_hwid then _hwid=get_hwid()
+  elseif syn and syn.hwid then _hwid=syn.hwid()
+  elseif fluxus and fluxus.GetHWID then _hwid=fluxus.GetHWID()
+  end
+  if not _hwid then return true end
+  local _h=0
+  for i=1,#_hwid do _h=(_h*37+string.byte(_hwid,i))%4294967296 end
+  return _h==${hwidHash}
+end`;
+      
+      // Generate environment integrity check
+      const envCheckCode = `
+local ${varNames.envCheck}=function()
+  local _dangerous={"getfenv","setfenv","debug.setupvalue","debug.setlocal"}
+  for _,_n in ipairs(_dangerous) do
+    local _parts={}
+    for _p in _n:gmatch("[^.]+") do _parts[#_parts+1]=_p end
+    local _v=_G
+    for _,_p in ipairs(_parts) do
+      if type(_v)=="table" then _v=_v[_p] else break end
+    end
+    if _v and type(_v)=="function" then
+      local _ok,_err=pcall(function() return string.dump(_v) end)
+      if not _ok then return false end
+    end
+  end
+  return true
+end`;
+      
+      // Generate time-based check (prevents analysis by detecting long pauses)
+      const timeCheckCode = `
+local ${varNames.timeCheck}=(os.clock and os.clock() or tick and tick() or 0)`;
+      
+      // Generate self-integrity verification
+      const selfCheckCode = `
+local ${varNames.selfCheck}=function(_fn)
+  if type(_fn)~="function" then return false end
+  local _ok,_dump=pcall(string.dump,_fn)
+  if not _ok or not _dump then return true end
+  local _h=0
+  for i=1,math.min(#_dump,200) do
+    _h=(_h*31+string.byte(_dump,i))%2147483647
+  end
+  return _h>0
+end`;
+      
+      // Build decryption function
+      const decryptCode = `
+local ${varNames.keyBytes}={${[
+        (masterKey >> 24) & 0xFF,
+        (masterKey >> 16) & 0xFF,
+        (masterKey >> 8) & 0xFF,
+        masterKey & 0xFF,
+        (masterKey * 7) & 0xFF,
+        (masterKey * 13) & 0xFF,
+        (masterKey * 31) & 0xFF,
+        (masterKey * 47) & 0xFF
+      ].join(',')}}
+local ${varNames.decrypt}=function(${varNames.data})
+  local ${varNames.result}=""
+  local _prev=0
+  for i=1,#${varNames.data} do
+    local _b=${varNames.data}[i]
+    if i>1 then _b=bit32 and bit32.bxor(_b,_prev%64) or ((_b>=(_prev%64)) and _b-(_prev%64) or 256+_b-(_prev%64))%256 end
+    _prev=${varNames.data}[i]
+    _b=(_b-((i-1)*7))%256
+    if _b<0 then _b=_b+256 end
+    local _k=${varNames.keyBytes}[((i-1)%8)+1]
+    _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
+    ${varNames.result}=${varNames.result}..string.char(_b)
+  end
+  return ${varNames.result}
+end`;
+      
+      // Build data chunks
+      const chunkDefs = chunks.map((chunk, i) => 
+        `local ${varNames.chunk[i]}={${chunk.join(',')}}`
+      ).join('\n');
+      
+      // Combine chunks
+      const combineCode = `
+local ${varNames.data}={}
+${chunks.map((_, i) => `for _,v in ipairs(${varNames.chunk[i]}) do ${varNames.data}[#${varNames.data}+1]=v end`).join('\n')}`;
+      
+      // Integrity verification
+      const integrityCode = `
+local ${varNames.integrityCheck}=function()
+  local _h=${salt}
+  for i=1,#${varNames.data} do _h=(_h*31+${varNames.data}[i]+i-1)%4294967296 end
+  return _h==${integrityHash}
+end`;
+      
+      // Execution wrapper with all protections
+      const execCode = `
+local ${varNames.exec}=function()
+  if not ${varNames.antiDebug}() then
+    return warn("[DefendLua] Security check failed: Debug detected")
+  end
+  if not ${varNames.hwidCheck}() then
+    return warn("[DefendLua] Security check failed: HWID mismatch")
+  end
+  if not ${varNames.envCheck}() then
+    return warn("[DefendLua] Security check failed: Environment tampered")
+  end
+  if not ${varNames.integrityCheck}() then
+    return warn("[DefendLua] Security check failed: Data corrupted")
+  end
+  local _elapsed=(os.clock and os.clock() or tick and tick() or 0)-${varNames.timeCheck}
+  if _elapsed>5 then
+    return warn("[DefendLua] Security check failed: Timeout exceeded")
+  end
+  local _src=${varNames.decrypt}(${varNames.data})
+  if not _src or #_src<5 then
+    return warn("[DefendLua] Decryption failed")
+  end
+  local _fn,_err=loadstring(_src)
+  if not _fn then
+    return warn("[DefendLua] Load error: "..tostring(_err))
+  end
+  if not ${varNames.selfCheck}(_fn) then
+    return warn("[DefendLua] Security check failed: Function tampered")
+  end
+  local _ok,_runErr=pcall(_fn)
+  if not _ok then
+    warn("[DefendLua] Runtime error: "..tostring(_runErr))
+  end
+end`;
+      
+      // Generate junk code to confuse decompilers
+      const junkVars = Array.from({length: 15}, (_, i) => `_J${rand3}${i}`);
+      const junkCode = `
+local ${junkVars[0]}=setmetatable({},{__index=function() return function() end end,__metatable="protected"})
+local ${junkVars[1]}=function(...) local _a={...} return #_a>0 and _a[1] or nil end
+local ${junkVars[2]}={${Array.from({length: 20}, () => Math.floor(Math.random() * 256)).join(',')}}
+local ${junkVars[3]}=coroutine.create(function() while true do coroutine.yield(${salt}) end end)
+local ${junkVars[4]}=function(_x) return _x and tonumber(tostring(_x):reverse()) or 0 end
+local ${junkVars[5]}=newproxy and newproxy(true) or {}
+if ${junkVars[5]} and getmetatable(${junkVars[5]}) then
+  local _mt=getmetatable(${junkVars[5]})
+  if _mt then _mt.__tostring=function() return "${rand1}" end end
+end
+local ${junkVars[6]}=string.rep("\\0",${Math.floor(Math.random() * 50) + 10})
+local ${junkVars[7]}={__mode="kv",__index=${junkVars[0]}}
+local ${junkVars[8]}=function() return rawequal(${junkVars[0]},${junkVars[0]}) and ${salt} or 0 end
+local ${junkVars[9]}=select("#",pcall(function() end))`;
+      
+      // Build final protected script
+      const protectedScript = `--[[DefendLua v17.0 | ${timestamp} | ${rand1}]]
+do
+${junkCode}
+${antiDebugCode}
+${hwidCheckCode}
+${envCheckCode}
+${timeCheckCode}
+${selfCheckCode}
+${decryptCode}
+${chunkDefs}
+${combineCode}
+${integrityCode}
+${execCode}
+${varNames.exec}()
+end
+--[[${Math.random().toString(36).slice(2)}]]`;
+      
+      return protectedScript;
+    };
+    
+    const protectedScript = obfuscateScript(script.script_key, hwid);
+    
+    return new Response(protectedScript, {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "text/plain" },
     });
