@@ -18,8 +18,20 @@ import {
   CheckCircle,
   ShoppingCart,
   ExternalLink,
-  Settings
+  Settings,
+  ArrowDown
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AIChatWidget from "./AIChatWidget";
@@ -45,6 +57,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
   const [searchTerm, setSearchTerm] = useState("");
   const [activationCode, setActivationCode] = useState("");
   const [isActivating, setIsActivating] = useState(false);
+  const [isDowngrading, setIsDowngrading] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [userEmail, setUserEmail] = useState("");
   const { toast } = useToast();
@@ -118,6 +131,35 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
       });
     } finally {
       setIsActivating(false);
+    }
+  };
+
+  const handleDowngrade = async () => {
+    setIsDowngrading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('downgrade-subscription');
+
+      if (error) throw error;
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "Plan Downgraded",
+        description: "You have been downgraded to the Free plan.",
+      });
+
+      fetchSubscription();
+    } catch (error: any) {
+      toast({
+        title: "Downgrade Failed",
+        description: error.message || "Failed to downgrade plan. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDowngrading(false);
     }
   };
 
@@ -647,6 +689,47 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                           </a>
                           <p className="text-xs text-center text-muted-foreground mt-2">
                             Or <a href="/contact" className="text-primary hover:underline">contact us</a> for Enterprise
+                          </p>
+                        </div>
+                      )}
+
+                      {(subscription?.plan === 'pro' || subscription?.plan === 'enterprise') && (
+                        <div className="pt-4 border-t">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" className="w-full text-destructive hover:text-destructive" disabled={isDowngrading}>
+                                <ArrowDown className="w-4 h-4 mr-2" />
+                                {isDowngrading ? "Downgrading..." : "Downgrade to Free Plan"}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Downgrade to Free Plan?</AlertDialogTitle>
+                                <AlertDialogDescription className="space-y-2">
+                                  <p>Are you sure you want to downgrade? You will immediately lose access to:</p>
+                                  <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                                    <li>Unlimited scripts (limited to 3)</li>
+                                    <li>Up to 100 HWIDs per script (limited to 10)</li>
+                                    <li>Discord webhook logging</li>
+                                    <li>Priority AI responses</li>
+                                    <li>Advanced analytics</li>
+                                  </ul>
+                                  <p className="mt-3 font-medium">This action takes effect immediately and cannot be undone.</p>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={handleDowngrade}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Yes, Downgrade
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          <p className="text-xs text-center text-muted-foreground mt-2">
+                            You can upgrade again anytime with an activation key
                           </p>
                         </div>
                       )}
