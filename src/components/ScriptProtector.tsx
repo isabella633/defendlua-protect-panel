@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Code, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Shield, Code, AlertTriangle, ArrowLeft, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import LuaCodeEditor from "@/components/LuaCodeEditor";
-import { checkLuaSyntax, type SyntaxError } from "@/lib/luaSyntaxChecker";
+import { checkLuaSyntax, getSyntaxSummary, type SyntaxError } from "@/lib/luaSyntaxChecker";
 import { supabase } from "@/integrations/supabase/client";
 import LuaCodeAssistant from "./LuaCodeAssistant";
 
@@ -21,11 +22,18 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
   const [scriptName, setScriptName] = useState("");
   const [luaCode, setLuaCode] = useState("");
   const [isProtecting, setIsProtecting] = useState(false);
-  const [syntaxErrors, setSyntaxErrors] = useState<SyntaxError[]>([]);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [userPlan, setUserPlan] = useState<'free' | 'pro' | 'enterprise'>('free');
   const [scriptCount, setScriptCount] = useState(0);
   const { toast } = useToast();
+
+  // Real-time syntax checking
+  const syntaxErrors = useMemo(() => {
+    if (!luaCode.trim()) return [];
+    return checkLuaSyntax(luaCode);
+  }, [luaCode]);
+
+  const syntaxSummary = useMemo(() => getSyntaxSummary(syntaxErrors), [syntaxErrors]);
 
   const getScriptLimit = (plan: string) => {
     switch (plan) {
@@ -41,29 +49,44 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
   }, [userId]);
 
   const loadUserData = async () => {
-    const { data: subscription } = await supabase
-      .from('subscriptions')
-      .select('plan')
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    if (subscription) {
-      setUserPlan(subscription.plan as 'free' | 'pro' | 'enterprise');
-    }
+    try {
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('plan')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (subError) {
+        console.error('Error loading subscription:', subError);
+      }
+      
+      if (subscription) {
+        setUserPlan(subscription.plan as 'free' | 'pro' | 'enterprise');
+      }
 
-    // Get current script count
-    const { count } = await supabase
-      .from('scripts')
-      .select('*', { count: 'exact', head: true })
-      .eq('owner_id', userId);
-    
-    setScriptCount(count || 0);
+      const { count, error: countError } = await supabase
+        .from('scripts')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', userId);
+      
+      if (countError) {
+        console.error('Error loading script count:', countError);
+      }
+      
+      setScriptCount(count || 0);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load user data. Please refresh the page.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleProtectScript = async () => {
     const scriptLimit = getScriptLimit(userPlan);
     
-    // Check script limit for free plan
     if (scriptCount >= scriptLimit) {
       toast({
         title: "Script Limit Reached",
@@ -92,9 +115,7 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
     }
 
     // Check for syntax errors
-    const errors = checkLuaSyntax(luaCode);
-    if (errors.length > 0) {
-      setSyntaxErrors(errors);
+    if (syntaxErrors.length > 0) {
       setShowErrorDialog(true);
       return;
     }
@@ -104,6 +125,7 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
 
   const proceedWithProtection = async () => {
     setIsProtecting(true);
+    setShowErrorDialog(false);
     
     try {
       const { data, error } = await supabase
@@ -117,22 +139,65 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('A script with this name already exists.');
+        }
+        throw error;
+      }
 
       toast({
         title: "Script Protected!",
-        description: `${scriptName} has been successfully protected.`,
+        description: `${scriptName} has been successfully protected and saved.`,
       });
       onBack();
     } catch (error: any) {
+      console.error('Protection error:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to save script.",
+        title: "Protection Failed",
+        description: error.message || "Failed to save script. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsProtecting(false);
     }
+  };
+
+  const getSyntaxStatusBadge = () => {
+    if (!luaCode.trim()) {
+      return (
+        <Badge variant="outline" className="text-muted-foreground">
+          <Code className="w-3 h-3 mr-1" />
+          No code entered
+        </Badge>
+      );
+    }
+
+    if (syntaxSummary.errorCount === 0 && syntaxSummary.warningCount === 0) {
+      return (
+        <Badge variant="outline" className="text-green-600 border-green-600/30 bg-green-600/10">
+          <CheckCircle2 className="w-3 h-3 mr-1" />
+          No issues found
+        </Badge>
+      );
+    }
+
+    if (syntaxSummary.errorCount > 0) {
+      return (
+        <Badge variant="destructive">
+          <XCircle className="w-3 h-3 mr-1" />
+          {syntaxSummary.errorCount} error{syntaxSummary.errorCount !== 1 ? 's' : ''}
+          {syntaxSummary.warningCount > 0 && `, ${syntaxSummary.warningCount} warning${syntaxSummary.warningCount !== 1 ? 's' : ''}`}
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="outline" className="text-yellow-600 border-yellow-600/30 bg-yellow-600/10">
+        <AlertCircle className="w-3 h-3 mr-1" />
+        {syntaxSummary.warningCount} warning{syntaxSummary.warningCount !== 1 ? 's' : ''}
+      </Badge>
+    );
   };
 
   return (
@@ -163,19 +228,24 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
 
           <Card className="border-border/50 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Code className="w-5 h-5 text-security-primary" />
-                <span>Lua Code Input</span>
-              </CardTitle>
-              <CardDescription>
-                Paste your Lua script below. We'll scan for syntax errors before protection.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Code className="w-5 h-5 text-security-primary" />
+                    <span>Lua Code Input</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Paste your Lua script below. Real-time syntax validation is enabled.
+                  </CardDescription>
+                </div>
+                {getSyntaxStatusBadge()}
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               <Alert className="border-primary/20 bg-primary/5">
                 <AlertTriangle className="h-4 w-4 text-primary" />
                 <AlertDescription className="text-primary">
-                  <strong>Syntax Checking Enabled:</strong> Your code will be scanned for common syntax errors before protection.
+                  <strong>Real-Time Syntax Checking:</strong> Your code is continuously scanned for Lua syntax errors and common mistakes.
                 </AlertDescription>
               </Alert>
 
@@ -186,16 +256,56 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
                   placeholder="My Awesome Script"
                   value={scriptName}
                   onChange={(e) => setScriptName(e.target.value)}
+                  maxLength={100}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lua-code">Enter your .lua code:</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="lua-code">Enter your .lua code:</Label>
+                </div>
                 <LuaCodeEditor
                   value={luaCode}
                   onChange={setLuaCode}
                 />
               </div>
+
+              {/* Real-time error display */}
+              {syntaxErrors.length > 0 && (
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                    <span>Syntax Issues Detected</span>
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto space-y-2">
+                    {syntaxErrors.slice(0, 10).map((error, index) => (
+                      <div 
+                        key={index} 
+                        className={`flex items-start gap-2 text-sm p-2 rounded ${
+                          error.severity === 'error' 
+                            ? 'bg-destructive/10 text-destructive' 
+                            : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                        }`}
+                      >
+                        {error.severity === 'error' ? (
+                          <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        )}
+                        <div>
+                          <span className="font-semibold">Line {error.line}:</span>{" "}
+                          <span>{error.message}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {syntaxErrors.length > 10 && (
+                      <p className="text-xs text-muted-foreground text-center pt-2">
+                        ... and {syntaxErrors.length - 10} more issue{syntaxErrors.length - 10 !== 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-center">
                 <Button
@@ -214,33 +324,72 @@ const ScriptProtector = ({ onBack, userId }: ScriptProtectorProps) => {
         </div>
       </main>
 
-      {/* Syntax Error Dialog */}
+      {/* Syntax Error Confirmation Dialog */}
       <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center space-x-2 text-destructive">
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="w-5 h-5" />
-              <span>Syntax Errors Found</span>
+              Syntax Issues Detected
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>The following syntax errors were detected in your code:</p>
-                <div className="max-h-[300px] overflow-y-auto space-y-2 bg-muted/50 rounded-md p-3">
+              <div className="space-y-4">
+                <p className="text-foreground">
+                  Your code has {syntaxSummary.errorCount > 0 && (
+                    <span className="font-semibold text-destructive">
+                      {syntaxSummary.errorCount} error{syntaxSummary.errorCount !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {syntaxSummary.errorCount > 0 && syntaxSummary.warningCount > 0 && ' and '}
+                  {syntaxSummary.warningCount > 0 && (
+                    <span className="font-semibold text-yellow-600">
+                      {syntaxSummary.warningCount} warning{syntaxSummary.warningCount !== 1 ? 's' : ''}
+                    </span>
+                  )}.
+                </p>
+                
+                <div className="max-h-[250px] overflow-y-auto space-y-2 bg-muted/50 rounded-md p-3">
                   {syntaxErrors.map((error, index) => (
-                    <div key={index} className="text-sm">
-                      <span className="font-semibold text-foreground">Line {error.line}:</span>{" "}
-                      <span className="text-muted-foreground">{error.message}</span>
+                    <div 
+                      key={index} 
+                      className={`flex items-start gap-2 text-sm p-2 rounded ${
+                        error.severity === 'error' 
+                          ? 'bg-destructive/10' 
+                          : 'bg-yellow-500/10'
+                      }`}
+                    >
+                      {error.severity === 'error' ? (
+                        <XCircle className="w-4 h-4 mt-0.5 shrink-0 text-destructive" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-yellow-600" />
+                      )}
+                      <div>
+                        <span className="font-semibold text-foreground">Line {error.line}:</span>{" "}
+                        <span className="text-muted-foreground">{error.message}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs">Would you like to proceed with protection anyway?</p>
+                
+                <div className="bg-destructive/5 border border-destructive/20 rounded-md p-3">
+                  <p className="text-sm text-destructive">
+                    <strong>Warning:</strong> Protecting a script with syntax errors may cause it to fail when executed. 
+                    It's recommended to fix these issues first.
+                  </p>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={proceedWithProtection} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Protect Anyway
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto">
+              Go Back & Fix Issues
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={proceedWithProtection} 
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Continue Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
