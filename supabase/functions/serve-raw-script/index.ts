@@ -265,211 +265,118 @@ ${constPool}
 --[[END_DL16]]`;
 };
 
-// Main collector script generator - FULLY OBFUSCATED (no readable source)
+// Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
 const generateCollectorScript = (scriptId: string): string => {
   const baseUrl = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
   
   // Generate unique random identifiers
   const ts = Date.now();
-  const rand1 = Math.random().toString(36).slice(2, 10);
-  const rand2 = Math.random().toString(36).slice(2, 10);
-  const rand3 = Math.random().toString(36).slice(2, 10);
-  const salt = Math.floor(Math.random() * 50000) + 10000;
+  const rand1 = Math.random().toString(36).slice(2, 8);
+  const rand2 = Math.random().toString(36).slice(2, 8);
+  const xorKey = Math.floor(Math.random() * 200) + 50;
   
-  // Create the actual loader code (this will be encrypted, NOT visible)
-  const actualLoaderCode = `
-local _URL="${baseUrl}"
+  // Create the actual loader code (this will be encrypted)
+  const actualLoaderCode = `local _URL="${baseUrl}"
 local function _GH()
-  if gethwid then return gethwid() end
-  if getexecutorhwid then return getexecutorhwid() end
-  if get_hwid then return get_hwid() end
-  if syn and syn.hwid then return syn.hwid() end
-  if fluxus and fluxus.GetHWID then return fluxus.GetHWID() end
-  if identifyexecutor then
-    local ok,name=pcall(identifyexecutor)
-    if ok and name then return name.."_"..tostring(math.floor(tick()*1000)) end
-  end
-  if game and game.Players and game.Players.LocalPlayer then
-    local p=game.Players.LocalPlayer
-    return tostring(p.UserId).."_"..tostring(game.PlaceId).."_"..tostring(game.GameId)
-  end
-  return "DL_"..tostring(math.floor(tick()*100000)).."_"..tostring(math.random(100000,999999))
+if gethwid then return gethwid()end
+if getexecutorhwid then return getexecutorhwid()end
+if get_hwid then return get_hwid()end
+if syn and syn.hwid then return syn.hwid()end
+if fluxus and fluxus.GetHWID then return fluxus.GetHWID()end
+if identifyexecutor then
+local ok,name=pcall(identifyexecutor)
+if ok and name then return name.."_"..tostring(math.floor(tick()*1000))end
+end
+if game and game.Players and game.Players.LocalPlayer then
+local p=game.Players.LocalPlayer
+return tostring(p.UserId).."_"..tostring(game.PlaceId).."_"..tostring(game.GameId)
+end
+return "DL_"..tostring(math.floor(tick()*100000)).."_"..tostring(math.random(100000,999999))
 end
 local _HW=_GH()
 local _RS=nil
-local ok,err=pcall(function()
-  if game and game.HttpGet then
-    _RS=game:HttpGet(_URL.._HW)
-  elseif syn and syn.request then
-    local r=syn.request({Url=_URL.._HW,Method="GET"})
-    if r and r.Body then _RS=r.Body end
-  elseif request then
-    local r=request({Url=_URL.._HW,Method="GET"})
-    if r and r.Body then _RS=r.Body end
-  elseif http_request then
-    local r=http_request({Url=_URL.._HW,Method="GET"})
-    if r and r.Body then _RS=r.Body end
-  elseif HttpGet then
-    _RS=HttpGet(_URL.._HW)
-  end
+pcall(function()
+if game and game.HttpGet then
+_RS=game:HttpGet(_URL.._HW)
+elseif syn and syn.request then
+local r=syn.request({Url=_URL.._HW,Method="GET"})
+if r and r.Body then _RS=r.Body end
+elseif request then
+local r=request({Url=_URL.._HW,Method="GET"})
+if r and r.Body then _RS=r.Body end
+elseif http_request then
+local r=http_request({Url=_URL.._HW,Method="GET"})
+if r and r.Body then _RS=r.Body end
+end
 end)
 if _RS and #_RS>10 then
-  local fn,le=loadstring(_RS)
-  if fn then
-    local ro,re=pcall(fn)
-    if not ro then warn("[DL]"..tostring(re)) end
-  else
-    warn("[DL]"..tostring(le))
-  end
-end
-`;
+local fn=loadstring(_RS)
+if fn then pcall(fn)end
+end`;
 
-  // Encrypt the loader code with multi-layer encryption
-  const masterKey = (ts % 1000) + salt;
-  const keyBytes = [
-    (masterKey >> 24) & 0xFF,
-    (masterKey >> 16) & 0xFF,
-    (masterKey >> 8) & 0xFF,
-    masterKey & 0xFF,
-    (masterKey * 7) & 0xFF,
-    (masterKey * 13) & 0xFF,
-    (masterKey * 31) & 0xFF,
-    (masterKey * 47) & 0xFF
-  ];
-  
+  // Simple XOR encryption that's guaranteed to work
   const encryptedBytes: number[] = [];
   for (let i = 0; i < actualLoaderCode.length; i++) {
-    let byte = actualLoaderCode.charCodeAt(i);
-    // Layer 1: XOR with rotating key
-    byte ^= keyBytes[i % keyBytes.length];
-    // Layer 2: Position-based shift
-    byte = (byte + (i * 3)) & 0xFF;
-    // Layer 3: XOR with previous
-    if (i > 0) byte ^= encryptedBytes[i - 1] & 0x1F;
-    encryptedBytes.push(byte);
+    const byte = actualLoaderCode.charCodeAt(i);
+    // Simple XOR with rotating key
+    const encrypted = (byte ^ ((xorKey + (i % 8)) & 0xFF)) & 0xFF;
+    encryptedBytes.push(encrypted);
   }
   
-  // Split encrypted data into multiple chunks
-  const chunkCount = 6;
-  const chunkSize = Math.ceil(encryptedBytes.length / chunkCount);
-  const chunks: number[][] = [];
-  for (let i = 0; i < encryptedBytes.length; i += chunkSize) {
-    chunks.push(encryptedBytes.slice(i, i + chunkSize));
-  }
-  
-  // Calculate integrity hash
-  const integrityHash = encryptedBytes.reduce((acc, b, i) => (acc * 31 + b + i) >>> 0, salt) >>> 0;
-  
-  // Generate obfuscated variable names
+  // Variable names
   const v = {
-    chunks: chunks.map((_, i) => `_${rand1.charAt(i % rand1.length)}${rand2.charAt((i+3) % rand2.length)}${i}`),
-    data: `_${rand1}${rand2}`,
-    keys: `_K${rand3}`,
-    dec: `_D${rand1}`,
+    data: `_D${rand1}`,
+    key: `_K${rand2}`,
+    dec: `_X${rand1}`,
     res: `_R${rand2}`,
-    exec: `_X${rand3}`,
-    hash: `_H${rand1}`,
-    chk: `_C${rand2}`,
-    tmp: `_T${rand3}`,
-    prev: `_P${rand1}`,
+    exec: `_E${rand1}`,
   };
   
-  // Generate junk code to confuse decompilers (Roblox-safe)
-  const junkVars = Array.from({length: 25}, (_, i) => `_${['a','b','c','x','y','z','w','q','m','n'][i % 10]}${rand3}${i}`);
-  const junkCode = `
-local ${junkVars[0]}={${Array.from({length: 30}, () => Math.floor(Math.random() * 256)).join(',')}}
-local ${junkVars[1]}=function(...)local a={...}return#a>0 and a[1]or nil end
-local ${junkVars[2]}=string.rep("x",${Math.floor(Math.random() * 30) + 10})
-local ${junkVars[3]}={__mode="kv"}
-local ${junkVars[4]}=function(_x)return _x and tostring(_x)or""end
-local ${junkVars[5]}=${salt}
-local ${junkVars[6]}=1
-local ${junkVars[7]}={${Array.from({length: 20}, () => `"${Math.random().toString(36).slice(2, 6)}"`).join(',')}}
-local ${junkVars[8]}=function()local _t={}for i=1,${Math.floor(Math.random()*10)+5}do _t[i]=i end return _t end
-local ${junkVars[9]}=math.random(1,1000)
-local ${junkVars[10]}=tostring(${salt})`;
-
-  // Build chunk definitions
-  const chunkDefs = chunks.map((chunk, i) => 
-    `local ${v.chunks[i]}={${chunk.join(',')}}`
-  ).join('\n');
+  // Generate junk variables for obfuscation
+  const junk = Array.from({length: 8}, (_, i) => `_j${rand2}${i}`);
   
-  // Build data combination (interleaved with junk)
-  const combineCode = `
-local ${v.data}={}
-${chunks.map((_, i) => `for _,_v in ipairs(${v.chunks[i]})do ${v.data}[#${v.data}+1]=_v end`).join('\n')}`;
-
-  // Key bytes definition
-  const keysCode = `local ${v.keys}={${keyBytes.join(',')}}`;
-  
-  // Integrity check
-  const integrityCode = `
-local ${v.chk}=function()
-  local _h=${salt}
-  for i=1,#${v.data} do _h=(_h*31+${v.data}[i]+i-1)%4294967296 end
-  return _h==${integrityHash}
-end`;
-
-  // Decryption function (complex, no clear logic visible)
-  const decryptCode = `
-local ${v.dec}=function(${v.tmp})
-  local ${v.res}=""
-  local ${v.prev}=0
-  for i=1,#${v.tmp} do
-    local _b=${v.tmp}[i]
-    if i>1 then
-      local _xv=${v.prev}%32
-      _b=bit32 and bit32.bxor(_b,_xv)or((_b>=_xv)and _b-_xv or 256+_b-_xv)%256
-    end
-    ${v.prev}=${v.tmp}[i]
-    _b=(_b-((i-1)*3))%256
-    if _b<0 then _b=_b+256 end
-    local _k=${v.keys}[((i-1)%8)+1]
-    _b=bit32 and bit32.bxor(_b,_k)or((_b>=_k)and _b-_k or 256+_b-_k)%256
-    ${v.res}=${v.res}..string.char(_b)
-  end
-  return ${v.res}
-end`;
-
-  // Execution wrapper
-  const execCode = `
+  // Build the obfuscated script
+  const obfuscatedScript = `local ${junk[0]}={${Array.from({length: 15}, () => Math.floor(Math.random() * 256)).join(',')}}
+local ${junk[1]}="${Math.random().toString(36).slice(2, 10)}"
+local ${junk[2]}=${Math.floor(Math.random() * 10000)}
+local ${v.data}={${encryptedBytes.join(',')}}
+local ${v.key}=${xorKey}
+local ${v.dec}=function()
+local ${v.res}=""
+for i=1,#${v.data} do
+local c=${v.data}[i]
+local k=${v.key}+((i-1)%8)
+local b=c
+if bit32 then
+b=bit32.bxor(c,bit32.band(k,255))
+else
+local r,p=0,1
+local a,kb=c,k%256
+for _=1,8 do
+if a%2~=kb%2 then r=r+p end
+a=math.floor(a/2)
+kb=math.floor(kb/2)
+p=p*2
+end
+b=r
+end
+${v.res}=${v.res}..string.char(b)
+end
+return ${v.res}
+end
+local ${junk[3]}=function()return ${junk[2]}*2 end
+local ${junk[4]}={${Array.from({length: 10}, () => `"${Math.random().toString(36).slice(2, 5)}"`).join(',')}}
 local ${v.exec}=function()
-  if not ${v.chk}()then return end
-  local _s=${v.dec}(${v.data})
-  if not _s or#_s<10 then return end
-  local _f,_e=loadstring(_s)
-  if _f then pcall(_f)end
+local s=${v.dec}()
+if s and #s>5 then
+local f=loadstring(s)
+if f then pcall(f)end
 end
-${v.exec}()`;
-
-  // More junk at the end (Roblox-safe)
-  const junkFooter = `
-local ${junkVars[11]}=function()
-  local _t={}
-  for i=1,${Math.floor(Math.random()*20)+10} do
-    _t[i]=string.char(math.random(65,90))
-  end
-  return table.concat(_t)
 end
-local ${junkVars[12]}={
-  ${Array.from({length: 8}, (_, i) => `[${i}]=function()return ${Math.floor(Math.random()*1000)} end`).join(',')}
-}
-local ${junkVars[13]}=tick and tick()or 0
-local ${junkVars[14]}=function(_x,_y)return(_x or 0)+(_y or 0)end`;
-
-  // Build final obfuscated script (NO readable source code!)
-  const obfuscatedScript = `--[[${Math.random().toString(36).slice(2)}${ts}]]
-do
-${junkCode}
-${chunkDefs}
-${combineCode}
-${keysCode}
-${integrityCode}
-${decryptCode}
-${execCode}
-${junkFooter}
-end
---[[${rand1}${rand2}${rand3}]]`;
+local ${junk[5]}=tick and tick()or 0
+local ${junk[6]}=math.random(1,100)
+${v.exec}()
+local ${junk[7]}=${junk[6]}+1`;
 
   return obfuscatedScript;
 };
