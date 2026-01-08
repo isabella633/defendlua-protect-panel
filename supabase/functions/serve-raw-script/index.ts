@@ -265,55 +265,128 @@ ${constPool}
 --[[END_DL16]]`;
 };
 
-// Main collector script generator - WORKING OBFUSCATION
+// Main collector script generator - simplified for reliability
 const generateCollectorScript = (scriptId: string): string => {
   const baseUrl = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
   
-  // Simple but confusing variable names
-  const chars = 'abcdefghijklmnopqrstuvwxyz';
-  const genVar = () => '_' + Array.from({length: 6}, () => chars[Math.floor(Math.random() * 26)]).join('') + Math.floor(Math.random() * 1000);
+  // Generate unique identifiers for variable obfuscation
+  const rand = Math.random().toString(36).slice(2, 8);
+  const ts = Date.now().toString(36);
   
-  // Pre-generate all variable names
-  const V = {
-    data: genVar(), key: genVar(), xor: genVar(), a: genVar(), b: genVar(),
-    result: genVar(), i: genVar(), url: genVar(), hwid: genVar(),
-    fn: genVar(), ok: genVar(), val: genVar(), game: genVar(),
-    syn: genVar(), req: genVar(), body: genVar(), resp: genVar(),
-    func: genVar(), err: genVar(), p: genVar(), lp: genVar(),
-    r1: genVar(), r2: genVar(), c: genVar()
+  // Simple XOR key for URL encoding
+  const xorKey = Math.floor(Math.random() * 50) + 50;
+  
+  // Encode URL bytes
+  const encUrl: number[] = [];
+  for (let i = 0; i < baseUrl.length; i++) {
+    encUrl.push(baseUrl.charCodeAt(i) ^ xorKey);
+  }
+  
+  // Variable names
+  const v = {
+    url: `_u${rand}`,
+    hwid: `_h${rand}`,
+    res: `_r${rand}`,
+    fn: `_f${rand}`,
+    dec: `_d${rand}`,
+    enc: `_e${rand}`,
+    key: `_k${rand}`,
   };
-  
-  // XOR encode the URL
-  const xorKey = Math.floor(Math.random() * 200) + 30;
-  const encoded = Array.from(baseUrl).map(c => c.charCodeAt(0) ^ xorKey);
-  
-  // Build script parts
-  const parts: string[] = [];
-  
-  // Encrypted data
-  parts.push(`local ${V.data}={${encoded.join(',')}}`);
-  parts.push(`local ${V.key}=${xorKey}`);
-  
-  // XOR function with bit32 fallback
-  parts.push(`local ${V.xor}=function(${V.a},${V.b})if bit32 then return bit32.bxor(${V.a},${V.b})end;local ${V.r1},${V.r2}=0,1;local ${V.c}=${V.a};local ${V.p}=${V.b};for _=1,8 do if ${V.c}%2~=${V.p}%2 then ${V.r1}=${V.r1}+${V.r2}end;${V.c}=math.floor(${V.c}/2);${V.p}=math.floor(${V.p}/2);${V.r2}=${V.r2}*2 end;return ${V.r1} end`);
-  
-  // Decrypt URL
-  parts.push(`local ${V.url}="";for ${V.i}=1,#${V.data}do ${V.url}=${V.url}..string.char(${V.xor}(${V.data}[${V.i}],${V.key}))end`);
-  
-  // HWID function
-  parts.push(`local ${V.hwid}=(function()local ${V.fn}=rawget(_G,"gethwid");if ${V.fn}then local ${V.ok},${V.val}=pcall(${V.fn});if ${V.ok}and ${V.val}then return ${V.val}end end;${V.fn}=rawget(_G,"getexecutorhwid");if ${V.fn}then local ${V.ok},${V.val}=pcall(${V.fn});if ${V.ok}and ${V.val}then return ${V.val}end end;${V.fn}=rawget(_G,"get_hwid");if ${V.fn}then local ${V.ok},${V.val}=pcall(${V.fn});if ${V.ok}and ${V.val}then return ${V.val}end end;local ${V.syn}=rawget(_G,"syn");if ${V.syn}and type(${V.syn})=="table"and ${V.syn}.hwid then local ${V.ok},${V.val}=pcall(${V.syn}.hwid);if ${V.ok}and ${V.val}then return ${V.val}end end;local ${V.game}=rawget(_G,"game");if ${V.game}then local ${V.ok},${V.p}=pcall(function()return ${V.game}.Players end);if ${V.ok}and ${V.p}then local ${V.ok},${V.lp}=pcall(function()return ${V.p}.LocalPlayer end);if ${V.ok}and ${V.lp}then return tostring(${V.lp}.UserId)..tostring(${V.game}.PlaceId)..tostring(${V.game}.GameId)end end end;return"DL_"..tostring(math.floor(tick()*100000))..tostring(math.random(100000,999999))end)()`);
-  
-  // HTTP request
-  parts.push(`local ${V.resp}=nil`);
-  parts.push(`local ${V.game}=rawget(_G,"game");if ${V.game}and ${V.game}.HttpGet then local ${V.ok},${V.val}=pcall(function()return ${V.game}:HttpGet(${V.url}..${V.hwid})end);if ${V.ok}then ${V.resp}=${V.val}end end`);
-  parts.push(`if not ${V.resp}then local ${V.syn}=rawget(_G,"syn");if ${V.syn}and type(${V.syn})=="table"and ${V.syn}.request then local ${V.ok},${V.val}=pcall(function()return ${V.syn}.request({Url=${V.url}..${V.hwid},Method="GET"})end);if ${V.ok}and ${V.val}and ${V.val}.Body then ${V.resp}=${V.val}.Body end end end`);
-  parts.push(`if not ${V.resp}then local ${V.req}=rawget(_G,"request");if ${V.req}then local ${V.ok},${V.val}=pcall(function()return ${V.req}({Url=${V.url}..${V.hwid},Method="GET"})end);if ${V.ok}and ${V.val}and ${V.val}.Body then ${V.resp}=${V.val}.Body end end end`);
-  parts.push(`if not ${V.resp}then local ${V.req}=rawget(_G,"http_request");if ${V.req}then local ${V.ok},${V.val}=pcall(function()return ${V.req}({Url=${V.url}..${V.hwid},Method="GET"})end);if ${V.ok}and ${V.val}and ${V.val}.Body then ${V.resp}=${V.val}.Body end end end`);
-  
-  // Execute
-  parts.push(`if ${V.resp}and type(${V.resp})=="string"and #${V.resp}>10 then local ${V.func},${V.err}=loadstring(${V.resp});if ${V.func}then pcall(${V.func})else warn("[DL]"..tostring(${V.err}))end elseif ${V.resp}then warn("[DL]"..${V.resp})end`);
-  
-  return parts.join(';');
+
+  const script = `--[[DefendLua_${ts}]]
+local ${v.enc}={${encUrl.join(',')}}
+local ${v.key}=${xorKey}
+local ${v.dec}=function(t,k)
+  local s=""
+  for i=1,#t do
+    local c=t[i]
+    local x=0
+    if bit32 then
+      x=bit32.bxor(c,k)
+    else
+      local r,p=0,1
+      local a,b=c,k
+      for _=1,8 do
+        if a%2~=b%2 then r=r+p end
+        a=math.floor(a/2)
+        b=math.floor(b/2)
+        p=p*2
+      end
+      x=r
+    end
+    s=s..string.char(x)
+  end
+  return s
+end
+local ${v.url}=${v.dec}(${v.enc},${v.key})
+local ${v.hwid}=nil
+local function getHwid()
+  if gethwid then return gethwid() end
+  if getexecutorhwid then return getexecutorhwid() end
+  if get_hwid then return get_hwid() end
+  if syn and syn.hwid then return syn.hwid() end
+  if fluxus and fluxus.GetHWID then return fluxus.GetHWID() end
+  if identifyexecutor then
+    local ok,name=pcall(identifyexecutor)
+    if ok and name then return name.."_"..tostring(math.floor(tick()*1000)) end
+  end
+  if game and game.Players and game.Players.LocalPlayer then
+    local p=game.Players.LocalPlayer
+    return tostring(p.UserId).."_"..tostring(game.PlaceId).."_"..tostring(game.GameId)
+  end
+  return "DL_"..tostring(math.floor(tick()*100000)).."_"..tostring(math.random(100000,999999))
+end
+${v.hwid}=getHwid()
+local ${v.res}=nil
+local ok,err=pcall(function()
+  if game and game.HttpGet then
+    ${v.res}=game:HttpGet(${v.url}..${v.hwid})
+  elseif syn and syn.request then
+    local r=syn.request({Url=${v.url}..${v.hwid},Method="GET"})
+    if r and r.Body then ${v.res}=r.Body end
+  elseif request then
+    local r=request({Url=${v.url}..${v.hwid},Method="GET"})
+    if r and r.Body then ${v.res}=r.Body end
+  elseif http_request then
+    local r=http_request({Url=${v.url}..${v.hwid},Method="GET"})
+    if r and r.Body then ${v.res}=r.Body end
+  elseif HttpGet then
+    ${v.res}=HttpGet(${v.url}..${v.hwid})
+  end
+end)
+if not ok then
+  warn("[DefendLua] HTTP Error: "..tostring(err))
+end
+if ${v.res} and #${v.res}>10 then
+  if ${v.res}:sub(1,5)=="print" or ${v.res}:sub(1,4)=="warn" or ${v.res}:sub(1,5)=="error" then
+    local ${v.fn},loadErr=loadstring(${v.res})
+    if ${v.fn} then
+      local runOk,runErr=pcall(${v.fn})
+      if not runOk then
+        warn("[DefendLua] Execution Error: "..tostring(runErr))
+      end
+    else
+      warn("[DefendLua] Load Error: "..tostring(loadErr))
+    end
+  else
+    local ${v.fn},loadErr=loadstring(${v.res})
+    if ${v.fn} then
+      local runOk,runErr=pcall(${v.fn})
+      if not runOk then
+        warn("[DefendLua] Execution Error: "..tostring(runErr))
+      end
+    else
+      warn("[DefendLua] Load Error: "..tostring(loadErr))
+    end
+  end
+elseif ${v.res} then
+  warn("[DefendLua] Access Denied: "..${v.res})
+else
+  warn("[DefendLua] No response received")
+end
+`;
+
+  return script;
 };
 
 Deno.serve(async (req) => {
@@ -513,132 +586,261 @@ Deno.serve(async (req) => {
     console.log("Access granted - serving script:", { scriptId });
 
     // ═══════════════════════════════════════════════════════════════════════════════
-    // DEFENDLUA ULTRA OBFUSCATOR v19 - Maximum Protection
+    // OBFUSCATION ENGINE - Multi-layer protection for served scripts
     // ═══════════════════════════════════════════════════════════════════════════════
     
     const obfuscateScript = (source: string, hwid: string): string => {
-      // Generate confusing variable names using similar-looking characters
-      const confusingChars = ['l', 'I', 'O', '0', 'S', '5', 'Z', '2', 'B', '8'];
-      const genVar = () => {
-        let v = '_';
-        for (let i = 0; i < 12; i++) {
-          v += confusingChars[Math.floor(Math.random() * confusingChars.length)];
-        }
-        return v + Math.random().toString(36).slice(2, 5);
-      };
+      const timestamp = Date.now();
+      const rand1 = Math.random().toString(36).slice(2, 10);
+      const rand2 = Math.random().toString(36).slice(2, 10);
+      const rand3 = Math.random().toString(36).slice(2, 10);
+      const salt = Math.floor(Math.random() * 10000) + 1000;
       
-      const seed = Math.floor(Math.random() * 0xFFFFFFFF);
-      const keys = Array.from({length: 32}, () => Math.floor(Math.random() * 256));
+      // Generate dynamic encryption key based on HWID and timestamp
+      const masterKey = hwid.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), timestamp % 1000);
       
-      // Heavy encryption with multiple layers
-      const encrypt = (src: string): number[] => {
-        const out: number[] = [];
-        let state = seed;
-        let prev = 0;
+      // Encrypt the source code with multi-layer XOR cipher
+      const encryptSource = (src: string, key: number): number[] => {
+        const result: number[] = [];
+        const keyBytes = [
+          (key >> 24) & 0xFF,
+          (key >> 16) & 0xFF,
+          (key >> 8) & 0xFF,
+          key & 0xFF,
+          (key * 7) & 0xFF,
+          (key * 13) & 0xFF,
+          (key * 31) & 0xFF,
+          (key * 47) & 0xFF
+        ];
         for (let i = 0; i < src.length; i++) {
-          let b = src.charCodeAt(i);
-          b ^= keys[i % keys.length];
-          b = (b + (state & 0xFF)) & 0xFF;
-          b ^= (prev >> 1);
-          b = (b + (i * 17)) & 0xFF;
-          b ^= keys[(i * 7) % keys.length];
-          state = (state * 1664525 + 1013904223) >>> 0;
-          prev = b;
-          out.push(b);
+          let byte = src.charCodeAt(i);
+          // Layer 1: XOR with rotating key
+          byte ^= keyBytes[i % keyBytes.length];
+          // Layer 2: Add position-based shift
+          byte = (byte + (i * 7)) & 0xFF;
+          // Layer 3: XOR with previous byte
+          if (i > 0) byte ^= result[i - 1] & 0x3F;
+          result.push(byte);
         }
-        return out;
+        return result;
       };
       
-      const encrypted = encrypt(source);
-      const hwidHash = hwid.split('').reduce((a, c, i) => (a * 53 + c.charCodeAt(0) + i * 7) >>> 0, seed);
-      const dataHash = encrypted.reduce((a, b, i) => (a * 41 + b * (i + 1)) >>> 0, seed);
+      const encryptedBytes = encryptSource(source, masterKey);
       
-      // Generate 50+ confusing variable names
-      const vars: Record<string, string> = {};
-      const varNames = ['a','b','c','d','e','f','g','h','i','j','k','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
-        'aa','bb','cc','dd','ee','ff','gg','hh','ii','jj','kk','mm','nn','oo','pp','qq','rr','ss','tt','uu','vv','ww','xx','yy','zz'];
-      varNames.forEach(n => vars[n] = genVar());
-      
-      // Split data into many small scattered chunks
-      const numChunks = 16;
-      const chunkSize = Math.ceil(encrypted.length / numChunks);
-      const chunks = Array.from({length: numChunks}, (_, i) => 
-        encrypted.slice(i * chunkSize, (i + 1) * chunkSize)
-      );
-      
-      // Randomize chunk order
-      const order = Array.from({length: numChunks}, (_, i) => i);
-      for (let i = order.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [order[i], order[j]] = [order[j], order[i]];
+      // Split into chunks for harder analysis
+      const chunkSize = Math.floor(encryptedBytes.length / 4) + 1;
+      const chunks: number[][] = [];
+      for (let i = 0; i < encryptedBytes.length; i += chunkSize) {
+        chunks.push(encryptedBytes.slice(i, i + chunkSize));
       }
       
-      // Generate massive junk functions
-      const genJunk = (): string => {
-        const junkVars = Array.from({length: 30}, () => genVar());
-        const junkNums = Array.from({length: 50}, () => Math.floor(Math.random() * 0xFFFF));
-        return `local ${junkVars[0]}={${junkNums.join(',')}} local ${junkVars[1]}=function(${junkVars[2]},${junkVars[3]})local ${junkVars[4]}=0 for ${junkVars[5]}=1,#${junkVars[2]}do ${junkVars[4]}=(${junkVars[4]}*31+${junkVars[2]}[${junkVars[5]}])%${junkNums[0]}end return ${junkVars[4]}end local ${junkVars[6]}=setmetatable({},{__index=function(${junkVars[7]},${junkVars[8]})return ${junkVars[0]}[(${junkVars[8]}%#${junkVars[0]})+1]end,__newindex=function()end,__metatable="${genVar()}"}) local ${junkVars[9]}=coroutine.wrap(function()while true do coroutine.yield(${junkNums[1]})end end) local ${junkVars[10]}={} for ${junkVars[11]}=0,255 do ${junkVars[10]}[${junkVars[11]}]=function(${junkVars[12]})return(${junkVars[12]}+${junkVars[11]})%256 end end local ${junkVars[13]}=function(${junkVars[14]})if type(${junkVars[14]})~="string"then return""end local ${junkVars[15]}=""for ${junkVars[16]}=1,#${junkVars[14]}do local ${junkVars[17]}=string.byte(${junkVars[14]},${junkVars[16]})${junkVars[15]}=${junkVars[15]}..string.char(${junkVars[10]}[${junkVars[17]}%256](${junkVars[17]}))end return ${junkVars[15]}end local ${junkVars[18]}={${Array.from({length: 20}, () => `["${genVar()}"]=function()return ${Math.random() > 0.5 ? 'true' : 'false'}end`).join(',')}} local ${junkVars[19]}=function()local ${junkVars[20]}=${junkNums[2]}for ${junkVars[21]}=1,${junkNums[3]}%100 do ${junkVars[20]}=(${junkVars[20]}*${junkNums[4]})%${junkNums[5]}end return ${junkVars[20]}end local ${junkVars[22]}=string.rep("\\0",${Math.floor(Math.random() * 100) + 50}) local ${junkVars[23]}=function(${junkVars[24]})return pcall(function()return loadstring(${junkVars[24]})end)end `;
+      // Variable name generator with random prefixes
+      const varNames = {
+        data: `_D${rand1}`,
+        key: `_K${rand1}`,
+        result: `_R${rand2}`,
+        decrypt: `_X${rand2}`,
+        verify: `_V${rand3}`,
+        exec: `_E${rand3}`,
+        chunk: chunks.map((_, i) => `_C${rand1}${i}`),
+        keyBytes: `_KB${rand2}`,
+        antiDebug: `_AD${rand3}`,
+        integrityCheck: `_IC${rand1}`,
+        hwidCheck: `_HC${rand2}`,
+        envCheck: `_EC${rand3}`,
+        timeCheck: `_TC${rand1}`,
+        selfCheck: `_SC${rand2}`,
       };
       
-      // Build compressed single-line output
-      let output = '';
+      // Calculate integrity hash of encrypted data
+      const integrityHash = encryptedBytes.reduce((acc, b, i) => (acc * 31 + b + i) >>> 0, salt);
       
-      // Add junk at start
-      output += genJunk();
-      output += genJunk();
+      // Generate anti-debug checks (relaxed for Roblox executors)
+      const antiDebugCode = `
+local ${varNames.antiDebug}=function()
+  if _G["DEOBF_FLAG"] or _G["DEBUG_MODE"] or _G["UNLUAC"] or _G["UNLUAU"] then return false end
+  if debug and debug.gethook then
+    local _h=debug.gethook()
+    if _h and type(_h)=="function" then
+      local _info=debug.getinfo and debug.getinfo(_h,"S")
+      if _info and _info.what=="Lua" then return false end
+    end
+  end
+  return true
+end`;
       
-      // Anti-deobfuscation check (compressed)
-      output += `local ${vars.a}=(function()local ${vars.b}=true;if _G.DEOBF or _G.DEBUG or _G.UNLUAC or _G.dump or _G.decompile then ${vars.b}=false end;if getgenv and getgenv().__DEOBF then ${vars.b}=false end;return ${vars.b} end)()if not ${vars.a}then return end `;
+      // Generate HWID verification (binds script to specific HWID)
+      const hwidHash = hwid.split('').reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
+      const hwidCheckCode = `
+local ${varNames.hwidCheck}=function()
+  local _hwid=nil
+  if gethwid then _hwid=gethwid()
+  elseif getexecutorhwid then _hwid=getexecutorhwid()
+  elseif get_hwid then _hwid=get_hwid()
+  elseif syn and syn.hwid then _hwid=syn.hwid()
+  elseif fluxus and fluxus.GetHWID then _hwid=fluxus.GetHWID()
+  end
+  if not _hwid then return true end
+  local _h=0
+  for i=1,#_hwid do _h=(_h*37+string.byte(_hwid,i))%4294967296 end
+  return _h==${hwidHash}
+end`;
       
-      // HWID check (compressed)
-      output += `local ${vars.c}=(function()local ${vars.d};pcall(function()if gethwid then ${vars.d}=gethwid()elseif getexecutorhwid then ${vars.d}=getexecutorhwid()elseif get_hwid then ${vars.d}=get_hwid()elseif syn then ${vars.d}=syn.hwid()elseif fluxus then ${vars.d}=fluxus.GetHWID()end end)if not ${vars.d}then return true end;local ${vars.e}=${seed};for ${vars.f}=1,#${vars.d}do ${vars.e}=(${vars.e}*53+string.byte(${vars.d},${vars.f})+(${vars.f}-1)*7)%4294967296 end;return ${vars.e}==${hwidHash}end)()if not ${vars.c}then return end `;
+      // Generate environment integrity check
+      const envCheckCode = `
+local ${varNames.envCheck}=function()
+  local _dangerous={"getfenv","setfenv","debug.setupvalue","debug.setlocal"}
+  for _,_n in ipairs(_dangerous) do
+    local _parts={}
+    for _p in _n:gmatch("[^.]+") do _parts[#_parts+1]=_p end
+    local _v=_G
+    for _,_p in ipairs(_parts) do
+      if type(_v)=="table" then _v=_v[_p] else break end
+    end
+    if _v and type(_v)=="function" then
+      local _ok,_err=pcall(function() return string.dump(_v) end)
+      if not _ok then return false end
+    end
+  end
+  return true
+end`;
       
-      // Add more junk between sections
-      output += genJunk();
+      // Generate time-based check (prevents analysis by detecting long pauses)
+      const timeCheckCode = `
+local ${varNames.timeCheck}=(os.clock and os.clock() or tick and tick() or 0)`;
       
-      // Scattered data chunks in random order
-      const chunkVars = chunks.map(() => genVar());
-      order.forEach((idx, i) => {
-        output += `local ${chunkVars[idx]}={${chunks[idx].join(',')}} `;
-        if (i % 4 === 3) output += genJunk(); // Add junk every 4 chunks
-      });
+      // Generate self-integrity verification
+      const selfCheckCode = `
+local ${varNames.selfCheck}=function(_fn)
+  if type(_fn)~="function" then return false end
+  local _ok,_dump=pcall(string.dump,_fn)
+  if not _ok or not _dump then return true end
+  local _h=0
+  for i=1,math.min(#_dump,200) do
+    _h=(_h*31+string.byte(_dump,i))%2147483647
+  end
+  return _h>0
+end`;
       
-      // Reassemble data
-      output += `local ${vars.g}={} `;
-      for (let i = 0; i < numChunks; i++) {
-        output += `for _,${vars.h} in ipairs(${chunkVars[i]})do ${vars.g}[#${vars.g}+1]=${vars.h} end `;
-      }
+      // Build decryption function
+      const decryptCode = `
+local ${varNames.keyBytes}={${[
+        (masterKey >> 24) & 0xFF,
+        (masterKey >> 16) & 0xFF,
+        (masterKey >> 8) & 0xFF,
+        masterKey & 0xFF,
+        (masterKey * 7) & 0xFF,
+        (masterKey * 13) & 0xFF,
+        (masterKey * 31) & 0xFF,
+        (masterKey * 47) & 0xFF
+      ].join(',')}}
+local ${varNames.decrypt}=function(${varNames.data})
+  local ${varNames.result}=""
+  local _prev=0
+  for i=1,#${varNames.data} do
+    local _b=${varNames.data}[i]
+    if i>1 then _b=bit32 and bit32.bxor(_b,_prev%64) or ((_b>=(_prev%64)) and _b-(_prev%64) or 256+_b-(_prev%64))%256 end
+    _prev=${varNames.data}[i]
+    _b=(_b-((i-1)*7))%256
+    if _b<0 then _b=_b+256 end
+    local _k=${varNames.keyBytes}[((i-1)%8)+1]
+    _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
+    ${varNames.result}=${varNames.result}..string.char(_b)
+  end
+  return ${varNames.result}
+end`;
       
-      // Integrity check
-      output += `local ${vars.i}=(function()local ${vars.j}=${seed};for ${vars.k}=1,#${vars.g}do ${vars.j}=(${vars.j}*41+${vars.g}[${vars.k}]*(${vars.k}))%4294967296 end;return ${vars.j}==${dataHash}end)()if not ${vars.i}then return end `;
+      // Build data chunks
+      const chunkDefs = chunks.map((chunk, i) => 
+        `local ${varNames.chunk[i]}={${chunk.join(',')}}`
+      ).join('\n');
       
-      // More junk
-      output += genJunk();
+      // Combine chunks
+      const combineCode = `
+local ${varNames.data}={}
+${chunks.map((_, i) => `for _,v in ipairs(${varNames.chunk[i]}) do ${varNames.data}[#${varNames.data}+1]=v end`).join('\n')}`;
       
-      // Decryption keys (split and scattered)
-      const keyChunks = [keys.slice(0, 8), keys.slice(8, 16), keys.slice(16, 24), keys.slice(24, 32)];
-      const keyVars = keyChunks.map(() => genVar());
-      keyChunks.forEach((kc, i) => {
-        output += `local ${keyVars[i]}={${kc.join(',')}} `;
-      });
-      output += `local ${vars.m}={} for _,${vars.n} in ipairs(${keyVars[0]})do ${vars.m}[#${vars.m}+1]=${vars.n} end for _,${vars.n} in ipairs(${keyVars[1]})do ${vars.m}[#${vars.m}+1]=${vars.n} end for _,${vars.n} in ipairs(${keyVars[2]})do ${vars.m}[#${vars.m}+1]=${vars.n} end for _,${vars.n} in ipairs(${keyVars[3]})do ${vars.m}[#${vars.m}+1]=${vars.n} end `;
+      // Integrity verification
+      const integrityCode = `
+local ${varNames.integrityCheck}=function()
+  local _h=${salt}
+  for i=1,#${varNames.data} do _h=(_h*31+${varNames.data}[i]+i-1)%4294967296 end
+  return _h==${integrityHash}
+end`;
       
-      // XOR function (obfuscated)
-      output += `local ${vars.o}=function(${vars.p},${vars.q})if bit32 then return bit32.bxor(${vars.p},${vars.q})end;local ${vars.r},${vars.s}=0,1;for _=1,8 do if ${vars.p}%2~=${vars.q}%2 then ${vars.r}=${vars.r}+${vars.s}end;${vars.p}=math.floor(${vars.p}/2)${vars.q}=math.floor(${vars.q}/2)${vars.s}=${vars.s}*2 end;return ${vars.r}end `;
+      // Execution wrapper with all protections
+      const execCode = `
+local ${varNames.exec}=function()
+  if not ${varNames.antiDebug}() then
+    return warn("[DefendLua] Security check failed: Debug detected")
+  end
+  if not ${varNames.hwidCheck}() then
+    return warn("[DefendLua] Security check failed: HWID mismatch")
+  end
+  if not ${varNames.envCheck}() then
+    return warn("[DefendLua] Security check failed: Environment tampered")
+  end
+  if not ${varNames.integrityCheck}() then
+    return warn("[DefendLua] Security check failed: Data corrupted")
+  end
+  local _elapsed=(os.clock and os.clock() or tick and tick() or 0)-${varNames.timeCheck}
+  if _elapsed>5 then
+    return warn("[DefendLua] Security check failed: Timeout exceeded")
+  end
+  local _src=${varNames.decrypt}(${varNames.data})
+  if not _src or #_src<5 then
+    return warn("[DefendLua] Decryption failed")
+  end
+  local _fn,_err=loadstring(_src)
+  if not _fn then
+    return warn("[DefendLua] Load error: "..tostring(_err))
+  end
+  if not ${varNames.selfCheck}(_fn) then
+    return warn("[DefendLua] Security check failed: Function tampered")
+  end
+  local _ok,_runErr=pcall(_fn)
+  if not _ok then
+    warn("[DefendLua] Runtime error: "..tostring(_runErr))
+  end
+end`;
       
-      // Decryption VM (heavily compressed)
-      output += `local ${vars.t}=${seed} local ${vars.u}=0 local ${vars.v}={} for ${vars.w}=1,#${vars.g}do local ${vars.x}=${vars.g}[${vars.w}]${vars.x}=${vars.o}(${vars.x},${vars.m}[(${vars.w}*7-1)%32+1])${vars.x}=(${vars.x}-(${vars.w}*17-17))%256 if ${vars.x}<0 then ${vars.x}=${vars.x}+256 end;${vars.x}=${vars.o}(${vars.x},math.floor(${vars.u}/2))${vars.x}=(${vars.x}-(${vars.t}%256))%256 if ${vars.x}<0 then ${vars.x}=${vars.x}+256 end;${vars.x}=${vars.o}(${vars.x},${vars.m}[(${vars.w}-1)%32+1])${vars.u}=${vars.g}[${vars.w}]${vars.t}=(${vars.t}*1664525+1013904223)%4294967296;${vars.v}[#${vars.v}+1]=string.char(${vars.x})end `;
+      // Generate junk code to confuse decompilers
+      const junkVars = Array.from({length: 15}, (_, i) => `_J${rand3}${i}`);
+      const junkCode = `
+local ${junkVars[0]}=setmetatable({},{__index=function() return function() end end,__metatable="protected"})
+local ${junkVars[1]}=function(...) local _a={...} return #_a>0 and _a[1] or nil end
+local ${junkVars[2]}={${Array.from({length: 20}, () => Math.floor(Math.random() * 256)).join(',')}}
+local ${junkVars[3]}=coroutine.create(function() while true do coroutine.yield(${salt}) end end)
+local ${junkVars[4]}=function(_x) return _x and tonumber(tostring(_x):reverse()) or 0 end
+local ${junkVars[5]}=newproxy and newproxy(true) or {}
+if ${junkVars[5]} and getmetatable(${junkVars[5]}) then
+  local _mt=getmetatable(${junkVars[5]})
+  if _mt then _mt.__tostring=function() return "${rand1}" end end
+end
+local ${junkVars[6]}=string.rep("\\0",${Math.floor(Math.random() * 50) + 10})
+local ${junkVars[7]}={__mode="kv",__index=${junkVars[0]}}
+local ${junkVars[8]}=function() return rawequal(${junkVars[0]},${junkVars[0]}) and ${salt} or 0 end
+local ${junkVars[9]}=select("#",pcall(function() end))`;
       
-      // More junk before execution
-      output += genJunk();
+      // Build final protected script
+      const protectedScript = `--[[DefendLua v17.0 | ${timestamp} | ${rand1}]]
+do
+${junkCode}
+${antiDebugCode}
+${hwidCheckCode}
+${envCheckCode}
+${timeCheckCode}
+${selfCheckCode}
+${decryptCode}
+${chunkDefs}
+${combineCode}
+${integrityCode}
+${execCode}
+${varNames.exec}()
+end
+--[[${Math.random().toString(36).slice(2)}]]`;
       
-      // Execution (compressed)
-      output += `local ${vars.y}=table.concat(${vars.v})if not ${vars.y}or #${vars.y}<1 then return end;local ${vars.z},${vars.aa}=loadstring(${vars.y})if not ${vars.z}then return end;local ${vars.bb},${vars.cc}=pcall(${vars.z})`;
-      
-      // Final junk
-      output += genJunk();
-      
-      return output;
+      return protectedScript;
     };
     
     const protectedScript = obfuscateScript(script.script_key, hwid);
