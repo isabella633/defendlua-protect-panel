@@ -796,23 +796,19 @@ local ${varNames.exec}=function()
   end
 end`;
       
-      // Generate junk code to confuse decompilers
+      // Generate junk code to confuse decompilers (Roblox-compatible)
       const junkVars = Array.from({length: 15}, (_, i) => `_J${rand3}${i}`);
       const junkCode = `
 local ${junkVars[0]}=setmetatable({},{__index=function() return function() end end,__metatable="protected"})
 local ${junkVars[1]}=function(...) local _a={...} return #_a>0 and _a[1] or nil end
 local ${junkVars[2]}={${Array.from({length: 20}, () => Math.floor(Math.random() * 256)).join(',')}}
-local ${junkVars[3]}=coroutine.create(function() while true do coroutine.yield(${salt}) end end)
-local ${junkVars[4]}=function(_x) return _x and tonumber(tostring(_x):reverse()) or 0 end
-local ${junkVars[5]}=newproxy and newproxy(true) or {}
-if ${junkVars[5]} and getmetatable(${junkVars[5]}) then
-  local _mt=getmetatable(${junkVars[5]})
-  if _mt then _mt.__tostring=function() return "${rand1}" end end
-end
-local ${junkVars[6]}=string.rep("\\0",${Math.floor(Math.random() * 50) + 10})
-local ${junkVars[7]}={__mode="kv",__index=${junkVars[0]}}
-local ${junkVars[8]}=function() return rawequal(${junkVars[0]},${junkVars[0]}) and ${salt} or 0 end
-local ${junkVars[9]}=select("#",pcall(function() end))`;
+local ${junkVars[3]}=function(_x) return _x and tonumber(tostring(_x or "0"):reverse()) or 0 end
+local ${junkVars[4]}=string.rep("\\0",${Math.floor(Math.random() * 50) + 10})
+local ${junkVars[5]}={__mode="kv",__index=${junkVars[0]}}
+local ${junkVars[6]}=function() return ${salt} end
+local ${junkVars[7]}=select("#",pcall(function() end))
+local ${junkVars[8]}="${rand1}${rand2}"
+local ${junkVars[9]}=${timestamp % 65536}`;
       
       // Build final protected script
       const protectedScript = `--[[DefendLua v17.0 | ${timestamp} | ${rand1}]]
