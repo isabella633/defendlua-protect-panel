@@ -655,25 +655,18 @@ Deno.serve(async (req) => {
       // Calculate integrity hash of encrypted data
       const integrityHash = encryptedBytes.reduce((acc, b, i) => (acc * 31 + b + i) >>> 0, salt);
       
-      // Generate anti-debug checks
+      // Generate anti-debug checks (relaxed for Roblox executors)
       const antiDebugCode = `
 local ${varNames.antiDebug}=function()
-  local _ok=true
-  if debug then
-    local _gi=debug.getinfo
-    if _gi then
-      local _i=_gi(1,"Sl")
-      if _i and _i.source and (_i.source:find("@") or _i.currentline<0) then
-        _ok=false
-      end
-    end
-    if debug.sethook then
-      local _h,_m,_c=debug.gethook()
-      if _h then _ok=false end
+  if _G["DEOBF_FLAG"] or _G["DEBUG_MODE"] or _G["UNLUAC"] or _G["UNLUAU"] then return false end
+  if debug and debug.gethook then
+    local _h=debug.gethook()
+    if _h and type(_h)=="function" then
+      local _info=debug.getinfo and debug.getinfo(_h,"S")
+      if _info and _info.what=="Lua" then return false end
     end
   end
-  if _G["DEOBF_FLAG"] or _G["DEBUG_MODE"] then _ok=false end
-  return _ok
+  return true
 end`;
       
       // Generate HWID verification (binds script to specific HWID)
