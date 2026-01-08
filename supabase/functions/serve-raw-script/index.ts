@@ -586,235 +586,132 @@ Deno.serve(async (req) => {
     console.log("Access granted - serving script:", { scriptId });
 
     // ═══════════════════════════════════════════════════════════════════════════════
-    // DEFENDLUA VM OBFUSCATOR v18 - Virtual Machine Based Protection
+    // DEFENDLUA ULTRA OBFUSCATOR v19 - Maximum Protection
     // ═══════════════════════════════════════════════════════════════════════════════
     
     const obfuscateScript = (source: string, hwid: string): string => {
-      const ts = Date.now();
-      const r1 = Math.random().toString(36).slice(2, 8);
-      const r2 = Math.random().toString(36).slice(2, 8);
-      const r3 = Math.random().toString(36).slice(2, 8);
-      const r4 = Math.random().toString(36).slice(2, 8);
-      const seed = Math.floor(Math.random() * 0xFFFFFF);
-      
-      // Generate unique opcodes for this instance (randomized instruction set)
-      const opcodes = {
-        LOAD_BYTE: Math.floor(Math.random() * 50) + 1,
-        XOR_KEY: Math.floor(Math.random() * 50) + 51,
-        ADD_POS: Math.floor(Math.random() * 50) + 101,
-        SUB_PREV: Math.floor(Math.random() * 50) + 151,
-        EMIT_CHAR: Math.floor(Math.random() * 50) + 201,
-        END: 0
+      // Generate confusing variable names using similar-looking characters
+      const confusingChars = ['l', 'I', 'O', '0', 'S', '5', 'Z', '2', 'B', '8'];
+      const genVar = () => {
+        let v = '_';
+        for (let i = 0; i < 12; i++) {
+          v += confusingChars[Math.floor(Math.random() * confusingChars.length)];
+        }
+        return v + Math.random().toString(36).slice(2, 5);
       };
       
-      // Multi-layer encryption with random keys
-      const keys = Array.from({length: 16}, () => Math.floor(Math.random() * 256));
-      const iv = Array.from({length: 8}, () => Math.floor(Math.random() * 256));
+      const seed = Math.floor(Math.random() * 0xFFFFFFFF);
+      const keys = Array.from({length: 32}, () => Math.floor(Math.random() * 256));
       
-      // Encrypt source with cascading cipher
+      // Heavy encryption with multiple layers
       const encrypt = (src: string): number[] => {
         const out: number[] = [];
         let state = seed;
+        let prev = 0;
         for (let i = 0; i < src.length; i++) {
           let b = src.charCodeAt(i);
-          // Layer 1: XOR with key schedule
           b ^= keys[i % keys.length];
-          // Layer 2: Add IV rotation
-          b = (b + iv[i % iv.length]) & 0xFF;
-          // Layer 3: XOR with state
-          b ^= (state & 0xFF);
-          // Layer 4: Position scramble
-          b = (b + (i * 13)) & 0xFF;
-          // Layer 5: Feedback from previous
-          if (out.length > 0) b ^= out[out.length - 1] >> 2;
-          // Update state
-          state = (state * 1103515245 + 12345) >>> 0;
+          b = (b + (state & 0xFF)) & 0xFF;
+          b ^= (prev >> 1);
+          b = (b + (i * 17)) & 0xFF;
+          b ^= keys[(i * 7) % keys.length];
+          state = (state * 1664525 + 1013904223) >>> 0;
+          prev = b;
           out.push(b);
         }
         return out;
       };
       
       const encrypted = encrypt(source);
+      const hwidHash = hwid.split('').reduce((a, c, i) => (a * 53 + c.charCodeAt(0) + i * 7) >>> 0, seed);
+      const dataHash = encrypted.reduce((a, b, i) => (a * 41 + b * (i + 1)) >>> 0, seed);
       
-      // Generate VM bytecode for decryption (makes static analysis much harder)
-      const generateBytecode = (): number[] => {
-        const bc: number[] = [];
-        for (let i = 0; i < encrypted.length; i++) {
-          // Randomize instruction order per byte
-          const order = Math.floor(Math.random() * 6);
-          bc.push(opcodes.LOAD_BYTE, encrypted[i]);
-          if (order < 2) {
-            bc.push(opcodes.XOR_KEY, keys[i % keys.length]);
-            bc.push(opcodes.SUB_PREV, iv[i % iv.length]);
-          } else if (order < 4) {
-            bc.push(opcodes.SUB_PREV, iv[i % iv.length]);
-            bc.push(opcodes.XOR_KEY, keys[i % keys.length]);
-          } else {
-            bc.push(opcodes.ADD_POS, (i * 13) & 0xFF);
-            bc.push(opcodes.XOR_KEY, keys[i % keys.length]);
-          }
-          bc.push(opcodes.EMIT_CHAR, i & 0xFF);
-        }
-        bc.push(opcodes.END);
-        return bc;
-      };
+      // Generate 50+ confusing variable names
+      const vars: Record<string, string> = {};
+      const varNames = ['a','b','c','d','e','f','g','h','i','j','k','m','n','o','p','q','r','s','t','u','v','w','x','y','z',
+        'aa','bb','cc','dd','ee','ff','gg','hh','ii','jj','kk','mm','nn','oo','pp','qq','rr','ss','tt','uu','vv','ww','xx','yy','zz'];
+      varNames.forEach(n => vars[n] = genVar());
       
-      const bytecode = generateBytecode();
-      
-      // Split bytecode into scattered arrays
-      const numChunks = 8;
-      const chunkSize = Math.ceil(bytecode.length / numChunks);
+      // Split data into many small scattered chunks
+      const numChunks = 16;
+      const chunkSize = Math.ceil(encrypted.length / numChunks);
       const chunks = Array.from({length: numChunks}, (_, i) => 
-        bytecode.slice(i * chunkSize, (i + 1) * chunkSize)
+        encrypted.slice(i * chunkSize, (i + 1) * chunkSize)
       );
       
-      // Shuffle chunk order and create reassembly map
-      const shuffleOrder = Array.from({length: numChunks}, (_, i) => i);
-      for (let i = shuffleOrder.length - 1; i > 0; i--) {
+      // Randomize chunk order
+      const order = Array.from({length: numChunks}, (_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffleOrder[i], shuffleOrder[j]] = [shuffleOrder[j], shuffleOrder[i]];
+        [order[i], order[j]] = [order[j], order[i]];
       }
       
-      // Variable names (heavily obfuscated)
-      const v = {
-        vm: `_${r1}`,
-        bc: `_${r2}`,
-        out: `_${r3}`,
-        run: `_${r4}`,
-        chunks: chunks.map((_, i) => `_${r1}${r2}${i}`),
-        keys: `_K${r3}`,
-        iv: `_I${r4}`,
-        state: `_S${r1}`,
-        ops: `_O${r2}`,
-        pc: `_P${r3}`,
-        reg: `_R${r4}`,
-        prev: `_V${r1}`,
-        tmp: `_T${r2}`,
-        dec: `_D${r3}`,
-        exec: `_E${r4}`,
-        guard: `_G${r1}`,
-        hc: `_H${r2}`,
-        ic: `_C${r3}`,
+      // Generate massive junk functions
+      const genJunk = (): string => {
+        const junkVars = Array.from({length: 30}, () => genVar());
+        const junkNums = Array.from({length: 50}, () => Math.floor(Math.random() * 0xFFFF));
+        return `local ${junkVars[0]}={${junkNums.join(',')}} local ${junkVars[1]}=function(${junkVars[2]},${junkVars[3]})local ${junkVars[4]}=0 for ${junkVars[5]}=1,#${junkVars[2]}do ${junkVars[4]}=(${junkVars[4]}*31+${junkVars[2]}[${junkVars[5]}])%${junkNums[0]}end return ${junkVars[4]}end local ${junkVars[6]}=setmetatable({},{__index=function(${junkVars[7]},${junkVars[8]})return ${junkVars[0]}[(${junkVars[8]}%#${junkVars[0]})+1]end,__newindex=function()end,__metatable="${genVar()}"}) local ${junkVars[9]}=coroutine.wrap(function()while true do coroutine.yield(${junkNums[1]})end end) local ${junkVars[10]}={} for ${junkVars[11]}=0,255 do ${junkVars[10]}[${junkVars[11]}]=function(${junkVars[12]})return(${junkVars[12]}+${junkVars[11]})%256 end end local ${junkVars[13]}=function(${junkVars[14]})if type(${junkVars[14]})~="string"then return""end local ${junkVars[15]}=""for ${junkVars[16]}=1,#${junkVars[14]}do local ${junkVars[17]}=string.byte(${junkVars[14]},${junkVars[16]})${junkVars[15]}=${junkVars[15]}..string.char(${junkVars[10]}[${junkVars[17]}%256](${junkVars[17]}))end return ${junkVars[15]}end local ${junkVars[18]}={${Array.from({length: 20}, () => `["${genVar()}"]=function()return ${Math.random() > 0.5 ? 'true' : 'false'}end`).join(',')}} local ${junkVars[19]}=function()local ${junkVars[20]}=${junkNums[2]}for ${junkVars[21]}=1,${junkNums[3]}%100 do ${junkVars[20]}=(${junkVars[20]}*${junkNums[4]})%${junkNums[5]}end return ${junkVars[20]}end local ${junkVars[22]}=string.rep("\\0",${Math.floor(Math.random() * 100) + 50}) local ${junkVars[23]}=function(${junkVars[24]})return pcall(function()return loadstring(${junkVars[24]})end)end `;
       };
       
-      // HWID hash for binding
-      const hwidHash = hwid.split('').reduce((a, c, i) => (a * 41 + c.charCodeAt(0) + i) >>> 0, seed);
+      // Build compressed single-line output
+      let output = '';
       
-      // Integrity hash of bytecode
-      const intHash = bytecode.reduce((a, b, i) => (a * 37 + b + i) >>> 0, seed);
+      // Add junk at start
+      output += genJunk();
+      output += genJunk();
       
-      // Build the protected script with embedded VM
-      const protectedScript = `--[[DL18|${ts}]]
-local ${v.guard}=(function()
-local _f=false
-if _G["DEOBF"]or _G["DEBUG"]or _G["UNLUAC"]or _G["dump"]then _f=true end
-if getgenv and getgenv()["__DL_BLOCK"]then _f=true end
-return not _f
-end)()
-if not ${v.guard}then return end
-local ${v.hc}=(function()
-local _h=nil
-pcall(function()
-if gethwid then _h=gethwid()
-elseif getexecutorhwid then _h=getexecutorhwid()
-elseif get_hwid then _h=get_hwid()
-elseif syn then _h=syn.hwid()
-elseif fluxus then _h=fluxus.GetHWID()end
-end)
-if not _h then return true end
-local _r=${seed}
-for i=1,#_h do _r=(_r*41+string.byte(_h,i)+i-1)%4294967296 end
-return _r==${hwidHash}
-end)()
-if not ${v.hc}then warn("[DL] HWID")return end
-local ${v.chunks[shuffleOrder[0]]}={${chunks[shuffleOrder[0]].join(',')}}
-local ${v.chunks[shuffleOrder[1]]}={${chunks[shuffleOrder[1]].join(',')}}
-local ${v.chunks[shuffleOrder[2]]}={${chunks[shuffleOrder[2]].join(',')}}
-local ${v.chunks[shuffleOrder[3]]}={${chunks[shuffleOrder[3]].join(',')}}
-local ${v.chunks[shuffleOrder[4]]}={${chunks[shuffleOrder[4]].join(',')}}
-local ${v.chunks[shuffleOrder[5]]}={${chunks[shuffleOrder[5]].join(',')}}
-local ${v.chunks[shuffleOrder[6]]}={${chunks[shuffleOrder[6]].join(',')}}
-local ${v.chunks[shuffleOrder[7]]}={${chunks[shuffleOrder[7]].join(',')}}
-local ${v.bc}={}
-for _,_v in ipairs(${v.chunks[0]})do ${v.bc}[#${v.bc}+1]=_v end
-for _,_v in ipairs(${v.chunks[1]})do ${v.bc}[#${v.bc}+1]=_v end
-for _,_v in ipairs(${v.chunks[2]})do ${v.bc}[#${v.bc}+1]=_v end
-for _,_v in ipairs(${v.chunks[3]})do ${v.bc}[#${v.bc}+1]=_v end
-for _,_v in ipairs(${v.chunks[4]})do ${v.bc}[#${v.bc}+1]=_v end
-for _,_v in ipairs(${v.chunks[5]})do ${v.bc}[#${v.bc}+1]=_v end
-for _,_v in ipairs(${v.chunks[6]})do ${v.bc}[#${v.bc}+1]=_v end
-for _,_v in ipairs(${v.chunks[7]})do ${v.bc}[#${v.bc}+1]=_v end
-local ${v.ic}=(function()
-local _h=${seed}
-for i=1,#${v.bc}do _h=(_h*37+${v.bc}[i]+i-1)%4294967296 end
-return _h==${intHash}
-end)()
-if not ${v.ic}then warn("[DL] INT")return end
-local ${v.keys}={${keys.join(',')}}
-local ${v.iv}={${iv.join(',')}}
-local ${v.ops}={LD=${opcodes.LOAD_BYTE},XK=${opcodes.XOR_KEY},AP=${opcodes.ADD_POS},SP=${opcodes.SUB_PREV},EM=${opcodes.EMIT_CHAR},EN=${opcodes.END}}
-local ${v.state}=${seed}
-local ${v.vm}=function()
-local ${v.out}={}
-local ${v.pc}=1
-local ${v.reg}=0
-local ${v.prev}=0
-local ${v.tmp}=0
-local _xor=function(a,b)
-if bit32 then return bit32.bxor(a,b)end
-local r,p=0,1
-for _=1,8 do
-if a%2~=b%2 then r=r+p end
-a=math.floor(a/2)b=math.floor(b/2)p=p*2
-end
-return r
-end
-while ${v.pc}<=#${v.bc}do
-local op=${v.bc}[${v.pc}]
-if op==${v.ops}.EN then break
-elseif op==${v.ops}.LD then
-${v.pc}=${v.pc}+1
-${v.reg}=${v.bc}[${v.pc}]
-elseif op==${v.ops}.XK then
-${v.pc}=${v.pc}+1
-local ki=${v.bc}[${v.pc}]
-${v.reg}=_xor(${v.reg},ki)
-elseif op==${v.ops}.AP then
-${v.pc}=${v.pc}+1
-local pi=${v.bc}[${v.pc}]
-${v.reg}=(${v.reg}-pi)%256
-if ${v.reg}<0 then ${v.reg}=${v.reg}+256 end
-elseif op==${v.ops}.SP then
-${v.pc}=${v.pc}+1
-local si=${v.bc}[${v.pc}]
-${v.reg}=(${v.reg}-si)%256
-if ${v.reg}<0 then ${v.reg}=${v.reg}+256 end
-elseif op==${v.ops}.EM then
-${v.pc}=${v.pc}+1
-local idx=${v.bc}[${v.pc}]
-local fb=0
-if #${v.out}>0 then fb=math.floor(string.byte(${v.out}[#${v.out}])/4)end
-${v.reg}=_xor(${v.reg},fb)
-${v.reg}=_xor(${v.reg},(${v.state}%256))
-${v.state}=(${v.state}*1103515245+12345)%4294967296
-${v.reg}=(${v.reg}-${v.iv}[(idx%8)+1])%256
-if ${v.reg}<0 then ${v.reg}=${v.reg}+256 end
-${v.reg}=_xor(${v.reg},${v.keys}[(idx%16)+1])
-${v.out}[#${v.out}+1]=string.char(${v.reg})
-end
-${v.pc}=${v.pc}+1
-end
-return table.concat(${v.out})
-end
-local ${v.dec}=${v.vm}()
-if not ${v.dec}or #${v.dec}<3 then warn("[DL] DEC")return end
-local ${v.exec},_e=loadstring(${v.dec})
-if not ${v.exec}then warn("[DL] LD: "..tostring(_e))return end
-local _ok,_re=pcall(${v.exec})
-if not _ok then warn("[DL] RUN: "..tostring(_re))end
-`;
+      // Anti-deobfuscation check (compressed)
+      output += `local ${vars.a}=(function()local ${vars.b}=true;if _G.DEOBF or _G.DEBUG or _G.UNLUAC or _G.dump or _G.decompile then ${vars.b}=false end;if getgenv and getgenv().__DEOBF then ${vars.b}=false end;return ${vars.b} end)()if not ${vars.a}then return end `;
       
-      return protectedScript;
+      // HWID check (compressed)
+      output += `local ${vars.c}=(function()local ${vars.d};pcall(function()if gethwid then ${vars.d}=gethwid()elseif getexecutorhwid then ${vars.d}=getexecutorhwid()elseif get_hwid then ${vars.d}=get_hwid()elseif syn then ${vars.d}=syn.hwid()elseif fluxus then ${vars.d}=fluxus.GetHWID()end end)if not ${vars.d}then return true end;local ${vars.e}=${seed};for ${vars.f}=1,#${vars.d}do ${vars.e}=(${vars.e}*53+string.byte(${vars.d},${vars.f})+(${vars.f}-1)*7)%4294967296 end;return ${vars.e}==${hwidHash}end)()if not ${vars.c}then return end `;
+      
+      // Add more junk between sections
+      output += genJunk();
+      
+      // Scattered data chunks in random order
+      const chunkVars = chunks.map(() => genVar());
+      order.forEach((idx, i) => {
+        output += `local ${chunkVars[idx]}={${chunks[idx].join(',')}} `;
+        if (i % 4 === 3) output += genJunk(); // Add junk every 4 chunks
+      });
+      
+      // Reassemble data
+      output += `local ${vars.g}={} `;
+      for (let i = 0; i < numChunks; i++) {
+        output += `for _,${vars.h} in ipairs(${chunkVars[i]})do ${vars.g}[#${vars.g}+1]=${vars.h} end `;
+      }
+      
+      // Integrity check
+      output += `local ${vars.i}=(function()local ${vars.j}=${seed};for ${vars.k}=1,#${vars.g}do ${vars.j}=(${vars.j}*41+${vars.g}[${vars.k}]*(${vars.k}))%4294967296 end;return ${vars.j}==${dataHash}end)()if not ${vars.i}then return end `;
+      
+      // More junk
+      output += genJunk();
+      
+      // Decryption keys (split and scattered)
+      const keyChunks = [keys.slice(0, 8), keys.slice(8, 16), keys.slice(16, 24), keys.slice(24, 32)];
+      const keyVars = keyChunks.map(() => genVar());
+      keyChunks.forEach((kc, i) => {
+        output += `local ${keyVars[i]}={${kc.join(',')}} `;
+      });
+      output += `local ${vars.m}={} for _,${vars.n} in ipairs(${keyVars[0]})do ${vars.m}[#${vars.m}+1]=${vars.n} end for _,${vars.n} in ipairs(${keyVars[1]})do ${vars.m}[#${vars.m}+1]=${vars.n} end for _,${vars.n} in ipairs(${keyVars[2]})do ${vars.m}[#${vars.m}+1]=${vars.n} end for _,${vars.n} in ipairs(${keyVars[3]})do ${vars.m}[#${vars.m}+1]=${vars.n} end `;
+      
+      // XOR function (obfuscated)
+      output += `local ${vars.o}=function(${vars.p},${vars.q})if bit32 then return bit32.bxor(${vars.p},${vars.q})end;local ${vars.r},${vars.s}=0,1;for _=1,8 do if ${vars.p}%2~=${vars.q}%2 then ${vars.r}=${vars.r}+${vars.s}end;${vars.p}=math.floor(${vars.p}/2)${vars.q}=math.floor(${vars.q}/2)${vars.s}=${vars.s}*2 end;return ${vars.r}end `;
+      
+      // Decryption VM (heavily compressed)
+      output += `local ${vars.t}=${seed} local ${vars.u}=0 local ${vars.v}={} for ${vars.w}=1,#${vars.g}do local ${vars.x}=${vars.g}[${vars.w}]${vars.x}=${vars.o}(${vars.x},${vars.m}[(${vars.w}*7-1)%32+1])${vars.x}=(${vars.x}-(${vars.w}*17-17))%256 if ${vars.x}<0 then ${vars.x}=${vars.x}+256 end;${vars.x}=${vars.o}(${vars.x},math.floor(${vars.u}/2))${vars.x}=(${vars.x}-(${vars.t}%256))%256 if ${vars.x}<0 then ${vars.x}=${vars.x}+256 end;${vars.x}=${vars.o}(${vars.x},${vars.m}[(${vars.w}-1)%32+1])${vars.u}=${vars.g}[${vars.w}]${vars.t}=(${vars.t}*1664525+1013904223)%4294967296;${vars.v}[#${vars.v}+1]=string.char(${vars.x})end `;
+      
+      // More junk before execution
+      output += genJunk();
+      
+      // Execution (compressed)
+      output += `local ${vars.y}=table.concat(${vars.v})if not ${vars.y}or #${vars.y}<1 then return end;local ${vars.z},${vars.aa}=loadstring(${vars.y})if not ${vars.z}then return end;local ${vars.bb},${vars.cc}=pcall(${vars.z})`;
+      
+      // Final junk
+      output += genJunk();
+      
+      return output;
     };
     
     const protectedScript = obfuscateScript(script.script_key, hwid);
