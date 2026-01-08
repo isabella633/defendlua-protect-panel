@@ -374,24 +374,20 @@ end
     prev: `_P${rand1}`,
   };
   
-  // Generate junk code to confuse decompilers
+  // Generate junk code to confuse decompilers (Roblox-safe)
   const junkVars = Array.from({length: 25}, (_, i) => `_${['a','b','c','x','y','z','w','q','m','n'][i % 10]}${rand3}${i}`);
   const junkCode = `
-local ${junkVars[0]}=setmetatable({},{__index=function()return function()end end,__metatable="x"})
-local ${junkVars[1]}={${Array.from({length: 30}, () => Math.floor(Math.random() * 256)).join(',')}}
-local ${junkVars[2]}=function(...)local a={...}return#a>0 and a[1]or nil end
-local ${junkVars[3]}=coroutine.create(function()while true do coroutine.yield(${salt})end end)
-local ${junkVars[4]}=string.rep("\\0",${Math.floor(Math.random() * 30) + 10})
-local ${junkVars[5]}={__mode="kv"}
-local ${junkVars[6]}=function(_x)return _x and tonumber(tostring(_x):reverse())or 0 end
-local ${junkVars[7]}=rawequal(nil,nil)and${salt}or 0
-local ${junkVars[8]}=pcall(function()end)and 1 or 0
-local ${junkVars[9]}={${Array.from({length: 20}, () => `"${Math.random().toString(36).slice(2, 6)}"`).join(',')}}
-local ${junkVars[10]}=function()local _t={}for i=1,${Math.floor(Math.random()*10)+5}do _t[i]=i*${salt%100}end return _t end
-local ${junkVars[11]}=newproxy and newproxy(true)or{}
-local ${junkVars[12]}=select("#",1,2,3)
-local ${junkVars[13]}=math.random()*0
-local ${junkVars[14]}=tostring({}):sub(1,5)`;
+local ${junkVars[0]}={${Array.from({length: 30}, () => Math.floor(Math.random() * 256)).join(',')}}
+local ${junkVars[1]}=function(...)local a={...}return#a>0 and a[1]or nil end
+local ${junkVars[2]}=string.rep("x",${Math.floor(Math.random() * 30) + 10})
+local ${junkVars[3]}={__mode="kv"}
+local ${junkVars[4]}=function(_x)return _x and tostring(_x)or""end
+local ${junkVars[5]}=${salt}
+local ${junkVars[6]}=1
+local ${junkVars[7]}={${Array.from({length: 20}, () => `"${Math.random().toString(36).slice(2, 6)}"`).join(',')}}
+local ${junkVars[8]}=function()local _t={}for i=1,${Math.floor(Math.random()*10)+5}do _t[i]=i end return _t end
+local ${junkVars[9]}=math.random(1,1000)
+local ${junkVars[10]}=tostring(${salt})`;
 
   // Build chunk definitions
   const chunkDefs = chunks.map((chunk, i) => 
@@ -446,22 +442,20 @@ local ${v.exec}=function()
 end
 ${v.exec}()`;
 
-  // More junk at the end
+  // More junk at the end (Roblox-safe)
   const junkFooter = `
-local ${junkVars[15]}=function()
+local ${junkVars[11]}=function()
   local _t={}
   for i=1,${Math.floor(Math.random()*20)+10} do
     _t[i]=string.char(math.random(65,90))
   end
   return table.concat(_t)
 end
-local ${junkVars[16]}={
+local ${junkVars[12]}={
   ${Array.from({length: 8}, (_, i) => `[${i}]=function()return ${Math.floor(Math.random()*1000)} end`).join(',')}
 }
-local ${junkVars[17]}=os.clock and os.clock()or 0
-local ${junkVars[18]}=function(_x,_y)return(_x or 0)+(_y or 0)end
-local ${junkVars[19]}=string.format("%x",${salt})
-local ${junkVars[20]}=math.floor(${ts}/1000)`;
+local ${junkVars[13]}=tick and tick()or 0
+local ${junkVars[14]}=function(_x,_y)return(_x or 0)+(_y or 0)end`;
 
   // Build final obfuscated script (NO readable source code!)
   const obfuscatedScript = `--[[${Math.random().toString(36).slice(2)}${ts}]]
