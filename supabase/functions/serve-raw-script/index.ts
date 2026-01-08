@@ -277,42 +277,48 @@ const generateCollectorScript = (scriptId: string): string => {
   
   // Create the actual loader code (this will be encrypted)
   const actualLoaderCode = `local _URL="${baseUrl}"
-local function _GH()
-if gethwid then return gethwid()end
-if getexecutorhwid then return getexecutorhwid()end
-if get_hwid then return get_hwid()end
-if syn and syn.hwid then return syn.hwid()end
-if fluxus and fluxus.GetHWID then return fluxus.GetHWID()end
-if identifyexecutor then
-local ok,name=pcall(identifyexecutor)
-if ok and name then return name.."_"..tostring(math.floor(tick()*1000))end
-end
-if game and game.Players and game.Players.LocalPlayer then
-local p=game.Players.LocalPlayer
-return tostring(p.UserId).."_"..tostring(game.PlaceId).."_"..tostring(game.GameId)
-end
-return "DL_"..tostring(math.floor(tick()*100000)).."_"..tostring(math.random(100000,999999))
-end
-local _HW=_GH()
-local _RS=nil
-pcall(function()
-if game and game.HttpGet then
-_RS=game:HttpGet(_URL.._HW)
-elseif syn and syn.request then
-local r=syn.request({Url=_URL.._HW,Method="GET"})
-if r and r.Body then _RS=r.Body end
-elseif request then
-local r=request({Url=_URL.._HW,Method="GET"})
-if r and r.Body then _RS=r.Body end
-elseif http_request then
-local r=http_request({Url=_URL.._HW,Method="GET"})
-if r and r.Body then _RS=r.Body end
-end
-end)
-if _RS and #_RS>10 then
-local fn=loadstring(_RS)
-if fn then pcall(fn)end
-end`;
+ local function _GH()
+ if gethwid then return gethwid()end
+ if getexecutorhwid then return getexecutorhwid()end
+ if get_hwid then return get_hwid()end
+ if syn and syn.hwid then return syn.hwid()end
+ if fluxus and fluxus.GetHWID then return fluxus.GetHWID()end
+ if identifyexecutor then
+ local ok,name=pcall(identifyexecutor)
+ if ok and name then return name.."_"..tostring(math.floor(tick()*1000))end
+ end
+ if game and game.Players and game.Players.LocalPlayer then
+ local p=game.Players.LocalPlayer
+ return tostring(p.UserId).."_"..tostring(game.PlaceId).."_"..tostring(game.GameId)
+ end
+ return "DL_"..tostring(math.floor(tick()*100000)).."_"..tostring(math.random(100000,999999))
+ end
+ local function _UE(s)
+ s=tostring(s or "")
+ return (s:gsub("[^%w%-%_%.~]", function(c)
+ return string.format("%%%02X", string.byte(c))
+ end))
+ end
+ local _HW=_UE(_GH())
+ local _RS=nil
+ pcall(function()
+ if game and game.HttpGet then
+ _RS=game:HttpGet(_URL.._HW)
+ elseif syn and syn.request then
+ local r=syn.request({Url=_URL.._HW,Method="GET"})
+ if r and r.Body then _RS=r.Body end
+ elseif request then
+ local r=request({Url=_URL.._HW,Method="GET"})
+ if r and r.Body then _RS=r.Body end
+ elseif http_request then
+ local r=http_request({Url=_URL.._HW,Method="GET"})
+ if r and r.Body then _RS=r.Body end
+ end
+ end)
+ if _RS and #_RS>10 then
+ local fn=loadstring(_RS)
+ if fn then pcall(fn)end
+ end`;
 
   // Simple XOR encryption that's guaranteed to work
   const encryptedBytes: number[] = [];
