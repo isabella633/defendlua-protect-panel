@@ -347,29 +347,29 @@ local ${junk[1]}="${Math.random().toString(36).slice(2, 10)}"
 local ${junk[2]}=${Math.floor(Math.random() * 10000)}
 local ${v.data}={${encryptedBytes.join(',')}}
 local ${v.key}=${xorKey}
-local ${v.dec}=function()
-local ${v.res}=""
-for i=1,#${v.data} do
-local c=${v.data}[i]
-local k=${v.key}+((i-1)%8)
-local b=c
-if bit32 then
-b=bit32.bxor(c,bit32.band(k,255))
-else
-local r,p=0,1
-local a,kb=c,k%256
-for _=1,8 do
-if a%2~=kb%2 then r=r+p end
-a=math.floor(a/2)
-kb=math.floor(kb/2)
-p=p*2
-end
-b=r
-end
-${v.res}=${v.res}..string.char(b)
-end
-return ${v.res}
-end
+ local ${v.dec}=function()
+ local _t={}
+ for i=1,#${v.data} do
+ local c=${v.data}[i]
+ local k=${v.key}+((i-1)%8)
+ local b=c
+ if bit32 then
+ b=bit32.bxor(c,bit32.band(k,255))
+ else
+ local r,p=0,1
+ local a,kb=c,k%256
+ for _=1,8 do
+ if a%2~=kb%2 then r=r+p end
+ a=math.floor(a/2)
+ kb=math.floor(kb/2)
+ p=p*2
+ end
+ b=r
+ end
+ _t[i]=string.char(b)
+ end
+ return table.concat(_t)
+ end
 local ${junk[3]}=function()return ${junk[2]}*2 end
 local ${junk[4]}={${Array.from({length: 10}, () => `"${Math.random().toString(36).slice(2, 5)}"`).join(',')}}
 local ${v.exec}=function()
@@ -733,7 +733,7 @@ local ${varNames.keyBytes}={${[
         (masterKey * 47) & 0xFF
       ].join(',')}}
 local ${varNames.decrypt}=function(${varNames.data})
-  local ${varNames.result}=""
+  local _t={}
   local _prev=0
   for i=1,#${varNames.data} do
     local _b=${varNames.data}[i]
@@ -743,9 +743,9 @@ local ${varNames.decrypt}=function(${varNames.data})
     if _b<0 then _b=_b+256 end
     local _k=${varNames.keyBytes}[((i-1)%8)+1]
     _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
-    ${varNames.result}=${varNames.result}..string.char(_b)
+    _t[i]=string.char(_b)
   end
-  return ${varNames.result}
+  return table.concat(_t)
 end`;
       
       // Build data chunks
