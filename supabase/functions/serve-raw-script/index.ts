@@ -796,6 +796,40 @@ end`;
    if not ${varNames.selfCheck}(_fn) then
      return warn("[DefendLua] Security check failed: Function tampered")
    end
+
+   -- Patch JSONEncode to avoid "Can't convert to JSON" crashes caused by non-serializable values
+   local function _DL_SAN(v,depth)
+     depth=depth or 0
+     if depth>4 then return tostring(v) end
+     local t=type(v)
+     if t=="nil" or t=="string" or t=="boolean" then return v end
+     if t=="number" then
+       if v~=v or v==math.huge or v==-math.huge then return 0 end
+       return v
+     end
+     if t=="table" then
+       local o={}
+       for k,val in pairs(v) do
+         local kk=(type(k)=="string" or type(k)=="number") and k or tostring(k)
+         local vv=_DL_SAN(val,depth+1)
+         if vv~=nil then o[kk]=vv end
+       end
+       return o
+     end
+     return tostring(v)
+   end
+   pcall(function()
+     local hs=(game and game.GetService) and game:GetService("HttpService") or nil
+     if hs and hookfunction and hs.JSONEncode then
+       local _old=hs.JSONEncode
+       hookfunction(_old,function(self,obj)
+         local ok,res=pcall(_old,self,obj)
+         if ok then return res end
+         return _old(self,_DL_SAN(obj,0))
+       end)
+     end
+   end)
+
    local _handler=function(e)
      if debug and debug.traceback then
        return debug.traceback(e,2)
@@ -807,7 +841,7 @@ end`;
      warn("[DefendLua] Runtime error: "..tostring(_runErr))
    end
  end`;
-      
+
       // Generate junk code to confuse decompilers (Roblox-compatible)
       const junkVars = Array.from({length: 15}, (_, i) => `_J${rand3}${i}`);
       const junkCode = `
