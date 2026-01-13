@@ -514,10 +514,21 @@ Deno.serve(async (req) => {
 
     if (error || !script) {
       console.error("Script not found:", error);
+      
+      // Log the access attempt for debugging (server-side only)
+      await supabaseAdmin.from("access_logs").insert({
+        script_id: scriptId,
+        hwid: hwid || "unknown",
+        ip_address: clientIp,
+        status: "denied",
+        reason: "Script not found",
+      });
+      
+      // Return identical response to access denied to prevent script ID enumeration
       return new Response(
-        'print("ERROR: Script not found")',
+        'print("ACCESS DENIED")',
         {
-          status: 404,
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         },
       );
@@ -595,8 +606,9 @@ Deno.serve(async (req) => {
       
       await sendDiscordWebhook("Denied", "HWID Blacklisted", 0xFF0000);
 
+      // Return identical response to prevent enumeration
       return new Response(
-        'print("ACCESS DENIED: Your HWID has been blacklisted")',
+        'print("ACCESS DENIED")',
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
@@ -642,8 +654,9 @@ Deno.serve(async (req) => {
       
       await sendDiscordWebhook("Denied", !isHwidWhitelisted ? "HWID Not Whitelisted" : "IP Not Whitelisted", 0xFF0000);
 
+      // Return identical response to script-not-found to prevent enumeration
       return new Response(
-        'print("ACCESS DENIED: You are not authorized")',
+        'print("ACCESS DENIED")',
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
