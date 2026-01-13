@@ -1,9 +1,51 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Dynamic CORS based on origin
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  const allowedOrigins = [
+    'https://uwfuuhhcjlxgyeecpeii.lovableproject.com',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+  
+  const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  
+  return {
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
+
+// Simple in-memory rate limiter using Map (resets on cold starts, but provides basic protection)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+function checkRateLimit(key: string, limit: number, windowMs: number): { allowed: boolean; remaining: number; resetIn: number } {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  
+  if (!entry || now > entry.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
+    return { allowed: true, remaining: limit - 1, resetIn: windowMs };
+  }
+  
+  if (entry.count >= limit) {
+    return { allowed: false, remaining: 0, resetIn: entry.resetTime - now };
+  }
+  
+  entry.count++;
+  return { allowed: true, remaining: limit - entry.count, resetIn: entry.resetTime - now };
+}
+
+// Clean up old rate limit entries periodically (prevent memory leak)
+function cleanupRateLimits() {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap.entries()) {
+    if (now > entry.resetTime) {
+      rateLimitMap.delete(key);
+    }
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DefendLua Obfuscation Engine v16.0 - Military-Grade Protection
@@ -388,19 +430,57 @@ local ${junk[7]}=${junk[6]}+1`;
 };
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Clean up old rate limit entries
+  cleanupRateLimits();
 
   try {
     const url = new URL(req.url);
     const scriptId = url.searchParams.get("id");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
+    
+    // Get client IP for rate limiting
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || 
+                     req.headers.get("x-real-ip") || 
+                     "unknown";
+
+    // Rate limit by IP: 30 requests per minute
+    const ipRateLimit = checkRateLimit(`ip:${clientIp}`, 30, 60000);
+    if (!ipRateLimit.allowed) {
+      console.warn("Rate limit exceeded for IP:", clientIp);
+      return new Response('print("ERROR: Rate limit exceeded. Please wait before trying again.")', {
+        status: 429,
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "text/plain",
+          "Retry-After": Math.ceil(ipRateLimit.resetIn / 1000).toString()
+        },
+      });
+    }
 
     if (!scriptId) {
       return new Response('print("ERROR: Script ID not provided")', {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+    
+    // Rate limit by script ID: 100 requests per hour per script
+    const scriptRateLimit = checkRateLimit(`script:${scriptId}`, 100, 3600000);
+    if (!scriptRateLimit.allowed) {
+      console.warn("Rate limit exceeded for script:", scriptId);
+      return new Response('print("ERROR: Script rate limit exceeded. Please try again later.")', {
+        status: 429,
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "text/plain",
+          "Retry-After": Math.ceil(scriptRateLimit.resetIn / 1000).toString()
+        },
       });
     }
 
