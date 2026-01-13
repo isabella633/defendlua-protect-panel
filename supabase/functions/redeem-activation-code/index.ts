@@ -1,15 +1,29 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Dynamic CORS based on origin
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || '';
+  const allowedOrigins = [
+    'https://uwfuuhhcjlxgyeecpeii.lovableproject.com',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+  
+  const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  
+  return {
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
 
 interface RedeemRequest {
   code: string;
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -74,39 +88,37 @@ Deno.serve(async (req) => {
     if (codeError) {
       console.error('Code lookup error:', codeError);
       return new Response(
-        JSON.stringify({ error: 'Database error while checking code' }),
+        JSON.stringify({ error: 'Unable to process request. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Use generic error message for all code validation failures to prevent enumeration
+    const genericCodeError = { error: 'Invalid or expired activation code' };
+    const codeErrorResponse = (status: number) => new Response(
+      JSON.stringify(genericCodeError),
+      { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
     if (!codeData) {
       console.log('Code not found');
-      return new Response(
-        JSON.stringify({ error: 'Invalid activation code' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return codeErrorResponse(400);
     }
 
-    // Validate code status
+    // Validate code status - use same generic message for all failures
     if (!codeData.is_active) {
-      return new Response(
-        JSON.stringify({ error: 'This activation code has been deactivated' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('Code deactivated');
+      return codeErrorResponse(400);
     }
 
     if (codeData.used_count >= codeData.max_uses) {
-      return new Response(
-        JSON.stringify({ error: 'This activation code has already been used' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('Code max uses reached');
+      return codeErrorResponse(400);
     }
 
     if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
-      return new Response(
-        JSON.stringify({ error: 'This activation code has expired' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('Code expired');
+      return codeErrorResponse(400);
     }
 
     console.log('Code validated, updating subscription for user:', user.id);
@@ -132,7 +144,7 @@ Deno.serve(async (req) => {
     if (subError) {
       console.error('Subscription update error:', subError);
       return new Response(
-        JSON.stringify({ error: 'Failed to update subscription' }),
+        JSON.stringify({ error: 'Unable to process request. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
