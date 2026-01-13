@@ -501,8 +501,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    const clientIp =
-      req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
+    // Reuse client IP derived earlier (used for rate limiting and logging)
+    // (Do not redeclare to avoid Deno runtime boot errors)
 
     console.log("Request details:", { scriptId, hwid: hwid ? "provided" : "missing", clientIp });
 
