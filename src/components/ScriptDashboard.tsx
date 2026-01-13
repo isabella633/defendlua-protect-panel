@@ -19,7 +19,8 @@ import {
   ShoppingCart,
   ExternalLink,
   Settings,
-  ArrowDown
+  ArrowDown,
+  Clock
 } from "lucide-react";
 import {
   AlertDialog,
@@ -336,13 +337,51 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
 
                 {subscription?.expires_at && (
                   <div className="pt-3 border-t">
-                    <p className="text-sm text-muted-foreground">
-                      Plan expires: {new Date(subscription.expires_at).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
+                    {(() => {
+                      const expiresAt = new Date(subscription.expires_at);
+                      const now = new Date();
+                      const diffTime = expiresAt.getTime() - now.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+                      
+                      if (diffDays <= 0) {
+                        return (
+                          <div className="flex items-center gap-2 text-destructive">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm font-medium">Plan expired</span>
+                          </div>
+                        );
+                      }
+                      
+                      const isUrgent = diffDays <= 3;
+                      const isWarning = diffDays <= 7;
+                      
+                      return (
+                        <div className="space-y-2">
+                          <div className={`flex items-center gap-2 ${isUrgent ? 'text-destructive' : isWarning ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                              {diffDays === 1 
+                                ? `Expires in ${diffHours} hours` 
+                                : `${diffDays} days remaining`}
+                            </span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all ${isUrgent ? 'bg-destructive' : isWarning ? 'bg-yellow-500' : 'bg-primary'}`}
+                              style={{ width: `${Math.min(100, Math.max(5, (diffDays / 30) * 100))}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Expires: {expiresAt.toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
