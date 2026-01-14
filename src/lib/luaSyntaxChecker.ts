@@ -77,10 +77,16 @@ export function checkLuaSyntax(code: string): SyntaxError[] {
     }
     
     // Check for unmatched parentheses on this line
-    const openParens = (lineWithoutStrings.match(/\(/g) || []).length;
-    const closeParens = (lineWithoutStrings.match(/\)/g) || []).length;
-    if (openParens !== closeParens) {
-      errors.push({ line: lineNum, message: "Unmatched parentheses", severity: 'error' });
+    // Skip parenthesis check for lines that are just 'end)' or 'end,' or similar callback closures
+    // These are valid Lua patterns for closing anonymous functions passed as arguments
+    const isCallbackClosure = /^\s*end\s*[,\)]/.test(trimmed) || /^\s*\}\s*[,\)]/.test(trimmed);
+    
+    if (!isCallbackClosure) {
+      const openParens = (lineWithoutStrings.match(/\(/g) || []).length;
+      const closeParens = (lineWithoutStrings.match(/\)/g) || []).length;
+      if (openParens !== closeParens) {
+        errors.push({ line: lineNum, message: "Unmatched parentheses", severity: 'error' });
+      }
     }
     
     // Check for unmatched brackets
