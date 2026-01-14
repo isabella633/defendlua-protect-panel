@@ -91,6 +91,60 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_link_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          used: boolean | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          used?: boolean | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          used?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      discord_links: {
+        Row: {
+          created_at: string | null
+          discord_id: string
+          discord_username: string | null
+          id: string
+          linked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          discord_id: string
+          discord_username?: string | null
+          id?: string
+          linked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          discord_id?: string
+          discord_username?: string | null
+          id?: string
+          linked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -253,6 +307,7 @@ export type Database = {
       can_create_script: { Args: { user_id_param: string }; Returns: boolean }
       count_user_scripts: { Args: { user_id_param: string }; Returns: number }
       generate_activation_code: { Args: never; Returns: string }
+      generate_discord_link_code: { Args: never; Returns: string }
       get_hwid_limit: { Args: { user_id_param: string }; Returns: number }
       get_script_limit: { Args: { user_id_param: string }; Returns: number }
       has_role: {

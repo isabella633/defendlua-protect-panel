@@ -1,0 +1,12 @@
+{
+  "name": "defendlua-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord bot for managing DefendLua script whitelists",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1"
+  }
+}
