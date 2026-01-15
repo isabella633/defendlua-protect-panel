@@ -728,11 +728,22 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                 <Card className="border-muted">
                   <CardHeader>
                     <CardTitle>Need the Bot?</CardTitle>
-                    <CardDescription>Add the DefendLua bot to your Discord server</CardDescription>
+                    <CardDescription>Add the official DefendLua bot to your Discord server</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
+                    <a 
+                      href="https://discord.com/oauth2/authorize?client_id=1385790808900501676&permissions=2147502080&integration_type=0&scope=bot" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <Button variant="hero" className="w-full">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Add DefendLua Bot to Server
+                      </Button>
+                    </a>
                     <Button onClick={() => navigate("/link-discord")} variant="outline" className="w-full">
-                      <ExternalLink className="w-4 h-4 mr-2" />
+                      <LinkIcon className="w-4 h-4 mr-2" />
                       Go to Discord Setup Page
                     </Button>
                   </CardContent>
