@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Copy, RefreshCw, Unlink, MessageCircle } from "lucide-react";
+import { ArrowLeft, Copy, RefreshCw, Unlink, MessageCircle, Bot, ExternalLink } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import logoImage from "@/assets/defendlua-logo.png";
 
 export default function LinkDiscord() {
@@ -16,6 +17,23 @@ export default function LinkDiscord() {
   const [codeExpiry, setCodeExpiry] = useState<Date | null>(null);
   const [discordLink, setDiscordLink] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
+  const [botClientId, setBotClientId] = useState("");
+
+  // Discord bot permissions: Send Messages (2048), Use Slash Commands (2147483648), Embed Links (16384)
+  const BOT_PERMISSIONS = "2147502080";
+
+  const generateInviteLink = () => {
+    if (!botClientId) return "";
+    return `https://discord.com/api/oauth2/authorize?client_id=${botClientId}&permissions=${BOT_PERMISSIONS}&scope=bot%20applications.commands`;
+  };
+
+  const copyInviteLink = () => {
+    const link = generateInviteLink();
+    if (link) {
+      navigator.clipboard.writeText(link);
+      toast.success("Invite link copied to clipboard!");
+    }
+  };
 
   useEffect(() => {
     checkAuth();
@@ -280,6 +298,74 @@ export default function LinkDiscord() {
             </CardContent>
           </Card>
         )}
+
+        {/* Bot Invite Link Generator */}
+        <Card className="mt-6 border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Bot className="h-5 w-5" />
+              Add Bot to Your Server
+            </CardTitle>
+            <CardDescription>
+              Invite the DefendLua bot to your Discord server
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                The bot requires these permissions to function properly:
+              </p>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Send Messages</li>
+                <li>Use Slash Commands</li>
+                <li>Embed Links</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-3">
+              <Label htmlFor="client-id">Bot Client ID</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="client-id"
+                  placeholder="Enter your bot's Client ID"
+                  value={botClientId}
+                  onChange={(e) => setBotClientId(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Find this in your Discord Developer Portal → Your Application → General Information
+              </p>
+            </div>
+
+            {botClientId && (
+              <div className="space-y-3">
+                <Label>Generated Invite Link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={generateInviteLink()}
+                    readOnly
+                    className="font-mono text-xs"
+                  />
+                  <Button variant="outline" size="icon" onClick={copyInviteLink}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <a 
+                  href={generateInviteLink()} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <Button variant="hero" className="w-full gap-2">
+                    <ExternalLink className="h-4 w-4" />
+                    Open Invite Link
+                  </Button>
+                </a>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Bot Info */}
         <Card className="mt-6 border-muted">
