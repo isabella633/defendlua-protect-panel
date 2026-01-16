@@ -62,7 +62,7 @@ protectedFunction()`);
   const getHwidLimit = (plan: string) => {
     switch (plan) {
       case 'free': return 10;
-      case 'pro': return 100;
+      case 'pro': return 999999; // unlimited
       case 'enterprise': return 999999;
       default: return 10;
     }
@@ -182,7 +182,7 @@ protectedFunction()`);
     if (hwidList.length >= hwidLimit) {
       toast({
         title: "HWID Limit Reached",
-        description: `Your ${userPlan} plan allows ${hwidLimit} HWIDs per script. ${userPlan === 'free' ? 'Upgrade to Pro for 100 HWIDs.' : userPlan === 'pro' ? 'Upgrade to Enterprise for unlimited.' : ''}`,
+        description: `Your ${userPlan} plan allows ${hwidLimit} HWIDs per script. ${userPlan === 'free' ? 'Upgrade to Pro for unlimited HWIDs.' : ''}`,
         variant: "destructive",
       });
       return;
