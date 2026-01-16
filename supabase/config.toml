@@ -14,3 +14,9 @@ verify_jwt = true
 
 [functions.discord-bot-api]
 verify_jwt = false
+
+[functions.discord-interactions]
+verify_jwt = false
+
+[functions.downgrade-subscription]
+verify_jwt = true
