@@ -917,7 +917,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                                   <p>Are you sure you want to downgrade? You will immediately lose access to:</p>
                                   <ul className="list-disc list-inside text-sm space-y-1 mt-2">
                                     <li>Unlimited scripts (limited to 3)</li>
-                                    <li>Up to 100 HWIDs per script (limited to 10)</li>
+                                    <li>Unlimited HWIDs per script (limited to 10)</li>
                                     <li>Discord webhook logging</li>
                                     <li>Priority AI responses</li>
                                     <li>Advanced analytics</li>
