@@ -138,7 +138,7 @@ const Purchase = () => {
             <ul className="space-y-4">
               {[
                 "Unlimited scripts",
-                "Up to 100 HWIDs per script",
+                "Unlimited HWIDs per script",
                 "🔔 Discord webhook logging",
                 "Real-time access notifications",
                 "Public access mode (auto-whitelist)",

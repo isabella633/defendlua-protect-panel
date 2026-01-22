@@ -327,7 +327,7 @@ const Index = () => {
                 name: "Pro",
                 price: "$9.99",
                 period: "per month",
-                features: ["Unlimited scripts", "Up to 100 HWIDs", "Advanced analytics", "Priority support"],
+                features: ["Unlimited scripts", "Unlimited HWIDs", "Advanced analytics", "Priority support"],
                 popular: true
               },
               {

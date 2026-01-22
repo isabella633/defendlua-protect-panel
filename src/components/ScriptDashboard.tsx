@@ -303,7 +303,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                     ) : subscription?.plan === 'pro' ? (
                       <>
                         <p className="text-foreground">• Unlimited scripts</p>
-                        <p className="text-foreground">• Up to 100 HWIDs per script</p>
+                        <p className="text-foreground">• Unlimited HWIDs per script</p>
                         <p className="text-foreground">• Advanced protection</p>
                         <p className="text-foreground">• Discord webhook logging</p>
                         <p className="text-foreground">• Public access mode</p>
@@ -480,7 +480,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
               <CardContent className="space-y-3">
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>✓ Unlimited scripts</p>
-                  <p>✓ Up to 100 HWIDs per script</p>
+                  <p>✓ Unlimited HWIDs per script</p>
                   <p>✓ Advanced analytics & priority support</p>
                   <p>✓ 100 AI questions per session</p>
                 </div>
@@ -803,7 +803,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                           ) : subscription?.plan === 'pro' ? (
                             <>
                               <p className="text-foreground">• Unlimited scripts</p>
-                              <p className="text-foreground">• Up to 100 HWIDs per script</p>
+                              <p className="text-foreground">• Unlimited HWIDs per script</p>
                               <p className="text-foreground">• Advanced protection</p>
                               <p className="text-foreground">• Discord webhook logging</p>
                               <p className="text-foreground">• Public access mode</p>

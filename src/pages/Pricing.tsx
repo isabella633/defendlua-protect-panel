@@ -34,7 +34,7 @@ const Pricing = () => {
       description: "Buy activation keys online - auto-generated & secure",
       features: [
         "Unlimited scripts",
-        "Up to 100 HWIDs per script",
+        "Unlimited HWIDs per script",
         "Discord webhook logging",
         "Real-time access notifications",
         "Public access mode (auto-whitelist)",
@@ -197,7 +197,7 @@ const Pricing = () => {
               },
               {
                 q: "What happens if I exceed my HWID limit?",
-                a: "You'll receive a notification and can upgrade your plan or remove old HWIDs to add new ones.",
+                a: "On Free, you'll receive a notification and can upgrade your plan or remove old HWIDs to add new ones.",
               },
             ].map((faq, i) => (
               <Card key={i} className="p-6 border-green-200/50 bg-white/80 backdrop-blur-sm hover:border-green-400/50 transition-colors">
