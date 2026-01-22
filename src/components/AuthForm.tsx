@@ -28,8 +28,14 @@ interface AuthFormProps {
 
 const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  const forgotPasswordSchema = z.object({
+    email: z.string().trim().email("Please enter a valid email address").max(255),
+  });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>, type: 'login' | 'signup') => {
     e.preventDefault();
@@ -115,6 +121,42 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    setIsResetting(true);
+    setErrors({});
+
+    const validation = forgotPasswordSchema.safeParse({ email: loginEmail });
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.errors.forEach((err) => {
+        if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(fieldErrors);
+      setIsResetting(false);
+      return;
+    }
+
+    try {
+      const redirectTo = `${window.location.origin}/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(validation.data.email, { redirectTo });
+      if (error) throw error;
+
+      // Security: don't confirm whether an email exists.
+      toast({
+        title: "Check your email",
+        description: "If an account exists for that email, you'll receive a password reset link shortly.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Reset failed",
+        description: error.message || "Couldn't send a reset email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -159,6 +201,8 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                         placeholder="your@email.com"
                         className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
                         required
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
                       />
                     </div>
                     {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
@@ -178,6 +222,16 @@ const AuthForm = ({ onSuccess, onBack }: AuthFormProps) => {
                       />
                     </div>
                     {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={isResetting || isLoading}
+                      className="text-sm text-primary hover:underline disabled:opacity-50"
+                    >
+                      {isResetting ? "Sending reset link..." : "Forgot password?"}
+                    </button>
                   </div>
                   <Button
                     type="submit" 
