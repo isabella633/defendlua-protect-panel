@@ -179,10 +179,11 @@ protectedFunction()`);
     if (!newHwid.trim()) return;
 
     const hwidLimit = getHwidLimit(userPlan);
+    const hwidLimitLabel = hwidLimit === 999999 ? "Unlimited" : String(hwidLimit);
     if (hwidList.length >= hwidLimit) {
       toast({
         title: "HWID Limit Reached",
-        description: `Your ${userPlan} plan allows ${hwidLimit} HWIDs per script. ${userPlan === 'free' ? 'Upgrade to Pro for unlimited HWIDs.' : ''}`,
+        description: `Your ${userPlan} plan allows ${hwidLimitLabel} HWIDs per script.${userPlan === 'free' ? ' Upgrade to Pro for unlimited HWIDs.' : ''}`,
         variant: "destructive",
       });
       return;
