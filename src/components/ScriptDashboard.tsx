@@ -23,7 +23,9 @@ import {
   Clock,
   MessageCircle,
   Link as LinkIcon,
-  Unlink
+  Unlink,
+  Sun,
+  Moon
 } from "lucide-react";
 import {
   AlertDialog,
@@ -66,8 +68,24 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
   const [subscription, setSubscription] = useState<any>(null);
   const [userEmail, setUserEmail] = useState("");
   const [discordLink, setDiscordLink] = useState<any>(null);
+  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const toggleTheme = () => {
+    const newDark = !darkMode;
+    setDarkMode(newDark);
+    document.documentElement.classList.toggle('dark', newDark);
+    localStorage.setItem('theme', newDark ? 'dark' : 'light');
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+      setDarkMode(true);
+    }
+  }, []);
 
   useEffect(() => {
     fetchSubscription();
@@ -636,6 +654,31 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                     <div className="space-y-2">
                       <Label>User ID</Label>
                       <Input value={userId} disabled className="bg-muted font-mono text-xs" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Theme Toggle */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Appearance</CardTitle>
+                    <CardDescription>Customize how DefendLua looks</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                        <div>
+                          <p className="font-medium">{darkMode ? "Dark Mode" : "Light Mode"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {darkMode ? "Switch to light theme" : "Switch to dark theme"}
+                          </p>
+                        </div>
+                      </div>
+                      <Button variant="outline" onClick={toggleTheme}>
+                        {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                        {darkMode ? "Light" : "Dark"}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
