@@ -4,12 +4,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const InteractionType = {
   PING: 1,
   APPLICATION_COMMAND: 2,
+  MESSAGE_COMPONENT: 3,
 };
 
 const InteractionResponseType = {
   PONG: 1,
   CHANNEL_MESSAGE_WITH_SOURCE: 4,
   DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE: 5,
+  UPDATE_MESSAGE: 7,
 };
 
 // Convert hex string to Uint8Array
@@ -419,6 +421,131 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       console.error("Command error:", error);
+      return new Response(
+        JSON.stringify({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: createEmbed("❌ Error", "An unexpected error occurred.", 0xff0000),
+        }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+
+  // Handle button interactions (e.g., "Blacklist this HWID" from webhook messages)
+  if (interaction.type === InteractionType.MESSAGE_COMPONENT) {
+    const customId = interaction.data?.custom_id || "";
+    const discordId = interaction.member?.user?.id || interaction.user?.id;
+
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    try {
+      if (customId.startsWith("blacklist_")) {
+        const hwid = customId.replace("blacklist_", "");
+
+        // Get user from Discord link
+        const { data: link, error: linkError } = await supabase
+          .from("discord_links")
+          .select("user_id")
+          .eq("discord_id", discordId)
+          .single();
+
+        if (linkError || !link) {
+          return new Response(
+            JSON.stringify({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: createEmbed("❌ Not Linked", "Your Discord account is not linked to DefendLua.", 0xff0000),
+            }),
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // Try to find which script this HWID accessed by checking the embed in the message
+        const embedFields = interaction.message?.embeds?.[0]?.fields || [];
+        const scriptIdField = embedFields.find((f: { name: string }) => f.name === "Script ID");
+        const scriptId = scriptIdField?.value?.replace(/`/g, "");
+
+        if (!scriptId) {
+          return new Response(
+            JSON.stringify({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: createEmbed("❌ Error", "Could not determine the script. Please use `/blacklist` command instead.", 0xff0000),
+            }),
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // Verify script ownership
+        const { data: script, error: scriptError } = await supabase
+          .from("scripts")
+          .select("id, script_name, hwid_blacklist, hwid_list")
+          .eq("id", scriptId)
+          .eq("owner_id", link.user_id)
+          .single();
+
+        if (scriptError || !script) {
+          return new Response(
+            JSON.stringify({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: createEmbed("❌ Access Denied", "You don't own this script.", 0xff0000),
+            }),
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        const currentBlacklist = script.hwid_blacklist || [];
+        if (currentBlacklist.includes(hwid)) {
+          return new Response(
+            JSON.stringify({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                ...createEmbed("⚠️ Already Blacklisted", `HWID \`${hwid}\` is already blacklisted on **${script.script_name}**.`, 0xffaa00),
+                components: [],
+              },
+            }),
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // Add to blacklist and remove from whitelist
+        const updateData: { hwid_blacklist: string[]; hwid_list?: string[] } = {
+          hwid_blacklist: [...currentBlacklist, hwid],
+        };
+        if (script.hwid_list?.includes(hwid)) {
+          updateData.hwid_list = script.hwid_list.filter((h: string) => h !== hwid);
+        }
+
+        const { error: updateError } = await supabase
+          .from("scripts")
+          .update(updateData)
+          .eq("id", script.id);
+
+        if (updateError) {
+          return new Response(
+            JSON.stringify({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: createEmbed("❌ Error", "Failed to blacklist HWID.", 0xff0000),
+            }),
+            { headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // Update the original message to remove the button and show success
+        return new Response(
+          JSON.stringify({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              ...createEmbed("🚫 HWID Blacklisted", `Successfully blacklisted \`${hwid}\` on **${script.script_name}**.`, 0xff0000),
+              components: [],
+            },
+          }),
+          { headers: { "Content-Type": "application/json" } }
+        );
+      }
+    } catch (error) {
+      console.error("Button interaction error:", error);
       return new Response(
         JSON.stringify({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
