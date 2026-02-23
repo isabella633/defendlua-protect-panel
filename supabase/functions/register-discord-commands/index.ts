@@ -10,6 +10,13 @@ const commands = [
   { name: "unwhitelist", description: "Remove HWID from whitelist", options: [{ name: "script", description: "Script name", type: 3, required: true }, { name: "hwid", description: "HWID to remove", type: 3, required: true }] },
   { name: "blacklist", description: "Add HWID to blacklist", options: [{ name: "script", description: "Script name", type: 3, required: true }, { name: "hwid", description: "HWID to blacklist", type: 3, required: true }] },
   { name: "unblacklist", description: "Remove HWID from blacklist", options: [{ name: "script", description: "Script name", type: 3, required: true }, { name: "hwid", description: "HWID to remove", type: 3, required: true }] },
+  { name: "stats", description: "View stats for a script", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
+  { name: "resetwhitelist", description: "Clear all HWIDs from a script's whitelist", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
+  { name: "resetblacklist", description: "Clear all HWIDs from a script's blacklist", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
+  { name: "rename", description: "Rename a script", options: [{ name: "script", description: "Current script name", type: 3, required: true }, { name: "name", description: "New script name", type: 3, required: true }] },
+  { name: "logs", description: "View recent access logs for a script", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
+  { name: "denied", description: "View recently denied HWIDs for a script", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
+  { name: "lookup", description: "Check if an HWID is whitelisted/blacklisted across all scripts", options: [{ name: "hwid", description: "HWID to look up", type: 3, required: true }] },
 ];
 
 Deno.serve(async (req) => {
