@@ -699,30 +699,26 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <code className="text-sm font-mono text-primary">/link &lt;code&gt;</code>
-                        <p className="text-sm text-muted-foreground mt-1">Link your Discord account using a generated code</p>
-                      </div>
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <code className="text-sm font-mono text-primary">/scripts</code>
-                        <p className="text-sm text-muted-foreground mt-1">List all your protected scripts</p>
-                      </div>
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <code className="text-sm font-mono text-primary">/whitelist &lt;script&gt; &lt;hwid&gt;</code>
-                        <p className="text-sm text-muted-foreground mt-1">Add an HWID to a script's whitelist</p>
-                      </div>
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <code className="text-sm font-mono text-primary">/unwhitelist &lt;script&gt; &lt;hwid&gt;</code>
-                        <p className="text-sm text-muted-foreground mt-1">Remove an HWID from a script's whitelist</p>
-                      </div>
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <code className="text-sm font-mono text-primary">/blacklist &lt;script&gt; &lt;hwid&gt;</code>
-                        <p className="text-sm text-muted-foreground mt-1">Add an HWID to a script's blacklist</p>
-                      </div>
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <code className="text-sm font-mono text-primary">/unblacklist &lt;script&gt; &lt;hwid&gt;</code>
-                        <p className="text-sm text-muted-foreground mt-1">Remove an HWID from a script's blacklist</p>
-                      </div>
+                      {[
+                        { cmd: "/link <code>", desc: "Link your Discord account using a generated code" },
+                        { cmd: "/scripts", desc: "List all your protected scripts with stats" },
+                        { cmd: "/whitelist <script> <hwid>", desc: "Add an HWID to a script's whitelist" },
+                        { cmd: "/unwhitelist <script> <hwid>", desc: "Remove an HWID from a script's whitelist" },
+                        { cmd: "/blacklist <script> <hwid>", desc: "Add an HWID to a script's blacklist" },
+                        { cmd: "/unblacklist <script> <hwid>", desc: "Remove an HWID from a script's blacklist" },
+                        { cmd: "/stats <script>", desc: "View detailed stats — access counts, whitelist/blacklist sizes, webhook status" },
+                        { cmd: "/resetwhitelist <script>", desc: "Clear all HWIDs from a script's whitelist" },
+                        { cmd: "/resetblacklist <script>", desc: "Clear all HWIDs from a script's blacklist" },
+                        { cmd: "/rename <script> <name>", desc: "Rename a script directly from Discord" },
+                        { cmd: "/logs <script>", desc: "View the last 10 access attempts with status, HWID, and IP" },
+                        { cmd: "/denied <script>", desc: "View recently denied HWIDs with reasons" },
+                        { cmd: "/lookup <hwid>", desc: "Check if an HWID exists in any of your scripts" },
+                      ].map(({ cmd, desc }) => (
+                        <div key={cmd} className="bg-muted/50 rounded-lg p-3">
+                          <code className="text-sm font-mono text-primary">{cmd}</code>
+                          <p className="text-sm text-muted-foreground mt-1">{desc}</p>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
