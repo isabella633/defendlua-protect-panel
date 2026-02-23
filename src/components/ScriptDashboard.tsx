@@ -25,7 +25,8 @@ import {
   Link as LinkIcon,
   Unlink,
   Sun,
-  Moon
+  Moon,
+  Bot
 } from "lucide-react";
 import {
   AlertDialog,
@@ -279,6 +280,10 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
           <Tabs defaultValue="scripts" className="w-full">
             <TabsList className="mb-6">
               <TabsTrigger value="scripts">Scripts</TabsTrigger>
+              <TabsTrigger value="discord">
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Discord
+              </TabsTrigger>
               <TabsTrigger value="settings">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
@@ -635,6 +640,116 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
               ))}
             </div>
           )}
+            </TabsContent>
+
+            <TabsContent value="discord">
+              <div className="grid gap-6">
+                {/* Discord Link Status */}
+                {discordLink ? (
+                  <Card className="border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-green-500">
+                        <MessageCircle className="h-5 w-5" />
+                        Discord Linked
+                      </CardTitle>
+                      <CardDescription>
+                        Your Discord account is linked to DefendLua
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground">Discord Username</p>
+                        <p className="text-lg font-medium">{discordLink.discord_username || "Unknown"}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Linked on {new Date(discordLink.linked_at).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      <Button variant="destructive" onClick={unlinkDiscord} className="w-full">
+                        <Unlink className="h-4 w-4 mr-2" />
+                        Unlink Discord Account
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <LinkIcon className="h-5 w-5" />
+                        Link Your Discord
+                      </CardTitle>
+                      <CardDescription>
+                        Connect your Discord account to manage scripts via bot commands
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="hero" onClick={() => navigate("/link-discord")} className="w-full gap-2">
+                        <ExternalLink className="w-4 h-4" />
+                        Go to Link Discord Page
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Available Commands */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Available Bot Commands</CardTitle>
+                    <CardDescription>Use these slash commands in Discord after linking your account</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <code className="text-sm font-mono text-primary">/link &lt;code&gt;</code>
+                        <p className="text-sm text-muted-foreground mt-1">Link your Discord account using a generated code</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <code className="text-sm font-mono text-primary">/scripts</code>
+                        <p className="text-sm text-muted-foreground mt-1">List all your protected scripts</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <code className="text-sm font-mono text-primary">/whitelist &lt;script&gt; &lt;hwid&gt;</code>
+                        <p className="text-sm text-muted-foreground mt-1">Add an HWID to a script's whitelist</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <code className="text-sm font-mono text-primary">/unwhitelist &lt;script&gt; &lt;hwid&gt;</code>
+                        <p className="text-sm text-muted-foreground mt-1">Remove an HWID from a script's whitelist</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <code className="text-sm font-mono text-primary">/blacklist &lt;script&gt; &lt;hwid&gt;</code>
+                        <p className="text-sm text-muted-foreground mt-1">Add an HWID to a script's blacklist</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <code className="text-sm font-mono text-primary">/unblacklist &lt;script&gt; &lt;hwid&gt;</code>
+                        <p className="text-sm text-muted-foreground mt-1">Remove an HWID from a script's blacklist</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Bot Invite */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bot className="h-5 w-5" />
+                      Add Bot to Your Server
+                    </CardTitle>
+                    <CardDescription>Invite the official DefendLua bot</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <a 
+                      href="https://discord.com/oauth2/authorize?client_id=1385790808900501676&permissions=2147502080&integration_type=0&scope=bot" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="hero" className="w-full gap-2">
+                        <ExternalLink className="h-4 w-4" />
+                        Add DefendLua Bot to Server
+                      </Button>
+                    </a>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="settings">
