@@ -700,18 +700,22 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                   <CardContent>
                     <div className="space-y-3">
                       {[
+                        { cmd: "/help", desc: "Show all available bot commands" },
                         { cmd: "/link <code>", desc: "Link your Discord account using a generated code" },
                         { cmd: "/scripts", desc: "List all your protected scripts with stats" },
-                        { cmd: "/whitelist <script> <hwid>", desc: "Add an HWID to a script's whitelist" },
-                        { cmd: "/unwhitelist <script> <hwid>", desc: "Remove an HWID from a script's whitelist" },
-                        { cmd: "/blacklist <script> <hwid>", desc: "Add an HWID to a script's blacklist" },
-                        { cmd: "/unblacklist <script> <hwid>", desc: "Remove an HWID from a script's blacklist" },
-                        { cmd: "/stats <script>", desc: "View detailed stats — access counts, whitelist/blacklist sizes, webhook status" },
-                        { cmd: "/resetwhitelist <script>", desc: "Clear all HWIDs from a script's whitelist" },
-                        { cmd: "/resetblacklist <script>", desc: "Clear all HWIDs from a script's blacklist" },
-                        { cmd: "/rename <script> <name>", desc: "Rename a script directly from Discord" },
-                        { cmd: "/logs <script>", desc: "View the last 10 access attempts with status, HWID, and IP" },
-                        { cmd: "/denied <script>", desc: "View recently denied HWIDs with reasons" },
+                        { cmd: "/stats", desc: "View detailed stats — pick script from dropdown" },
+                        { cmd: "/info", desc: "View full script details — pick from dropdown" },
+                        { cmd: "/logs", desc: "View last 10 access attempts — pick from dropdown" },
+                        { cmd: "/denied", desc: "View recently denied HWIDs — pick from dropdown" },
+                        { cmd: "/whitelist <hwid>", desc: "Add HWID to whitelist — pick script from dropdown" },
+                        { cmd: "/unwhitelist <hwid>", desc: "Remove HWID from whitelist — pick from dropdown" },
+                        { cmd: "/blacklist <hwid>", desc: "Add HWID to blacklist — pick from dropdown" },
+                        { cmd: "/unblacklist <hwid>", desc: "Remove HWID from blacklist — pick from dropdown" },
+                        { cmd: "/resetwhitelist", desc: "Clear all HWIDs from whitelist — pick from dropdown" },
+                        { cmd: "/resetblacklist", desc: "Clear all HWIDs from blacklist — pick from dropdown" },
+                        { cmd: "/rename <name>", desc: "Rename a script — pick from dropdown" },
+                        { cmd: "/toggle", desc: "Toggle public/private access — pick from dropdown" },
+                        { cmd: "/delete", desc: "Permanently delete a script — pick from dropdown" },
                         { cmd: "/lookup <hwid>", desc: "Check if an HWID exists in any of your scripts" },
                       ].map(({ cmd, desc }) => (
                         <div key={cmd} className="bg-muted/50 rounded-lg p-3">
