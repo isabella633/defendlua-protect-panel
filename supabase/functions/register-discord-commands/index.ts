@@ -17,6 +17,7 @@ const commands = [
   { name: "toggle", description: "Toggle public/private access for a script (select from dropdown)" },
   { name: "info", description: "View full details of a script (select from dropdown)" },
   { name: "delete", description: "Delete a script permanently (select from dropdown)" },
+  { name: "webhook", description: "Set or remove a Discord webhook URL for a script", options: [{ name: "url", description: "Webhook URL (leave empty to remove)", type: 3, required: false }] },
 
   // Commands that still need typed input
   { name: "whitelist", description: "Add HWID to whitelist", options: [{ name: "hwid", description: "HWID to whitelist", type: 3, required: true }] },

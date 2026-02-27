@@ -711,11 +711,12 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                         { cmd: "/unwhitelist <hwid>", desc: "Remove HWID from whitelist — pick from dropdown" },
                         { cmd: "/blacklist <hwid>", desc: "Add HWID to blacklist — pick from dropdown" },
                         { cmd: "/unblacklist <hwid>", desc: "Remove HWID from blacklist — pick from dropdown" },
-                        { cmd: "/resetwhitelist", desc: "Clear all HWIDs from whitelist — pick from dropdown" },
-                        { cmd: "/resetblacklist", desc: "Clear all HWIDs from blacklist — pick from dropdown" },
+                        { cmd: "/resetwhitelist", desc: "Clear all HWIDs from whitelist — dropdown + confirmation" },
+                        { cmd: "/resetblacklist", desc: "Clear all HWIDs from blacklist — dropdown + confirmation" },
                         { cmd: "/rename <name>", desc: "Rename a script — pick from dropdown" },
                         { cmd: "/toggle", desc: "Toggle public/private access — pick from dropdown" },
-                        { cmd: "/delete", desc: "Permanently delete a script — pick from dropdown" },
+                        { cmd: "/webhook [url]", desc: "Set or remove webhook URL — pick from dropdown" },
+                        { cmd: "/delete", desc: "Permanently delete a script — dropdown + confirmation" },
                         { cmd: "/lookup <hwid>", desc: "Check if an HWID exists in any of your scripts" },
                       ].map(({ cmd, desc }) => (
                         <div key={cmd} className="bg-muted/50 rounded-lg p-3">

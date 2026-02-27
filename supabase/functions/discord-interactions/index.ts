@@ -19,6 +19,13 @@ const ComponentType = {
   STRING_SELECT: 3,
 };
 
+const ButtonStyle = {
+  PRIMARY: 1,
+  SECONDARY: 2,
+  SUCCESS: 3,
+  DANGER: 4,
+};
+
 function hexToUint8Array(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
@@ -89,7 +96,7 @@ async function findScript(supabase: any, userId: string, scriptName: string) {
 async function getUserScripts(supabase: any, userId: string) {
   const { data } = await supabase
     .from("scripts")
-    .select("id, script_name, hwid_list, hwid_blacklist, public_access, webhook_url, created_at, script_key, ip_list")
+    .select("id, script_name, hwid_list, hwid_blacklist, public_access, webhook_url, created_at, script_key, ip_list, updated_at")
     .eq("owner_id", userId)
     .order("created_at", { ascending: false });
   return data || [];
@@ -115,6 +122,40 @@ function scriptSelectMenu(action: string, scripts: any[], title: string, descrip
       }],
     }],
   });
+}
+
+// Build a confirmation prompt with Yes/No buttons
+function confirmationPrompt(action: string, scriptId: string, scriptName: string, description: string, extraData?: string) {
+  const confirmId = `confirm_${action}:${scriptId}${extraData ? `:${extraData}` : ""}`;
+  const cancelId = `cancel_${action}`;
+
+  return reply(InteractionResponseType.UPDATE_MESSAGE, {
+    ...createEmbed(`⚠️ Confirm: ${scriptName}`, description, 0xff6600),
+    components: [{
+      type: ComponentType.ACTION_ROW,
+      components: [
+        {
+          type: ComponentType.BUTTON,
+          style: ButtonStyle.DANGER,
+          label: "Yes, confirm",
+          custom_id: confirmId,
+          emoji: { name: "⚠️" },
+        },
+        {
+          type: ComponentType.BUTTON,
+          style: ButtonStyle.SECONDARY,
+          label: "Cancel",
+          custom_id: cancelId,
+          emoji: { name: "❌" },
+        },
+      ],
+    }],
+  });
+}
+
+// Validate Discord webhook URL
+function isValidWebhookUrl(url: string): boolean {
+  return /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(url);
 }
 
 Deno.serve(async (req) => {
@@ -171,15 +212,16 @@ Deno.serve(async (req) => {
             { name: "🗑️ /unwhitelist <hwid>", value: "Remove from whitelist (dropdown)", inline: true },
             { name: "🚫 /blacklist <hwid>", value: "Add HWID to blacklist (dropdown)", inline: true },
             { name: "♻️ /unblacklist <hwid>", value: "Remove from blacklist (dropdown)", inline: true },
-            { name: "🗑️ /resetwhitelist", value: "Clear all whitelist HWIDs (dropdown)", inline: true },
-            { name: "🗑️ /resetblacklist", value: "Clear all blacklist HWIDs (dropdown)", inline: true },
+            { name: "🗑️ /resetwhitelist", value: "Clear whitelist (dropdown + confirm)", inline: true },
+            { name: "🗑️ /resetblacklist", value: "Clear blacklist (dropdown + confirm)", inline: true },
             { name: "✏️ /rename <name>", value: "Rename a script (dropdown)", inline: true },
-            { name: "🔄 /toggle", value: "Toggle public/private access (dropdown)", inline: true },
-            { name: "🗑️ /delete", value: "Delete a script (dropdown)", inline: true },
+            { name: "🔄 /toggle", value: "Toggle public/private (dropdown)", inline: true },
+            { name: "🔗 /webhook [url]", value: "Set/remove webhook (dropdown)", inline: true },
+            { name: "🗑️ /delete", value: "Delete script (dropdown + confirm)", inline: true },
             { name: "🔍 /lookup <hwid>", value: "Search HWID across all scripts", inline: true },
           ];
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("📖 DefendLua Bot Commands", "All commands with **(dropdown)** will let you pick a script from a list.", 0x5865f2, fields));
+            createEmbed("📖 DefendLua Bot Commands", "Commands with **(dropdown)** let you pick a script. Destructive actions require **(confirm)**.", 0x5865f2, fields));
         }
 
         // ── /link ──
@@ -278,14 +320,35 @@ Deno.serve(async (req) => {
             stats: "Please select a script to view its stats",
             logs: "Please select a script to view access logs",
             denied: "Please select a script to view denied attempts",
-            resetwhitelist: "Please select a script to clear its whitelist",
-            resetblacklist: "Please select a script to clear its blacklist",
+            resetwhitelist: "⚠️ Select a script — you'll be asked to confirm",
+            resetblacklist: "⚠️ Select a script — you'll be asked to confirm",
             toggle: "Please select a script to toggle public/private",
             info: "Please select a script to view full details",
-            delete: "⚠️ **This action is permanent!** Select a script to delete",
+            delete: "⚠️ **This action is permanent!** Select a script — you'll be asked to confirm",
           };
 
           return scriptSelectMenu(name, scripts, titles[name], descs[name]);
+        }
+
+        // ── /webhook (with optional url, then select menu) ──
+        case "webhook": {
+          const url = getOpt("url") || "";
+
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("You don't have any scripts yet.");
+
+          if (url && !isValidWebhookUrl(url)) {
+            return errReply("Invalid webhook URL. Must match: `https://discord.com/api/webhooks/{id}/{token}`");
+          }
+
+          const desc = url
+            ? `Set webhook to:\n\`${url}\`\nSelect the script below.`
+            : "Select a script to **remove** its webhook URL.";
+
+          return scriptSelectMenu("webhook", scripts, "🔗 Select a script for webhook", desc, url || "__remove__");
         }
 
         // ── HWID commands with select menu ──
@@ -380,7 +443,79 @@ Deno.serve(async (req) => {
       const userId = await getUserId(supabase, discordId);
       if (!userId) return notLinkedReply();
 
-      // ── BUTTON: blacklist from webhook ──
+      // ── CANCEL BUTTON ──
+      if (customId.startsWith("cancel_")) {
+        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed("❌ Cancelled", "Action was cancelled.", 0x888888),
+          components: [],
+        });
+      }
+
+      // ── CONFIRM BUTTON ──
+      if (customId.startsWith("confirm_")) {
+        const payload = customId.replace("confirm_", "");
+        const parts = payload.split(":");
+        const action = parts[0];
+        const scriptId = parts[1];
+        const extraData = parts.slice(2).join(":");
+
+        const { data: script, error: scriptError } = await supabase
+          .from("scripts")
+          .select("*")
+          .eq("id", scriptId)
+          .eq("owner_id", userId)
+          .single();
+
+        if (scriptError || !script) {
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Script not found or you don't own it.", 0xff0000),
+            components: [],
+          });
+        }
+
+        switch (action) {
+          case "delete": {
+            await supabase.from("access_logs").delete().eq("script_id", script.id);
+            const { error } = await supabase.from("scripts").delete().eq("id", script.id);
+            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to delete script.", 0xff0000), components: [] });
+
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🗑️ Script Deleted", `**${script.script_name}** has been permanently deleted.`, 0xff0000),
+              components: [],
+            });
+          }
+
+          case "resetwhitelist": {
+            const count = script.hwid_list?.length || 0;
+            const { error } = await supabase.from("scripts").update({ hwid_list: [] }).eq("id", script.id);
+            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to reset whitelist.", 0xff0000), components: [] });
+
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🗑️ Whitelist Reset", `Cleared **${count}** HWID(s) from the whitelist of **${script.script_name}**.`, 0x00ff00),
+              components: [],
+            });
+          }
+
+          case "resetblacklist": {
+            const count = script.hwid_blacklist?.length || 0;
+            const { error } = await supabase.from("scripts").update({ hwid_blacklist: [] }).eq("id", script.id);
+            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to reset blacklist.", 0xff0000), components: [] });
+
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🗑️ Blacklist Reset", `Cleared **${count}** HWID(s) from the blacklist of **${script.script_name}**.`, 0x00ff00),
+              components: [],
+            });
+          }
+
+          default:
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❓ Unknown", "Unknown confirmation action.", 0xff0000),
+              components: [],
+            });
+        }
+      }
+
+      // ── BUTTON: blacklist from webhook notification ──
       if (customId.startsWith("blacklist_")) {
         const hwid = customId.replace("blacklist_", "");
 
@@ -425,11 +560,10 @@ Deno.serve(async (req) => {
       // ── SELECT MENU: script selection ──
       if (customId.startsWith("select_script_")) {
         const selectedValue = values[0] || "";
-        // value format: "action:scriptId" or "action:scriptId:extraData"
         const parts = selectedValue.split(":");
         const action = parts[0];
         const scriptId = parts[1];
-        const extraData = parts.slice(2).join(":"); // rejoin in case extra data has colons
+        const extraData = parts.slice(2).join(":");
 
         const { data: script, error: scriptError } = await supabase
           .from("scripts")
@@ -544,28 +678,22 @@ Deno.serve(async (req) => {
             });
           }
 
-          // ── resetwhitelist ──
-          case "resetwhitelist": {
-            const count = script.hwid_list?.length || 0;
-            const { error } = await supabase.from("scripts").update({ hwid_list: [] }).eq("id", script.id);
-            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to reset whitelist.", 0xff0000), components: [] });
-
-            return reply(InteractionResponseType.UPDATE_MESSAGE, {
-              ...createEmbed("🗑️ Whitelist Reset", `Cleared **${count}** HWID(s) from the whitelist of **${script.script_name}**.`, 0x00ff00),
-              components: [],
-            });
+          // ── DESTRUCTIVE ACTIONS → show confirmation ──
+          case "delete": {
+            return confirmationPrompt("delete", script.id, script.script_name,
+              `Are you sure you want to **permanently delete** **${script.script_name}**?\n\nThis will also delete all access logs. This action **cannot be undone**.`);
           }
 
-          // ── resetblacklist ──
+          case "resetwhitelist": {
+            const count = script.hwid_list?.length || 0;
+            return confirmationPrompt("resetwhitelist", script.id, script.script_name,
+              `Are you sure you want to clear **${count}** HWID(s) from the whitelist of **${script.script_name}**?\n\nThis action **cannot be undone**.`);
+          }
+
           case "resetblacklist": {
             const count = script.hwid_blacklist?.length || 0;
-            const { error } = await supabase.from("scripts").update({ hwid_blacklist: [] }).eq("id", script.id);
-            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to reset blacklist.", 0xff0000), components: [] });
-
-            return reply(InteractionResponseType.UPDATE_MESSAGE, {
-              ...createEmbed("🗑️ Blacklist Reset", `Cleared **${count}** HWID(s) from the blacklist of **${script.script_name}**.`, 0x00ff00),
-              components: [],
-            });
+            return confirmationPrompt("resetblacklist", script.id, script.script_name,
+              `Are you sure you want to clear **${count}** HWID(s) from the blacklist of **${script.script_name}**?\n\nThis action **cannot be undone**.`);
           }
 
           // ── toggle ──
@@ -580,17 +708,28 @@ Deno.serve(async (req) => {
             });
           }
 
-          // ── delete ──
-          case "delete": {
-            // Delete access logs first, then the script
-            await supabase.from("access_logs").delete().eq("script_id", script.id);
-            const { error } = await supabase.from("scripts").delete().eq("id", script.id);
-            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to delete script.", 0xff0000), components: [] });
+          // ── webhook ──
+          case "webhook": {
+            const webhookUrl = extraData;
+            const isRemove = !webhookUrl || webhookUrl === "__remove__";
 
-            return reply(InteractionResponseType.UPDATE_MESSAGE, {
-              ...createEmbed("🗑️ Script Deleted", `**${script.script_name}** has been permanently deleted.`, 0xff0000),
-              components: [],
-            });
+            if (isRemove) {
+              const { error } = await supabase.from("scripts").update({ webhook_url: null }).eq("id", script.id);
+              if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to remove webhook.", 0xff0000), components: [] });
+
+              return reply(InteractionResponseType.UPDATE_MESSAGE, {
+                ...createEmbed("🔗 Webhook Removed", `Webhook has been removed from **${script.script_name}**.`, 0x00ff00),
+                components: [],
+              });
+            } else {
+              const { error } = await supabase.from("scripts").update({ webhook_url: webhookUrl }).eq("id", script.id);
+              if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to set webhook. Make sure the URL is valid.", 0xff0000), components: [] });
+
+              return reply(InteractionResponseType.UPDATE_MESSAGE, {
+                ...createEmbed("🔗 Webhook Set", `Webhook for **${script.script_name}** has been updated.\n\`${webhookUrl}\``, 0x00ff00),
+                components: [],
+              });
+            }
           }
 
           // ── rename ──
