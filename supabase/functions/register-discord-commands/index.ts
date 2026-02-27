@@ -6,16 +6,24 @@ const corsHeaders = {
 const commands = [
   { name: "link", description: "Link your Discord account to DefendLua", options: [{ name: "code", description: "The 6-character link code", type: 3, required: true }] },
   { name: "scripts", description: "List all your scripts" },
-  { name: "whitelist", description: "Add HWID to whitelist", options: [{ name: "script", description: "Script name", type: 3, required: true }, { name: "hwid", description: "HWID to whitelist", type: 3, required: true }] },
-  { name: "unwhitelist", description: "Remove HWID from whitelist", options: [{ name: "script", description: "Script name", type: 3, required: true }, { name: "hwid", description: "HWID to remove", type: 3, required: true }] },
-  { name: "blacklist", description: "Add HWID to blacklist", options: [{ name: "script", description: "Script name", type: 3, required: true }, { name: "hwid", description: "HWID to blacklist", type: 3, required: true }] },
-  { name: "unblacklist", description: "Remove HWID from blacklist", options: [{ name: "script", description: "Script name", type: 3, required: true }, { name: "hwid", description: "HWID to remove", type: 3, required: true }] },
-  { name: "stats", description: "View stats for a script", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
-  { name: "resetwhitelist", description: "Clear all HWIDs from a script's whitelist", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
-  { name: "resetblacklist", description: "Clear all HWIDs from a script's blacklist", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
-  { name: "rename", description: "Rename a script", options: [{ name: "script", description: "Current script name", type: 3, required: true }, { name: "name", description: "New script name", type: 3, required: true }] },
-  { name: "logs", description: "View recent access logs for a script", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
-  { name: "denied", description: "View recently denied HWIDs for a script", options: [{ name: "script", description: "Script name", type: 3, required: true }] },
+  { name: "help", description: "Show all available bot commands" },
+
+  // Select-menu commands (no script option — bot shows dropdown)
+  { name: "stats", description: "View detailed stats for a script (select from dropdown)" },
+  { name: "logs", description: "View recent access logs for a script (select from dropdown)" },
+  { name: "denied", description: "View recently denied HWIDs (select from dropdown)" },
+  { name: "resetwhitelist", description: "Clear all HWIDs from a script's whitelist (select from dropdown)" },
+  { name: "resetblacklist", description: "Clear all HWIDs from a script's blacklist (select from dropdown)" },
+  { name: "toggle", description: "Toggle public/private access for a script (select from dropdown)" },
+  { name: "info", description: "View full details of a script (select from dropdown)" },
+  { name: "delete", description: "Delete a script permanently (select from dropdown)" },
+
+  // Commands that still need typed input
+  { name: "whitelist", description: "Add HWID to whitelist", options: [{ name: "hwid", description: "HWID to whitelist", type: 3, required: true }] },
+  { name: "unwhitelist", description: "Remove HWID from whitelist", options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
+  { name: "blacklist", description: "Add HWID to blacklist", options: [{ name: "hwid", description: "HWID to blacklist", type: 3, required: true }] },
+  { name: "unblacklist", description: "Remove HWID from blacklist", options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
+  { name: "rename", description: "Rename a script", options: [{ name: "name", description: "New script name", type: 3, required: true }] },
   { name: "lookup", description: "Check if an HWID is whitelisted/blacklisted across all scripts", options: [{ name: "hwid", description: "HWID to look up", type: 3, required: true }] },
 ];
 
