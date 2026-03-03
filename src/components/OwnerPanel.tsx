@@ -68,11 +68,11 @@ protectedFunction()`);
     }
   };
 
+  const [scriptSlug, setScriptSlug] = useState("");
+
   useEffect(() => {
-    // Generate raw link pointing to edge function
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const projectId = supabaseUrl?.split("//")[1]?.split(".")[0];
-    setRawLink(`https://${projectId}.supabase.co/functions/v1/serve-raw-script?id=${scriptId}`);
+    // Raw link will be set after loading script data (uses slug)
+    setRawLink("");
 
     // Load script data including HWID list
     loadScriptData();
@@ -100,7 +100,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from("scripts")
-      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url")
+      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug")
       .eq("id", scriptId)
       .single();
 
@@ -112,6 +112,9 @@ protectedFunction()`);
       setHwidBlacklist(data.hwid_blacklist || []);
       setPublicAccess(data.public_access || false);
       setWebhookUrl((data as any).webhook_url || "");
+      const slug = (data as any).slug || "";
+      setScriptSlug(slug);
+      setRawLink(`https://defendlua.lol/s/${slug}`);
     }
 
     // Load access logs
