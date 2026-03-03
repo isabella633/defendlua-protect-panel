@@ -308,8 +308,8 @@ ${constPool}
 };
 
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
-const generateCollectorScript = (slug: string): string => {
-  const baseUrl = `https://defendlua.lol/s/${slug}?key=`;
+const generateCollectorScript = (scriptId: string): string => {
+  const baseUrl = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
   
   // Generate unique random identifiers
   const ts = Date.now();
@@ -441,9 +441,7 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    // Support both slug-based and id-based lookups
-    let scriptId = url.searchParams.get("id");
-    const slug = url.searchParams.get("slug");
+    const scriptId = url.searchParams.get("id");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
     
     // Get client IP for rate limiting
@@ -465,26 +463,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Resolve slug to script ID if needed
-    if (!scriptId && slug) {
-      const supabaseAdmin = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      );
-      const { data: slugScript } = await supabaseAdmin
-        .from("scripts")
-        .select("id")
-        .eq("slug", slug)
-        .single();
-      
-      if (slugScript) {
-        scriptId = slugScript.id;
-      }
-    }
-
     if (!scriptId) {
-      return new Response('print("ACCESS DENIED")', {
-        status: 403,
+      return new Response('print("ERROR: Script ID not provided")', {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
     }
@@ -506,22 +487,7 @@ Deno.serve(async (req) => {
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
       
-      // Get slug for the collector URL (if we resolved from slug, use it; otherwise fetch)
-      let collectorSlug = slug || "";
-      if (!collectorSlug) {
-        const slugAdmin = createClient(
-          Deno.env.get("SUPABASE_URL") ?? "",
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-        );
-        const { data: slugData } = await slugAdmin
-          .from("scripts")
-          .select("slug")
-          .eq("id", scriptId)
-          .single();
-        collectorSlug = slugData?.slug || scriptId;
-      }
-      
-      const collectorScript = generateCollectorScript(collectorSlug);
+      const collectorScript = generateCollectorScript(scriptId);
       return new Response(collectorScript, {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
@@ -542,7 +508,7 @@ Deno.serve(async (req) => {
 
     const { data: script, error } = await supabaseAdmin
       .from("scripts")
-      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, slug")
+      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url")
       .eq("id", scriptId)
       .single();
 

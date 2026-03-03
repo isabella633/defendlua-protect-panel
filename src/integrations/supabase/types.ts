@@ -177,7 +177,6 @@ export type Database = {
           public_access: boolean | null
           script_key: string
           script_name: string
-          slug: string
           updated_at: string | null
           webhook_url: string | null
         }
@@ -191,7 +190,6 @@ export type Database = {
           public_access?: boolean | null
           script_key: string
           script_name: string
-          slug?: string
           updated_at?: string | null
           webhook_url?: string | null
         }
@@ -205,7 +203,6 @@ export type Database = {
           public_access?: boolean | null
           script_key?: string
           script_name?: string
-          slug?: string
           updated_at?: string | null
           webhook_url?: string | null
         }
