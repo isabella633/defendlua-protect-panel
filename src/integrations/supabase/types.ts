@@ -145,6 +145,94 @@ export type Database = {
         }
         Relationships: []
       }
+      generated_keys: {
+        Row: {
+          created_at: string
+          discord_id: string
+          expires_at: string
+          id: string
+          key: string
+          redeemed: boolean
+          redeemed_at: string | null
+          redeemed_hwid: string | null
+          script_id: string
+        }
+        Insert: {
+          created_at?: string
+          discord_id: string
+          expires_at: string
+          id?: string
+          key: string
+          redeemed?: boolean
+          redeemed_at?: string | null
+          redeemed_hwid?: string | null
+          script_id: string
+        }
+        Update: {
+          created_at?: string
+          discord_id?: string
+          expires_at?: string
+          id?: string
+          key?: string
+          redeemed?: boolean
+          redeemed_at?: string | null
+          redeemed_hwid?: string | null
+          script_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_keys_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      key_system_configs: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          key_expiry_hours: number
+          provider: Database["public"]["Enums"]["key_provider"]
+          provider_link: string
+          redeem_action: Database["public"]["Enums"]["key_redeem_action"]
+          script_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          key_expiry_hours?: number
+          provider: Database["public"]["Enums"]["key_provider"]
+          provider_link: string
+          redeem_action?: Database["public"]["Enums"]["key_redeem_action"]
+          script_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          key_expiry_hours?: number
+          provider?: Database["public"]["Enums"]["key_provider"]
+          provider_link?: string
+          redeem_action?: Database["public"]["Enums"]["key_redeem_action"]
+          script_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "key_system_configs_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: true
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -323,6 +411,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      key_provider: "linkvertise" | "workink"
+      key_redeem_action: "whitelist" | "temporary"
       plan_type: "free" | "pro" | "enterprise"
     }
     CompositeTypes: {
@@ -452,6 +542,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      key_provider: ["linkvertise", "workink"],
+      key_redeem_action: ["whitelist", "temporary"],
       plan_type: ["free", "pro", "enterprise"],
     },
   },
