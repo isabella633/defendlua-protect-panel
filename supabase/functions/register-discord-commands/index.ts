@@ -26,6 +26,20 @@ const commands = [
   { name: "unblacklist", description: "Remove HWID from blacklist", options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
   { name: "rename", description: "Rename a script", options: [{ name: "name", description: "New script name", type: 3, required: true }] },
   { name: "lookup", description: "Check if an HWID is whitelisted/blacklisted across all scripts", options: [{ name: "hwid", description: "HWID to look up", type: 3, required: true }] },
+
+  // Key System commands
+  { name: "setup", description: "Set up a key system for a script", options: [
+    { name: "provider", description: "Link provider", type: 3, required: true, choices: [{ name: "Linkvertise", value: "linkvertise" }, { name: "WorkInk", value: "workink" }] },
+    { name: "link", description: "Your monetization link URL", type: 3, required: true },
+    { name: "expiry", description: "Key expiry in hours (default: 24)", type: 4, required: false },
+    { name: "mode", description: "What happens on redeem", type: 3, required: false, choices: [{ name: "Add HWID to whitelist", value: "whitelist" }, { name: "Temporary access pass", value: "temporary" }] },
+  ]},
+  { name: "removesetup", description: "Remove the key system from a script (select from dropdown)" },
+  { name: "getkey", description: "Get a key for a script by completing a link" },
+  { name: "redeem", description: "Redeem a key to get access to a script", options: [
+    { name: "key", description: "The key you received", type: 3, required: true },
+    { name: "hwid", description: "Your HWID to whitelist", type: 3, required: true },
+  ]},
 ];
 
 Deno.serve(async (req) => {

@@ -102,6 +102,26 @@ async function getUserScripts(supabase: any, userId: string) {
   return data || [];
 }
 
+// Get scripts that have key system enabled (for /getkey - any user)
+async function getKeySystemScripts(supabase: any) {
+  const { data } = await supabase
+    .from("key_system_configs")
+    .select("script_id, provider, provider_link, key_expiry_hours, redeem_action, scripts:script_id(id, script_name, owner_id)")
+    .eq("enabled", true);
+  return data || [];
+}
+
+// Generate a random key string
+function generateKey(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let key = "";
+  for (let i = 0; i < 16; i++) {
+    if (i > 0 && i % 4 === 0) key += "-";
+    key += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return key;
+}
+
 // Build a select menu response for choosing a script
 function scriptSelectMenu(action: string, scripts: any[], title: string, description: string, extraData?: string) {
   const options = scripts.slice(0, 25).map((s: any) => ({
@@ -219,6 +239,10 @@ Deno.serve(async (req) => {
             { name: "🔗 /webhook [url]", value: "Set/remove webhook (dropdown)", inline: true },
             { name: "🗑️ /delete", value: "Delete script (dropdown + confirm)", inline: true },
             { name: "🔍 /lookup <hwid>", value: "Search HWID across all scripts", inline: true },
+            { name: "🔑 /setup", value: "Set up key system (Linkvertise/WorkInk)", inline: true },
+            { name: "🗑️ /removesetup", value: "Remove key system (dropdown)", inline: true },
+            { name: "🎫 /getkey", value: "Get a key by completing a link", inline: true },
+            { name: "✅ /redeem <key> <hwid>", value: "Redeem a key to get access", inline: true },
           ];
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             createEmbed("📖 DefendLua Bot Commands", "Commands with **(dropdown)** let you pick a script. Destructive actions require **(confirm)**.", 0x5865f2, fields));
@@ -422,6 +446,124 @@ Deno.serve(async (req) => {
             createEmbed("🔍 HWID Lookup", `Found HWID in **${results.length}** script(s)`, 0x5865f2, results));
         }
 
+        // ── /setup (owner: configure key system) ──
+        case "setup": {
+          const provider = getOpt("provider");
+          const link = getOpt("link");
+          const expiry = getOpt("expiry") || 24;
+          const mode = getOpt("mode") || "whitelist";
+
+          if (!provider || !link) return errReply("Please provide a provider and link.");
+
+          // Validate URL
+          try { new URL(link); } catch { return errReply("Invalid URL provided."); }
+
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("You don't have any scripts yet.");
+
+          // Encode setup data in the select menu value
+          const setupData = JSON.stringify({ provider, link, expiry, mode });
+          const encodedData = btoa(setupData);
+
+          return scriptSelectMenu("setup", scripts, "🔑 Select a script for key system",
+            `**Provider:** ${provider}\n**Link:** ${link}\n**Expiry:** ${expiry}h\n**Mode:** ${mode}\n\nSelect the script to set up.`, encodedData);
+        }
+
+        // ── /removesetup (owner: remove key system) ──
+        case "removesetup": {
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("You don't have any scripts yet.");
+
+          return scriptSelectMenu("removesetup", scripts, "🗑️ Select a script to remove key system",
+            "Select a script to remove its key system configuration.");
+        }
+
+        // ── /getkey (any user: get a key by completing a link) ──
+        case "getkey": {
+          const keyScripts = await getKeySystemScripts(supabase);
+
+          if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            createEmbed("🔑 No Key Systems", "No scripts have a key system configured yet.", 0xffaa00));
+
+          const options = keyScripts.slice(0, 25).map((ks: any) => ({
+            label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
+            description: `Provider: ${ks.provider} | Expires: ${ks.key_expiry_hours}h`,
+            value: `getkey:${ks.script_id}`,
+          }));
+
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            ...createEmbed("🔑 Get a Key", "Select a script to get a key. You'll need to complete a link first.", 0x5865f2),
+            components: [{
+              type: ComponentType.ACTION_ROW,
+              components: [{
+                type: ComponentType.STRING_SELECT,
+                custom_id: "select_script_getkey",
+                placeholder: "Select a script",
+                options,
+              }],
+            }],
+          });
+        }
+
+        // ── /redeem (any user: redeem a key) ──
+        case "redeem": {
+          const key = getOpt("key");
+          const hwid = getOpt("hwid");
+          if (!key || !hwid) return errReply("Please provide both a key and your HWID.");
+
+          // Look up the key
+          const { data: keyData, error: keyError } = await supabase
+            .from("generated_keys")
+            .select("*, scripts:script_id(id, script_name, hwid_list, hwid_blacklist, public_access)")
+            .eq("key", key.toUpperCase().trim())
+            .single();
+
+          if (keyError || !keyData) return errReply("Invalid key. Please check and try again.");
+          if (keyData.redeemed) return errReply("This key has already been redeemed.");
+          if (new Date(keyData.expires_at) < new Date()) return errReply("This key has expired. Use `/getkey` to get a new one.");
+
+          // Get key system config
+          const { data: config } = await supabase
+            .from("key_system_configs")
+            .select("redeem_action")
+            .eq("script_id", keyData.script_id)
+            .single();
+
+          const script = keyData.scripts;
+          if (!script) return errReply("Script not found.");
+
+          // Check if HWID is blacklisted
+          if (script.hwid_blacklist?.includes(hwid)) return errReply("Your HWID is blacklisted on this script.");
+
+          // Perform the redeem action
+          if (config?.redeem_action === "whitelist") {
+            const currentList = script.hwid_list || [];
+            if (!currentList.includes(hwid)) {
+              await supabase.from("scripts").update({ hwid_list: [...currentList, hwid] }).eq("id", script.id);
+            }
+          }
+
+          // Mark key as redeemed
+          await supabase.from("generated_keys").update({
+            redeemed: true,
+            redeemed_at: new Date().toISOString(),
+            redeemed_hwid: hwid,
+          }).eq("id", keyData.id);
+
+          const actionMsg = config?.redeem_action === "whitelist"
+            ? `Your HWID has been **whitelisted** on **${script.script_name}**.`
+            : `You have been granted **temporary access** to **${script.script_name}** (expires in ${Math.round((new Date(keyData.expires_at).getTime() - Date.now()) / 3600000)}h).`;
+
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            createEmbed("✅ Key Redeemed!", actionMsg, 0x00ff00));
+        }
+
         default:
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             createEmbed("❓ Unknown Command", "This command is not recognized. Use `/help` to see all commands.", 0xff0000));
@@ -557,6 +699,52 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ── BUTTON: getkey complete (user says they completed the link) ──
+      if (customId.startsWith("getkey_complete:")) {
+        const scriptId = customId.replace("getkey_complete:", "");
+
+        const { data: config } = await supabase
+          .from("key_system_configs")
+          .select("*, scripts:script_id(script_name)")
+          .eq("script_id", scriptId)
+          .eq("enabled", true)
+          .single();
+
+        if (!config) {
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Key system is no longer available for this script.", 0xff0000),
+            components: [],
+          });
+        }
+
+        // Generate key
+        const key = generateKey();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + config.key_expiry_hours);
+
+        const { error: insertError } = await supabase
+          .from("generated_keys")
+          .insert({
+            script_id: scriptId,
+            key,
+            discord_id: discordId,
+            expires_at: expiresAt.toISOString(),
+          });
+
+        if (insertError) {
+          console.error("Key generation error:", insertError);
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Failed to generate key. Please try again.", 0xff0000),
+            components: [],
+          });
+        }
+
+        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed("🔑 Your Key", `**Script:** ${config.scripts?.script_name}\n\n🔑 **Your Key:**\n\`${key}\`\n\n⏰ **Expires:** <t:${Math.floor(expiresAt.getTime() / 1000)}:R>\n\nUse \`/redeem ${key} <your_hwid>\` to activate!`, 0x00ff00),
+          components: [],
+        });
+      }
+
       // ── SELECT MENU: script selection ──
       if (customId.startsWith("select_script_")) {
         const selectedValue = values[0] || "";
@@ -564,6 +752,38 @@ Deno.serve(async (req) => {
         const action = parts[0];
         const scriptId = parts[1];
         const extraData = parts.slice(2).join(":");
+
+        // ── getkey: special handling (doesn't require ownership) ──
+        if (action === "getkey") {
+          // Get the key system config
+          const { data: config, error: configError } = await supabase
+            .from("key_system_configs")
+            .select("*, scripts:script_id(id, script_name)")
+            .eq("script_id", scriptId)
+            .eq("enabled", true)
+            .single();
+
+          if (configError || !config) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Key system not found or disabled for this script.", 0xff0000),
+              components: [],
+            });
+          }
+
+          // Show the link and a "I completed it" button
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("🔑 Complete the Link", `**Script:** ${config.scripts?.script_name}\n**Provider:** ${config.provider}\n\n🔗 **Complete this link:**\n${config.provider_link}\n\nAfter completing, click the button below to receive your key.`, 0x5865f2),
+            components: [{
+              type: ComponentType.ACTION_ROW,
+              components: [{
+                type: ComponentType.BUTTON,
+                style: ButtonStyle.SUCCESS,
+                label: "✅ I completed the link — Give me my key",
+                custom_id: `getkey_complete:${scriptId}`,
+              }],
+            }],
+          });
+        }
 
         const { data: script, error: scriptError } = await supabase
           .from("scripts")
@@ -791,6 +1011,55 @@ Deno.serve(async (req) => {
 
             return reply(InteractionResponseType.UPDATE_MESSAGE, {
               ...createEmbed(`${emoji} Success`, message, 0x00ff00),
+              components: [],
+            });
+          }
+
+          // ── setup (save key system config) ──
+          case "setup": {
+            try {
+              const setupData = JSON.parse(atob(extraData));
+              const { provider, link, expiry, mode } = setupData;
+
+              // Upsert key system config
+              const { error: configError } = await supabase
+                .from("key_system_configs")
+                .upsert({
+                  script_id: script.id,
+                  provider,
+                  provider_link: link,
+                  key_expiry_hours: expiry || 24,
+                  redeem_action: mode || "whitelist",
+                  enabled: true,
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: "script_id" });
+
+              if (configError) {
+                console.error("Setup error:", configError);
+                return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to set up key system.", 0xff0000), components: [] });
+              }
+
+              return reply(InteractionResponseType.UPDATE_MESSAGE, {
+                ...createEmbed("🔑 Key System Configured!", `**${script.script_name}** now has a key system!\n\n**Provider:** ${provider}\n**Link:** ${link}\n**Key Expiry:** ${expiry || 24}h\n**Redeem Action:** ${mode || "whitelist"}`, 0x00ff00),
+                components: [],
+              });
+            } catch (e) {
+              console.error("Setup parse error:", e);
+              return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Invalid setup data.", 0xff0000), components: [] });
+            }
+          }
+
+          // ── removesetup ──
+          case "removesetup": {
+            const { error: delError } = await supabase
+              .from("key_system_configs")
+              .delete()
+              .eq("script_id", script.id);
+
+            if (delError) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to remove key system.", 0xff0000), components: [] });
+
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🗑️ Key System Removed", `Key system has been removed from **${script.script_name}**.`, 0x00ff00),
               components: [],
             });
           }
