@@ -718,6 +718,10 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                         { cmd: "/webhook [url]", desc: "Set or remove webhook URL — pick from dropdown" },
                         { cmd: "/delete", desc: "Permanently delete a script — dropdown + confirmation" },
                         { cmd: "/lookup <hwid>", desc: "Check if an HWID exists in any of your scripts" },
+                        { cmd: "/setup <provider> <link> [expiry] [mode]", desc: "Set up a key system (Linkvertise/WorkInk) — pick script from dropdown" },
+                        { cmd: "/removesetup", desc: "Remove the key system from a script — pick from dropdown" },
+                        { cmd: "/getkey", desc: "Get a key by completing a monetization link — pick script from dropdown" },
+                        { cmd: "/redeem <key> <hwid>", desc: "Redeem a key to get whitelisted on a script" },
                       ].map(({ cmd, desc }) => (
                         <div key={cmd} className="bg-muted/50 rounded-lg p-3">
                           <code className="text-sm font-mono text-primary">{cmd}</code>
