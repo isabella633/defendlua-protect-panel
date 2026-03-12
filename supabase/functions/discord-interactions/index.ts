@@ -695,6 +695,52 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ── BUTTON: getkey complete (user says they completed the link) ──
+      if (customId.startsWith("getkey_complete:")) {
+        const scriptId = customId.replace("getkey_complete:", "");
+
+        const { data: config } = await supabase
+          .from("key_system_configs")
+          .select("*, scripts:script_id(script_name)")
+          .eq("script_id", scriptId)
+          .eq("enabled", true)
+          .single();
+
+        if (!config) {
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Key system is no longer available for this script.", 0xff0000),
+            components: [],
+          });
+        }
+
+        // Generate key
+        const key = generateKey();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + config.key_expiry_hours);
+
+        const { error: insertError } = await supabase
+          .from("generated_keys")
+          .insert({
+            script_id: scriptId,
+            key,
+            discord_id: discordId,
+            expires_at: expiresAt.toISOString(),
+          });
+
+        if (insertError) {
+          console.error("Key generation error:", insertError);
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Failed to generate key. Please try again.", 0xff0000),
+            components: [],
+          });
+        }
+
+        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed("🔑 Your Key", `**Script:** ${config.scripts?.script_name}\n\n🔑 **Your Key:**\n\`${key}\`\n\n⏰ **Expires:** <t:${Math.floor(expiresAt.getTime() / 1000)}:R>\n\nUse \`/redeem ${key} <your_hwid>\` to activate!`, 0x00ff00),
+          components: [],
+        });
+      }
+
       // ── SELECT MENU: script selection ──
       if (customId.startsWith("select_script_")) {
         const selectedValue = values[0] || "";
