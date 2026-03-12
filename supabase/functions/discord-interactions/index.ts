@@ -933,6 +933,55 @@ Deno.serve(async (req) => {
             });
           }
 
+          // ── setup (save key system config) ──
+          case "setup": {
+            try {
+              const setupData = JSON.parse(atob(extraData));
+              const { provider, link, expiry, mode } = setupData;
+
+              // Upsert key system config
+              const { error: configError } = await supabase
+                .from("key_system_configs")
+                .upsert({
+                  script_id: script.id,
+                  provider,
+                  provider_link: link,
+                  key_expiry_hours: expiry || 24,
+                  redeem_action: mode || "whitelist",
+                  enabled: true,
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: "script_id" });
+
+              if (configError) {
+                console.error("Setup error:", configError);
+                return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to set up key system.", 0xff0000), components: [] });
+              }
+
+              return reply(InteractionResponseType.UPDATE_MESSAGE, {
+                ...createEmbed("🔑 Key System Configured!", `**${script.script_name}** now has a key system!\n\n**Provider:** ${provider}\n**Link:** ${link}\n**Key Expiry:** ${expiry || 24}h\n**Redeem Action:** ${mode || "whitelist"}`, 0x00ff00),
+                components: [],
+              });
+            } catch (e) {
+              console.error("Setup parse error:", e);
+              return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Invalid setup data.", 0xff0000), components: [] });
+            }
+          }
+
+          // ── removesetup ──
+          case "removesetup": {
+            const { error: delError } = await supabase
+              .from("key_system_configs")
+              .delete()
+              .eq("script_id", script.id);
+
+            if (delError) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to remove key system.", 0xff0000), components: [] });
+
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🗑️ Key System Removed", `Key system has been removed from **${script.script_name}**.`, 0x00ff00),
+              components: [],
+            });
+          }
+
           default:
             return reply(InteractionResponseType.UPDATE_MESSAGE, {
               ...createEmbed("❓ Unknown Action", "This action is not recognized.", 0xff0000),
