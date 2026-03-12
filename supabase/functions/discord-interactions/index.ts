@@ -442,6 +442,124 @@ Deno.serve(async (req) => {
             createEmbed("🔍 HWID Lookup", `Found HWID in **${results.length}** script(s)`, 0x5865f2, results));
         }
 
+        // ── /setup (owner: configure key system) ──
+        case "setup": {
+          const provider = getOpt("provider");
+          const link = getOpt("link");
+          const expiry = getOpt("expiry") || 24;
+          const mode = getOpt("mode") || "whitelist";
+
+          if (!provider || !link) return errReply("Please provide a provider and link.");
+
+          // Validate URL
+          try { new URL(link); } catch { return errReply("Invalid URL provided."); }
+
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("You don't have any scripts yet.");
+
+          // Encode setup data in the select menu value
+          const setupData = JSON.stringify({ provider, link, expiry, mode });
+          const encodedData = btoa(setupData);
+
+          return scriptSelectMenu("setup", scripts, "🔑 Select a script for key system",
+            `**Provider:** ${provider}\n**Link:** ${link}\n**Expiry:** ${expiry}h\n**Mode:** ${mode}\n\nSelect the script to set up.`, encodedData);
+        }
+
+        // ── /removesetup (owner: remove key system) ──
+        case "removesetup": {
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("You don't have any scripts yet.");
+
+          return scriptSelectMenu("removesetup", scripts, "🗑️ Select a script to remove key system",
+            "Select a script to remove its key system configuration.");
+        }
+
+        // ── /getkey (any user: get a key by completing a link) ──
+        case "getkey": {
+          const keyScripts = await getKeySystemScripts(supabase);
+
+          if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            createEmbed("🔑 No Key Systems", "No scripts have a key system configured yet.", 0xffaa00));
+
+          const options = keyScripts.slice(0, 25).map((ks: any) => ({
+            label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
+            description: `Provider: ${ks.provider} | Expires: ${ks.key_expiry_hours}h`,
+            value: `getkey:${ks.script_id}`,
+          }));
+
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            ...createEmbed("🔑 Get a Key", "Select a script to get a key. You'll need to complete a link first.", 0x5865f2),
+            components: [{
+              type: ComponentType.ACTION_ROW,
+              components: [{
+                type: ComponentType.STRING_SELECT,
+                custom_id: "select_script_getkey",
+                placeholder: "Select a script",
+                options,
+              }],
+            }],
+          });
+        }
+
+        // ── /redeem (any user: redeem a key) ──
+        case "redeem": {
+          const key = getOpt("key");
+          const hwid = getOpt("hwid");
+          if (!key || !hwid) return errReply("Please provide both a key and your HWID.");
+
+          // Look up the key
+          const { data: keyData, error: keyError } = await supabase
+            .from("generated_keys")
+            .select("*, scripts:script_id(id, script_name, hwid_list, hwid_blacklist, public_access)")
+            .eq("key", key.toUpperCase().trim())
+            .single();
+
+          if (keyError || !keyData) return errReply("Invalid key. Please check and try again.");
+          if (keyData.redeemed) return errReply("This key has already been redeemed.");
+          if (new Date(keyData.expires_at) < new Date()) return errReply("This key has expired. Use `/getkey` to get a new one.");
+
+          // Get key system config
+          const { data: config } = await supabase
+            .from("key_system_configs")
+            .select("redeem_action")
+            .eq("script_id", keyData.script_id)
+            .single();
+
+          const script = keyData.scripts;
+          if (!script) return errReply("Script not found.");
+
+          // Check if HWID is blacklisted
+          if (script.hwid_blacklist?.includes(hwid)) return errReply("Your HWID is blacklisted on this script.");
+
+          // Perform the redeem action
+          if (config?.redeem_action === "whitelist") {
+            const currentList = script.hwid_list || [];
+            if (!currentList.includes(hwid)) {
+              await supabase.from("scripts").update({ hwid_list: [...currentList, hwid] }).eq("id", script.id);
+            }
+          }
+
+          // Mark key as redeemed
+          await supabase.from("generated_keys").update({
+            redeemed: true,
+            redeemed_at: new Date().toISOString(),
+            redeemed_hwid: hwid,
+          }).eq("id", keyData.id);
+
+          const actionMsg = config?.redeem_action === "whitelist"
+            ? `Your HWID has been **whitelisted** on **${script.script_name}**.`
+            : `You have been granted **temporary access** to **${script.script_name}** (expires in ${Math.round((new Date(keyData.expires_at).getTime() - Date.now()) / 3600000)}h).`;
+
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            createEmbed("✅ Key Redeemed!", actionMsg, 0x00ff00));
+        }
+
         default:
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             createEmbed("❓ Unknown Command", "This command is not recognized. Use `/help` to see all commands.", 0xff0000));
