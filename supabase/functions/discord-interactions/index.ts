@@ -703,6 +703,38 @@ Deno.serve(async (req) => {
         const scriptId = parts[1];
         const extraData = parts.slice(2).join(":");
 
+        // ── getkey: special handling (doesn't require ownership) ──
+        if (action === "getkey") {
+          // Get the key system config
+          const { data: config, error: configError } = await supabase
+            .from("key_system_configs")
+            .select("*, scripts:script_id(id, script_name)")
+            .eq("script_id", scriptId)
+            .eq("enabled", true)
+            .single();
+
+          if (configError || !config) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Key system not found or disabled for this script.", 0xff0000),
+              components: [],
+            });
+          }
+
+          // Show the link and a "I completed it" button
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("🔑 Complete the Link", `**Script:** ${config.scripts?.script_name}\n**Provider:** ${config.provider}\n\n🔗 **Complete this link:**\n${config.provider_link}\n\nAfter completing, click the button below to receive your key.`, 0x5865f2),
+            components: [{
+              type: ComponentType.ACTION_ROW,
+              components: [{
+                type: ComponentType.BUTTON,
+                style: ButtonStyle.SUCCESS,
+                label: "✅ I completed the link — Give me my key",
+                custom_id: `getkey_complete:${scriptId}`,
+              }],
+            }],
+          });
+        }
+
         const { data: script, error: scriptError } = await supabase
           .from("scripts")
           .select("*")
