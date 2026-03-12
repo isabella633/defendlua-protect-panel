@@ -102,6 +102,26 @@ async function getUserScripts(supabase: any, userId: string) {
   return data || [];
 }
 
+// Get scripts that have key system enabled (for /getkey - any user)
+async function getKeySystemScripts(supabase: any) {
+  const { data } = await supabase
+    .from("key_system_configs")
+    .select("script_id, provider, provider_link, key_expiry_hours, redeem_action, scripts:script_id(id, script_name, owner_id)")
+    .eq("enabled", true);
+  return data || [];
+}
+
+// Generate a random key string
+function generateKey(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let key = "";
+  for (let i = 0; i < 16; i++) {
+    if (i > 0 && i % 4 === 0) key += "-";
+    key += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return key;
+}
+
 // Build a select menu response for choosing a script
 function scriptSelectMenu(action: string, scripts: any[], title: string, description: string, extraData?: string) {
   const options = scripts.slice(0, 25).map((s: any) => ({
