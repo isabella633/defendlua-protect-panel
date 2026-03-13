@@ -446,14 +446,15 @@ Deno.serve(async (req) => {
             createEmbed("🔍 HWID Lookup", `Found HWID in **${results.length}** script(s)`, 0x5865f2, results));
         }
 
-        // ── /setup (owner: configure key system) ──
+        // ── /setup (owner: configure key system — no dropdown, script name typed) ──
         case "setup": {
+          const scriptName = getOpt("script");
           const provider = getOpt("provider");
           const link = getOpt("link");
           const expiry = getOpt("expiry") || 24;
           const mode = getOpt("mode") || "whitelist";
 
-          if (!provider || !link) return errReply("Please provide a provider and link.");
+          if (!scriptName || !provider || !link) return errReply("Please provide a script name, provider, and link.");
 
           // Validate URL
           try { new URL(link); } catch { return errReply("Invalid URL provided."); }
@@ -461,15 +462,29 @@ Deno.serve(async (req) => {
           const userId = await getUserId(supabase, discordId);
           if (!userId) return notLinkedReply();
 
-          const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          const script = await findScript(supabase, userId, scriptName);
+          if (!script) return errReply(`Script **${scriptName}** not found. Use \`/scripts\` to see your scripts.`);
 
-          // Encode setup data in the select menu value
-          const setupData = JSON.stringify({ provider, link, expiry, mode });
-          const encodedData = btoa(setupData);
+          // Upsert key system config directly
+          const { error: configError } = await supabase
+            .from("key_system_configs")
+            .upsert({
+              script_id: script.id,
+              provider,
+              provider_link: link,
+              key_expiry_hours: expiry,
+              redeem_action: mode,
+              enabled: true,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "script_id" });
 
-          return scriptSelectMenu("setup", scripts, "🔑 Select a script for key system",
-            `**Provider:** ${provider}\n**Link:** ${link}\n**Expiry:** ${expiry}h\n**Mode:** ${mode}\n\nSelect the script to set up.`, encodedData);
+          if (configError) {
+            console.error("Setup error:", configError);
+            return errReply("Failed to set up key system.");
+          }
+
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            createEmbed("🔑 Key System Configured!", `**${script.script_name}** now has a key system!\n\n**Provider:** ${provider}\n**Link:** ${link}\n**Key Expiry:** ${expiry}h\n**Redeem Action:** ${mode}\n\nUsers can now use \`/getkey\` to get a key!`, 0x00ff00));
         }
 
         // ── /removesetup (owner: remove key system) ──
@@ -1013,40 +1028,6 @@ Deno.serve(async (req) => {
               ...createEmbed(`${emoji} Success`, message, 0x00ff00),
               components: [],
             });
-          }
-
-          // ── setup (save key system config) ──
-          case "setup": {
-            try {
-              const setupData = JSON.parse(atob(extraData));
-              const { provider, link, expiry, mode } = setupData;
-
-              // Upsert key system config
-              const { error: configError } = await supabase
-                .from("key_system_configs")
-                .upsert({
-                  script_id: script.id,
-                  provider,
-                  provider_link: link,
-                  key_expiry_hours: expiry || 24,
-                  redeem_action: mode || "whitelist",
-                  enabled: true,
-                  updated_at: new Date().toISOString(),
-                }, { onConflict: "script_id" });
-
-              if (configError) {
-                console.error("Setup error:", configError);
-                return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to set up key system.", 0xff0000), components: [] });
-              }
-
-              return reply(InteractionResponseType.UPDATE_MESSAGE, {
-                ...createEmbed("🔑 Key System Configured!", `**${script.script_name}** now has a key system!\n\n**Provider:** ${provider}\n**Link:** ${link}\n**Key Expiry:** ${expiry || 24}h\n**Redeem Action:** ${mode || "whitelist"}`, 0x00ff00),
-                components: [],
-              });
-            } catch (e) {
-              console.error("Setup parse error:", e);
-              return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Invalid setup data.", 0xff0000), components: [] });
-            }
           }
 
           // ── removesetup ──
