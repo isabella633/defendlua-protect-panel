@@ -504,7 +504,7 @@ Deno.serve(async (req) => {
           const keyScripts = await getKeySystemScripts(supabase);
 
           if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("🔑 No Key Systems", "No scripts have a key system configured yet.", 0xffaa00));
+            { ...createEmbed("🔑 No Key Systems", "No scripts have a key system configured yet.", 0xffaa00), flags: 64 });
 
           const options = keyScripts.slice(0, 25).map((ks: any) => ({
             label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
@@ -514,6 +514,7 @@ Deno.serve(async (req) => {
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("🔑 Get a Key", "Select a script to get a key. You'll need to complete a link first.", 0x5865f2),
+            flags: 64,
             components: [{
               type: ComponentType.ACTION_ROW,
               components: [{
