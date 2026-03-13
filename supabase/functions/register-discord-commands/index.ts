@@ -29,6 +29,7 @@ const commands = [
 
   // Key System commands
   { name: "setup", description: "Set up a key system for a script", options: [
+    { name: "script", description: "Script name to set up", type: 3, required: true },
     { name: "provider", description: "Link provider", type: 3, required: true, choices: [{ name: "Linkvertise", value: "linkvertise" }, { name: "WorkInk", value: "workink" }] },
     { name: "link", description: "Your monetization link URL", type: 3, required: true },
     { name: "expiry", description: "Key expiry in hours (default: 24)", type: 4, required: false },
