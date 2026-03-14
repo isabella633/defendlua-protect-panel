@@ -36,6 +36,7 @@ const App = () => (
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/link-discord" element={<LinkDiscord />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify" element={<Verify />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
