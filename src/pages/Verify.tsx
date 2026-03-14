@@ -68,16 +68,16 @@ const Verify = () => {
   const handleComplete = async () => {
     try {
       const res = await fetch(`${supabaseUrl}/functions/v1/verify-key-link?token=${token}&complete=true`);
-      const data = await res.json().catch(() => null);
+      const data = await res.json();
       
-      if (res.ok) {
+      if (res.ok && data.success) {
         setStatus("complete");
-      } else if (res.status === 403) {
+      } else if (res.status === 403 || data.bypass) {
         setStatus("bypass");
-        setErrorMessage(data?.error || "You haven't completed the task yet. Complete it and try again.");
+        setErrorMessage(data.error || "You haven't completed the task yet.");
       } else {
         setStatus("error");
-        setErrorMessage(data?.error || "Verification failed. Please try again.");
+        setErrorMessage(data.error || "Verification failed. Please try again.");
       }
     } catch {
       setStatus("error");
