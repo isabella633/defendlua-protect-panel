@@ -33,8 +33,8 @@ const Verify = () => {
         }
 
         // Store token and timestamp in sessionStorage
-        sessionStorage.setItem("defendlua_verify_token", tokenFromUrl);
-        sessionStorage.setItem("defendlua_verify_time", Date.now().toString());
+        localStorage.setItem("defendlua_verify_token", tokenFromUrl);
+        localStorage.setItem("defendlua_verify_time", Date.now().toString());
         setScriptName(data.scriptName || "Unknown Script");
         setStatus("redirecting");
 
