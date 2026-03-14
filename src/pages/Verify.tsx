@@ -33,8 +33,8 @@ const Verify = () => {
         }
 
         // Store token and timestamp in sessionStorage
-        sessionStorage.setItem("defendlua_verify_token", tokenFromUrl);
-        sessionStorage.setItem("defendlua_verify_time", Date.now().toString());
+        localStorage.setItem("defendlua_verify_token", tokenFromUrl);
+        localStorage.setItem("defendlua_verify_time", Date.now().toString());
         setScriptName(data.scriptName || "Unknown Script");
         setStatus("redirecting");
 
@@ -50,8 +50,8 @@ const Verify = () => {
     }
 
     // Case 2: Returning from provider (no token in URL, but token in sessionStorage)
-    const savedToken = sessionStorage.getItem("defendlua_verify_token");
-    const savedTime = sessionStorage.getItem("defendlua_verify_time");
+    const savedToken = localStorage.getItem("defendlua_verify_token");
+    const savedTime = localStorage.getItem("defendlua_verify_time");
 
     if (!savedToken) {
       setStatus("error");
@@ -81,8 +81,8 @@ const Verify = () => {
         setExpiresAt(data.expiresAt || "");
         setStatus("complete");
         // Clean up session
-        sessionStorage.removeItem("defendlua_verify_token");
-        sessionStorage.removeItem("defendlua_verify_time");
+        localStorage.removeItem("defendlua_verify_token");
+        localStorage.removeItem("defendlua_verify_time");
       } else if (data.bypass) {
         setStatus("bypass");
         setErrorMessage(data.error || "Bypass detected. Complete the full task.");
