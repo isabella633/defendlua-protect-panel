@@ -849,7 +849,7 @@ Deno.serve(async (req) => {
               script_id: scriptId,
             });
 
-          const verifyLink = `https://defendlua-protect-panel.lovable.app/verify?token=${verifyToken}`;
+          const verifyLink = `https://defendlua.lol/verify?token=${verifyToken}`;
 
           // Show the tracked verification link (NOT the raw provider link)
           return reply(InteractionResponseType.UPDATE_MESSAGE, {

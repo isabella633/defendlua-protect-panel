@@ -117,6 +117,6 @@ Deno.serve(async (req) => {
   // Fallback: redirect to the website verify page
   return new Response(null, {
     status: 302,
-    headers: { Location: `https://defendlua-protect-panel.lovable.app/verify?token=${token}` },
+    headers: { Location: `https://defendlua.lol/verify?token=${token}` },
   });
 });
