@@ -851,19 +851,11 @@ Deno.serve(async (req) => {
 
           const verifyLink = `https://defendlua.lol/verify?token=${verifyToken}`;
 
-          // Show the tracked verification link (NOT the raw provider link)
+          // Show the verification link — key will be given on the website after completing the provider task
           return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("🔑 Complete the Link to Get Your Key", `**Script:** ${config.scripts?.script_name}\n**Provider:** ${config.provider}\n\n🔗 **Click the link below to start:**\n${verifyLink}\n\n⚠️ **You MUST complete the full ${config.provider} task.** The system will verify your completion before issuing a key.\n\n🚫 Attempting to bypass will be detected.`, 0x5865f2),
+            ...createEmbed("🔑 Complete the Link to Get Your Key", `**Script:** ${config.scripts?.script_name}\n**Provider:** ${config.provider}\n\n🔗 **Click the link below to start:**\n${verifyLink}\n\n1️⃣ You'll be redirected to ${config.provider}\n2️⃣ Complete the full task\n3️⃣ You'll be redirected back to receive your key automatically\n\n🚫 **Bypassing will be detected** — the system verifies your completion.`, 0x5865f2),
             flags: 64,
-            components: [{
-              type: ComponentType.ACTION_ROW,
-              components: [{
-                type: ComponentType.BUTTON,
-                style: ButtonStyle.SUCCESS,
-                label: "✅ I completed the link — Give me my key",
-                custom_id: `getkey_complete:${scriptId}:${verifyToken}`,
-              }],
-            }],
+            components: [],
           });
         }
 
