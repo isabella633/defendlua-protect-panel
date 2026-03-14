@@ -14,6 +14,7 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import LinkDiscord from "./pages/LinkDiscord";
 import NotFound from "./pages/NotFound";
+import Verify from "./pages/Verify";
 import ResetPassword from "./pages/ResetPassword";
 const queryClient = new QueryClient();
 
