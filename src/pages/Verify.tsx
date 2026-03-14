@@ -50,8 +50,8 @@ const Verify = () => {
     }
 
     // Case 2: Returning from provider (no token in URL, but token in sessionStorage)
-    const savedToken = sessionStorage.getItem("defendlua_verify_token");
-    const savedTime = sessionStorage.getItem("defendlua_verify_time");
+    const savedToken = localStorage.getItem("defendlua_verify_token");
+    const savedTime = localStorage.getItem("defendlua_verify_time");
 
     if (!savedToken) {
       setStatus("error");
