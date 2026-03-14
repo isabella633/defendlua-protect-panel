@@ -5,6 +5,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Generate a random key string
+function generateKey(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let key = "";
+  for (let i = 0; i < 16; i++) {
+    if (i > 0 && i % 4 === 0) key += "-";
+    key += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return key;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -12,7 +23,7 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const token = url.searchParams.get("token");
-  const format = url.searchParams.get("format"); // "json" for API calls from React app
+  const format = url.searchParams.get("format");
 
   if (!token) {
     if (format === "json") {
@@ -34,14 +45,14 @@ Deno.serve(async (req) => {
     .single();
 
   if (error || !verification) {
-    const msg = "This verification link is invalid or has already expired. Please use /getkey again in Discord.";
+    const msg = "This verification link is invalid or has already been used. Please use /getkey again in Discord.";
     if (format === "json") return new Response(JSON.stringify({ error: msg }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     return new Response(msg, { status: 404, headers: { "Content-Type": "text/plain" } });
   }
 
   // Check if already completed
   if (verification.completed) {
-    const msg = "You've already completed this verification. Go back to Discord and click the button to get your key.";
+    const msg = "This verification has already been completed and a key was issued.";
     if (format === "json") return new Response(JSON.stringify({ error: msg, completed: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     return new Response(msg, { headers: { "Content-Type": "text/plain" } });
   }
@@ -54,10 +65,10 @@ Deno.serve(async (req) => {
     return new Response(msg, { status: 410, headers: { "Content-Type": "text/plain" } });
   }
 
-  // Get the provider link from key_system_configs
+  // Get the provider config
   const { data: config } = await supabase
     .from("key_system_configs")
-    .select("provider_link, provider")
+    .select("provider_link, provider, key_expiry_hours")
     .eq("script_id", verification.script_id)
     .eq("enabled", true)
     .single();
@@ -68,7 +79,7 @@ Deno.serve(async (req) => {
     return new Response(msg, { status: 404, headers: { "Content-Type": "text/plain" } });
   }
 
-  // Mark as visited (but NOT completed yet)
+  // Mark as visited
   if (!verification.visited_at) {
     await supabase
       .from("key_link_verifications")
@@ -76,7 +87,9 @@ Deno.serve(async (req) => {
       .eq("id", verification.id);
   }
 
-  // Handle the completion callback
+  // ═══════════════════════════════════════
+  // COMPLETION: Generate key and return it
+  // ═══════════════════════════════════════
   if (url.searchParams.get("complete") === "true") {
     const visitedAt = verification.visited_at ? new Date(verification.visited_at).getTime() : Date.now();
     const timeSpent = Date.now() - visitedAt;
@@ -84,25 +97,58 @@ Deno.serve(async (req) => {
 
     if (timeSpent < MIN_TIME_MS) {
       const remaining = Math.ceil((MIN_TIME_MS - timeSpent) / 1000);
-      const msg = `You haven't completed the ${config.provider} task yet. You need to spend at least 30 seconds completing it. Please go back, complete the task, and try again in ${remaining} seconds. Do not try to bypass the key system.`;
-      return new Response(JSON.stringify({ error: msg, bypass: true }), {
+      return new Response(JSON.stringify({
+        error: `You haven't completed the ${config.provider} task yet. Please go back and complete it. Try again in ${remaining} seconds.`,
+        bypass: true,
+      }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Mark as completed
+    // Generate the key
+    const key = generateKey();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + (config.key_expiry_hours || 24));
+
+    const { error: insertError } = await supabase
+      .from("generated_keys")
+      .insert({
+        script_id: verification.script_id,
+        key,
+        discord_id: verification.discord_id,
+        expires_at: expiresAt.toISOString(),
+      });
+
+    if (insertError) {
+      console.error("Key generation error:", insertError);
+      return new Response(JSON.stringify({ error: "Failed to generate key. Please try again." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Mark verification as completed
     await supabase
       .from("key_link_verifications")
       .update({ completed: true })
       .eq("id", verification.id);
 
-    return new Response(JSON.stringify({ success: true, message: `Verification complete! Go back to Discord and click the button to get your key.` }), {
+    const scriptName = verification.scripts?.script_name || "Unknown Script";
+
+    return new Response(JSON.stringify({
+      success: true,
+      key,
+      scriptName,
+      expiresAt: expiresAt.toISOString(),
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Return verification data as JSON for the React page
+  // ═══════════════════════════════════════
+  // INITIAL LOAD: Return provider info for redirect
+  // ═══════════════════════════════════════
   if (format === "json") {
     const scriptName = verification.scripts?.script_name || "Unknown Script";
     return new Response(JSON.stringify({
