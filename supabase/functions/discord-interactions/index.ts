@@ -849,8 +849,7 @@ Deno.serve(async (req) => {
               script_id: scriptId,
             });
 
-          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-          const verifyLink = `${supabaseUrl}/functions/v1/verify-key-link?token=${verifyToken}`;
+          const verifyLink = `https://defendlua-protect-panel.lovable.app/verify?token=${verifyToken}`;
 
           // Show the tracked verification link (NOT the raw provider link)
           return reply(InteractionResponseType.UPDATE_MESSAGE, {
