@@ -484,7 +484,7 @@ Deno.serve(async (req) => {
           }
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("🔑 Key System Configured!", `**${script.script_name}** now has a key system!\n\n**Provider:** ${provider}\n**Link:** ${link}\n**Key Expiry:** ${expiry}h\n**Redeem Action:** ${mode}\n\nUsers can now use \`/getkey\` to get a key!`, 0x00ff00));
+            createEmbed("🔑 Key System Configured!", `**${script.script_name}** now has a key system!\n\n**Provider:** ${provider}\n**Link:** ${link}\n**Key Expiry:** ${expiry}h\n**Redeem Action:** ${mode}\n\n⚠️ **IMPORTANT:** Set your ${provider} redirect/target URL to:\n\`https://defendlua.lol/verify\`\n\nThis ensures users are redirected back to receive their key after completing the task.\n\nUsers can now use \`/getkey\` to get a key!`, 0x00ff00));
         }
 
         // ── /removesetup (owner: remove key system) ──
