@@ -715,90 +715,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      // ── BUTTON: getkey complete (user says they completed the link) ──
+      // ── BUTTON: getkey complete (legacy — keys are now issued on the website) ──
       if (customId.startsWith("getkey_complete:")) {
-        const parts = customId.replace("getkey_complete:", "").split(":");
-        const scriptId = parts[0];
-        const verifyToken = parts[1];
-
-        // Check verification status in the database
-        const { data: verification } = await supabase
-          .from("key_link_verifications")
-          .select("*")
-          .eq("token", verifyToken)
-          .eq("discord_id", discordId)
-          .eq("script_id", scriptId)
-          .single();
-
-        if (!verification) {
-          return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("❌ Error", "Verification session not found. Use `/getkey` again.", 0xff0000),
-            flags: 64,
-            components: [],
-          });
-        }
-
-        // Check if they actually completed the verification page
-        if (!verification.completed) {
-          return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("🚫 Bypass Detected", "You **have not completed** the link task yet!\n\n⚠️ You must:\n1. Click the verification link\n2. Open the provider link\n3. Complete the full task\n4. Click \"Verify Now\" on the page\n\n**Do not attempt to bypass the key system.**", 0xff0000),
-            flags: 64,
-            components: [{
-              type: ComponentType.ACTION_ROW,
-              components: [{
-                type: ComponentType.BUTTON,
-                style: ButtonStyle.SUCCESS,
-                label: "✅ I completed the link — Give me my key",
-                custom_id: `getkey_complete:${scriptId}:${verifyToken}`,
-              }],
-            }],
-          });
-        }
-
-        // Verified! Now generate the key
-        const { data: config } = await supabase
-          .from("key_system_configs")
-          .select("*, scripts:script_id(script_name)")
-          .eq("script_id", scriptId)
-          .eq("enabled", true)
-          .single();
-
-        if (!config) {
-          return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("❌ Error", "Key system is no longer available for this script.", 0xff0000),
-            flags: 64,
-            components: [],
-          });
-        }
-
-        // Generate key
-        const key = generateKey();
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + config.key_expiry_hours);
-
-        const { error: insertError } = await supabase
-          .from("generated_keys")
-          .insert({
-            script_id: scriptId,
-            key,
-            discord_id: discordId,
-            expires_at: expiresAt.toISOString(),
-          });
-
-        if (insertError) {
-          console.error("Key generation error:", insertError);
-          return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("❌ Error", "Failed to generate key. Please try again.", 0xff0000),
-            flags: 64,
-            components: [],
-          });
-        }
-
-        // Clean up verification record
-        await supabase.from("key_link_verifications").delete().eq("id", verification.id);
-
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
-          ...createEmbed("🔑 Your Key", `**Script:** ${config.scripts?.script_name}\n\n🔑 **Your Key:**\n\`${key}\`\n\n⏰ **Expires:** <t:${Math.floor(expiresAt.getTime() / 1000)}:R>\n\nUse \`/redeem ${key} <your_hwid>\` to activate!`, 0x00ff00),
+          ...createEmbed("ℹ️ Key System Updated", "Keys are now issued directly on the verification website after completing the task. Use `/getkey` to get a new link.", 0x5865f2),
           flags: 64,
           components: [],
         });
