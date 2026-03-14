@@ -81,8 +81,8 @@ const Verify = () => {
         setExpiresAt(data.expiresAt || "");
         setStatus("complete");
         // Clean up session
-        sessionStorage.removeItem("defendlua_verify_token");
-        sessionStorage.removeItem("defendlua_verify_time");
+        localStorage.removeItem("defendlua_verify_token");
+        localStorage.removeItem("defendlua_verify_time");
       } else if (data.bypass) {
         setStatus("bypass");
         setErrorMessage(data.error || "Bypass detected. Complete the full task.");
