@@ -189,6 +189,44 @@ export type Database = {
           },
         ]
       }
+      key_link_verifications: {
+        Row: {
+          completed: boolean
+          created_at: string
+          discord_id: string
+          id: string
+          script_id: string
+          token: string
+          visited_at: string | null
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          discord_id: string
+          id?: string
+          script_id: string
+          token: string
+          visited_at?: string | null
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          discord_id?: string
+          id?: string
+          script_id?: string
+          token?: string
+          visited_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "key_link_verifications_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       key_system_configs: {
         Row: {
           created_at: string
