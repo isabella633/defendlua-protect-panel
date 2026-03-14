@@ -825,20 +825,44 @@ Deno.serve(async (req) => {
           if (configError || !config) {
             return reply(InteractionResponseType.UPDATE_MESSAGE, {
               ...createEmbed("❌ Error", "Key system not found or disabled for this script.", 0xff0000),
+              flags: 64,
               components: [],
             });
           }
 
-          // Show the link and a "I completed it" button
+          // Create a unique verification token
+          const verifyToken = crypto.randomUUID().replace(/-/g, "").substring(0, 24);
+
+          // Clean up any old verifications for this user+script
+          await supabase
+            .from("key_link_verifications")
+            .delete()
+            .eq("discord_id", discordId)
+            .eq("script_id", scriptId);
+
+          // Create verification record
+          await supabase
+            .from("key_link_verifications")
+            .insert({
+              token: verifyToken,
+              discord_id: discordId,
+              script_id: scriptId,
+            });
+
+          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+          const verifyLink = `${supabaseUrl}/functions/v1/verify-key-link?token=${verifyToken}`;
+
+          // Show the tracked verification link (NOT the raw provider link)
           return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("🔑 Complete the Link", `**Script:** ${config.scripts?.script_name}\n**Provider:** ${config.provider}\n\n🔗 **Complete this link:**\n${config.provider_link}\n\nAfter completing, click the button below to receive your key.`, 0x5865f2),
+            ...createEmbed("🔑 Complete the Link to Get Your Key", `**Script:** ${config.scripts?.script_name}\n**Provider:** ${config.provider}\n\n🔗 **Click the link below to start:**\n${verifyLink}\n\n⚠️ **You MUST complete the full ${config.provider} task.** The system will verify your completion before issuing a key.\n\n🚫 Attempting to bypass will be detected.`, 0x5865f2),
+            flags: 64,
             components: [{
               type: ComponentType.ACTION_ROW,
               components: [{
                 type: ComponentType.BUTTON,
                 style: ButtonStyle.SUCCESS,
                 label: "✅ I completed the link — Give me my key",
-                custom_id: `getkey_complete:${scriptId}`,
+                custom_id: `getkey_complete:${scriptId}:${verifyToken}`,
               }],
             }],
           });
