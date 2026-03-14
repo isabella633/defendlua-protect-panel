@@ -46,35 +46,19 @@ const Verify = () => {
 
   const loadVerification = async () => {
     try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/verify-key-link?token=${token}`);
-      const html = await res.text();
+      const res = await fetch(`${supabaseUrl}/functions/v1/verify-key-link?token=${token}&format=json`);
+      const data = await res.json();
       
-      if (!res.ok) {
+      if (!res.ok || data.error) {
         setStatus("error");
-        setErrorMessage(res.status === 404 ? "This verification link is invalid or has expired." : "Something went wrong. Please try again.");
+        setErrorMessage(data.error || "Something went wrong.");
         return;
       }
 
-      // Parse the response to extract provider info
-      // We'll call a JSON endpoint instead - let's use the edge function with a json flag
-      const jsonRes = await fetch(`${supabaseUrl}/functions/v1/verify-key-link?token=${token}&format=json`);
-      if (jsonRes.ok) {
-        const data = await jsonRes.json();
-        if (data.error) {
-          setStatus("error");
-          setErrorMessage(data.error);
-          return;
-        }
-        setProvider(data.provider || "");
-        setProviderLink(data.providerLink || "");
-        setScriptName(data.scriptName || "Unknown Script");
-        setStatus("ready");
-      } else {
-        // Fallback: just show generic page
-        setProvider("Link");
-        setScriptName("Script");
-        setStatus("ready");
-      }
+      setProvider(data.provider || "Link");
+      setProviderLink(data.providerLink || "");
+      setScriptName(data.scriptName || "Unknown Script");
+      setStatus("ready");
     } catch {
       setStatus("error");
       setErrorMessage("Failed to load verification. Please try again.");
