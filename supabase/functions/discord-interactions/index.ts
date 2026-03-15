@@ -722,11 +722,15 @@ Deno.serve(async (req) => {
 
       if (customId.startsWith("loader_redeem:")) {
         const scriptId = customId.replace("loader_redeem:", "");
-        const { data: script } = await supabase.from("scripts").select("script_name").eq("id", scriptId).single();
+        const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
         if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
 
+        const loaderBase = script.slug
+          ? `https://defendlua.lol/s/${script.slug}`
+          : `${supabaseUrl}/functions/v1/serve-raw-script?id=${scriptId}`;
+
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
-          ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse the \`/redeem\` command with your key:\n\`/redeem key:YOUR-KEY-HERE\`\n\nThis will give you a Lua script that auto-whitelists your HWID.`, 0x00ff00),
+          ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse \`/redeem key:YOUR-KEY-HERE\` to get your loadstring.\n\nOr paste this in your executor with your key:\n\`\`\`lua\nloadstring(game:HttpGet("${loaderBase}${script.slug ? '?' : '&'}redeemkey=YOUR-KEY-HERE"))()\n\`\`\``, 0x00ff00),
           components: [],
         });
       }
