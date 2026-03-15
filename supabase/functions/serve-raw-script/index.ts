@@ -678,7 +678,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const accessAllowed = publicAccess || (isHwidWhitelisted && isIpWhitelisted);
+    const accessAllowed = publicAccess || redeemWhitelisted || (isHwidWhitelisted && isIpWhitelisted);
 
     if (!accessAllowed) {
       console.log("Access denied:", { scriptId, hwid, isHwidWhitelisted, isIpWhitelisted, publicAccess });
