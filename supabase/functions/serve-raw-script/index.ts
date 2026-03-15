@@ -632,7 +632,7 @@ Deno.serve(async (req) => {
 
     const { data: script, error } = await supabaseAdmin
       .from("scripts")
-      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url")
+      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark")
       .eq("id", scriptId)
       .single();
 
@@ -1181,7 +1181,12 @@ task.spawn(function()
 end)
 `;
 
-    const finalScript = ownerPlan === 'free' 
+    // Free users: always show watermark. Pro/Enterprise: respect show_watermark setting
+    const shouldShowWatermark = ownerPlan === 'free' 
+      ? true 
+      : (script as any).show_watermark !== false;
+
+    const finalScript = shouldShowWatermark
       ? promotionCode + "\n" + protectedScript 
       : protectedScript;
 

@@ -53,6 +53,7 @@ protectedFunction()`);
   const [hwidBlacklist, setHwidBlacklist] = useState<string[]>([]);
   const [newBlacklistHwid, setNewBlacklistHwid] = useState("");
   const [publicAccess, setPublicAccess] = useState(false);
+  const [showWatermark, setShowWatermark] = useState(true);
   const [accessLogs, setAccessLogs] = useState<any[]>([]);
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "enterprise">("free");
   const [userId, setUserId] = useState<string>("");
@@ -99,7 +100,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from("scripts")
-      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug")
+      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark")
       .eq("id", scriptId)
       .single();
 
@@ -110,6 +111,7 @@ protectedFunction()`);
       setIpList(data.ip_list || []);
       setHwidBlacklist(data.hwid_blacklist || []);
       setPublicAccess(data.public_access || false);
+      setShowWatermark((data as any).show_watermark !== false);
       setWebhookUrl((data as any).webhook_url || "");
       setRawLink(`https://api.defendlua.lol/s/${data.slug}`);
     }
@@ -137,6 +139,7 @@ protectedFunction()`);
       ip_list: ipList,
       hwid_blacklist: hwidBlacklist,
       public_access: publicAccess,
+      show_watermark: showWatermark,
     };
 
     // Only include webhook_url for Pro/Enterprise plans with validation
@@ -484,6 +487,26 @@ protectedFunction()`);
                     </div>
                   </div>
                 )}
+
+                {/* Watermark Toggle - Pro/Enterprise can toggle, Free is forced on */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Promotional Watermark</label>
+                  <div className="flex items-center justify-between bg-muted/50 p-3 rounded border border-border/50">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Show "DEFENDLUA.LOL" watermark</p>
+                      <p className="text-xs text-muted-foreground">
+                        {userPlan === "free" 
+                          ? "Free plan: Watermark is always shown. Upgrade to remove it." 
+                          : "Toggle the in-game promotional watermark"}
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={showWatermark} 
+                      onCheckedChange={setShowWatermark} 
+                      disabled={userPlan === "free"}
+                    />
+                  </div>
+                </div>
 
                 {(userPlan === "pro" || userPlan === "enterprise") && (
                   <div>

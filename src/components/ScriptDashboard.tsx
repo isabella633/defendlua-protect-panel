@@ -448,6 +448,26 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
             </CardContent>
           </Card>
 
+          {/* Watermark Notice for Free Users */}
+          {(subscription?.plan === 'free' || !subscription?.plan) && (
+            <Card className="mb-6 border-amber-500/30 bg-gradient-to-br from-accent/5 to-background">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-accent mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Promotional Watermark Active</h4>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Your scripts include a rainbow "DEFENDLUA.LOL" watermark visible to all users. This cannot be removed on the Free plan.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <strong>Upgrade to Pro or Enterprise</strong> to remove the watermark or toggle it on/off per script.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pro Plan Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Activation Code Card */}

@@ -1,0 +1,1 @@
+ALTER TABLE public.scripts ADD COLUMN show_watermark boolean NOT NULL DEFAULT true;
