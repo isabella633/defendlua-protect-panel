@@ -16,6 +16,7 @@ import LinkDiscord from "./pages/LinkDiscord";
 import NotFound from "./pages/NotFound";
 import Verify from "./pages/Verify";
 import ResetPassword from "./pages/ResetPassword";
+import ScriptRedirect from "./pages/ScriptRedirect";
 const queryClient = new QueryClient();
 
 const App = () => (
