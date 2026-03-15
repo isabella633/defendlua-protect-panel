@@ -511,7 +511,7 @@ Deno.serve(async (req) => {
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
       
-      const collectorScript = generateCollectorScript(scriptId);
+      const collectorScript = generateCollectorScript(scriptId, scriptSlug || undefined);
       return new Response(collectorScript, {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
