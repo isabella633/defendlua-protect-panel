@@ -111,6 +111,7 @@ protectedFunction()`);
       setIpList(data.ip_list || []);
       setHwidBlacklist(data.hwid_blacklist || []);
       setPublicAccess(data.public_access || false);
+      setShowWatermark((data as any).show_watermark !== false);
       setWebhookUrl((data as any).webhook_url || "");
       setRawLink(`https://api.defendlua.lol/s/${data.slug}`);
     }
