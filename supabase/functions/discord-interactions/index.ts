@@ -631,13 +631,32 @@ Deno.serve(async (req) => {
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
         if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
-        const loaderUrl = `https://api.defendlua.lol/s/${script.slug}`;
-        const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
+        // Check if user has a valid (redeemed or unredeemed) key for this script
+        const { data: existingKey } = await supabase
+          .from("generated_keys")
+          .select("key, redeemed, expires_at")
+          .eq("script_id", scriptId)
+          .eq("discord_id", discordId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
 
-        return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-          ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nCopy and execute this in your executor:\n\`\`\`lua\n${luaLoader}\n\`\`\``, 0x5865f2),
-          flags: 64,
-        });
+        const loaderUrl = `https://api.defendlua.lol/s/${script.slug}`;
+
+        if (existingKey && new Date(existingKey.expires_at) > new Date()) {
+          // User has a valid key — show the key-based loadstring
+          const luaLoader = `Key = "${existingKey.key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nCopy and execute this in your executor:\n\`\`\`lua\n${luaLoader}\n\`\`\``, 0x00ff00),
+            flags: 64,
+          });
+        } else {
+          // No valid key — tell them to get one
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            ...createEmbed("📜 Get Script", `**${script.script_name}**\n\n⚠️ You don't have a valid key yet.\n\nUse the **Get Key** button to obtain a key first, then come back here to get your script.`, 0xffaa00),
+            flags: 64,
+          });
+        }
       }
 
       if (customId.startsWith("loader_getkey:")) {
