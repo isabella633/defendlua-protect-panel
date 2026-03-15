@@ -508,7 +508,7 @@ protectedFunction()`);
                   </div>
                 </div>
 
-
+                {(userPlan === "pro" || userPlan === "enterprise") && (
                   <div>
                     <label className="text-sm font-medium mb-2 block flex items-center gap-2">
                       <Bell className="w-4 h-4" />
