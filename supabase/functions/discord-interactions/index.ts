@@ -705,8 +705,8 @@ Deno.serve(async (req) => {
           .eq("enabled", true)
           .single();
 
-        if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
-          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), components: [],
+        if (!config) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), flags: 64,
         });
 
         const verifyToken = crypto.randomUUID().replace(/-/g, "").substring(0, 24);
@@ -714,9 +714,9 @@ Deno.serve(async (req) => {
         await supabase.from("key_link_verifications").insert({ token: verifyToken, discord_id: discordId, script_id: scriptId });
 
         const verifyLink = `https://defendlua.lol/verify?token=${verifyToken}`;
-        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+        return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
           ...createEmbed("🔑 Get Your Key", `**Script:** ${config.scripts?.script_name}\n\n🔗 **Click to start:** ${verifyLink}\n\n1️⃣ Complete the ${config.provider} task\n2️⃣ Get redirected back to receive your key\n\n🚫 Bypass detection is active.`, 0x5865f2),
-          components: [],
+          flags: 64,
         });
       }
 
