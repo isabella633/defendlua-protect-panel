@@ -781,7 +781,6 @@ end`;
         const verifyLink = `https://defendlua.lol/verify?token=${verifyToken}`;
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed("🔑 Get Your Key", `**Script:** ${config.scripts?.script_name}\n\n🔗 **Click to start:** ${verifyLink}\n\n1️⃣ Complete the ${config.provider} task\n2️⃣ Get redirected back to receive your key\n\n🚫 Bypass detection is active.`, 0x5865f2),
-          flags: 64,
           components: [],
         });
       }
