@@ -10,7 +10,7 @@ const commands = [
   // ── Public commands (anyone can use) ──
   { name: "help", description: "Show all available bot commands" },
   { name: "link", description: "Link your Discord account to DefendLua", options: [{ name: "code", description: "The 6-character link code", type: 3, required: true }] },
-  { name: "loader", description: "Browse available scripts — get script, redeem, get key, or view stats" },
+  { name: "loader", description: "Browse available scripts — get script, redeem, get key, or view stats", default_member_permissions: ADMIN_ONLY },
   { name: "getkey", description: "Get a key for a script by completing a link" },
   { name: "redeem", description: "Redeem a key — gives you a script to execute that auto-whitelists your HWID", options: [
     { name: "key", description: "The key you received", type: 3, required: true },
