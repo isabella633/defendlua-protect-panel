@@ -111,8 +111,7 @@ protectedFunction()`);
       setHwidBlacklist(data.hwid_blacklist || []);
       setPublicAccess(data.public_access || false);
       setWebhookUrl((data as any).webhook_url || "");
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      setRawLink(`${supabaseUrl}/functions/v1/serve-raw-script?id=${data.slug}`);
+      setRawLink(`https://api.defendlua.lol/s/${data.slug}`);
     }
 
     // Load access logs
