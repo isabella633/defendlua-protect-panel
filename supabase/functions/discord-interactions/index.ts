@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
             { name: "ℹ️ /info", value: "Full script details (dropdown)", inline: true },
             { name: "📋 /logs", value: "Recent access logs (dropdown)", inline: true },
             { name: "🛡️ /denied", value: "Recently denied HWIDs (dropdown)", inline: true },
-            { name: "✅ /whitelist <hwid>", value: "Add HWID to whitelist (dropdown)", inline: true },
+            { name: "✅ /whitelist @user [expiry]", value: "Whitelist a Discord user (generates key & DMs them)", inline: true },
             { name: "🗑️ /unwhitelist <hwid>", value: "Remove from whitelist (dropdown)", inline: true },
             { name: "🚫 /blacklist <hwid>", value: "Add HWID to blacklist (dropdown)", inline: true },
             { name: "♻️ /unblacklist <hwid>", value: "Remove from blacklist (dropdown)", inline: true },
@@ -376,8 +376,31 @@ Deno.serve(async (req) => {
           return scriptSelectMenu("webhook", scripts, "🔗 Select a script for webhook", desc, url || "__remove__");
         }
 
+        // ── /whitelist (supports @user mention OR hwid) ──
+        case "whitelist": {
+          const targetUser = getOpt("user");
+          const hwid = getOpt("hwid");
+          const expiry = getOpt("expiry");
+
+          if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
+
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("You don't have any scripts yet.");
+
+          if (targetUser) {
+            // Discord user-based whitelist: generate key + DM
+            const extraPayload = JSON.stringify({ targetUser, expiry: expiry ?? 24 });
+            return scriptSelectMenu("whitelist_user", scripts, "✅ Select a script to whitelist user", `User: <@${targetUser}>\nExpiry: ${expiry === 0 ? "Lifetime" : `${expiry ?? 24}h`}\nSelect the script below.`, extraPayload);
+          } else {
+            // Legacy HWID-based whitelist
+            return scriptSelectMenu("whitelist", scripts, "✅ Select a script to whitelist HWID", `HWID: \`${hwid.substring(0, 40)}\`\nSelect the script below.`, hwid);
+          }
+        }
+
         // ── HWID commands with select menu ──
-        case "whitelist":
         case "unwhitelist":
         case "blacklist":
         case "unblacklist": {
@@ -391,7 +414,6 @@ Deno.serve(async (req) => {
           if (!scripts.length) return errReply("You don't have any scripts yet.");
 
           const actionLabels: Record<string, string> = {
-            whitelist: "✅ Select a script to whitelist HWID",
             unwhitelist: "🗑️ Select a script to unwhitelist HWID",
             blacklist: "🚫 Select a script to blacklist HWID",
             unblacklist: "♻️ Select a script to unblacklist HWID",
@@ -575,13 +597,12 @@ Deno.serve(async (req) => {
           const safeKey = keyData.key;
           const scriptSlug = keyData.scripts?.slug;
 
-          // Build a short loadstring that auto-redeems on execution
           const loaderUrl = `https://api.defendlua.lol/s/${scriptSlug || keyData.script_id}`;
 
-          const loadstring = `loadstring(game:HttpGet("${loaderUrl}?redeemkey=${safeKey}"))()`;
+          const loadstringCode = `Key = "${safeKey}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-            ...createEmbed("✅ Redeem Key", `**Script:** ${scriptName}\n**Key:** \`${safeKey}\`\n\nPaste this in your executor — it will auto-redeem your key and load the script:\n\`\`\`lua\n${loadstring}\n\`\`\``, 0x00ff00),
+            ...createEmbed("✅ Redeem Key", `**Script:** ${scriptName}\n**Key:** \`${safeKey}\`\n\nPaste this in your executor — it will auto-redeem your key and load the script:\n\`\`\`lua\n${loadstringCode}\n\`\`\``, 0x00ff00),
             flags: 64,
           });
         }
@@ -651,7 +672,7 @@ Deno.serve(async (req) => {
         const loaderBase = `https://api.defendlua.lol/s/${script.slug || scriptId}`;
 
         return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-          ...createEmbed("🔑 Redeem a Key", `**${script.script_name}**\n\nUse \`/redeem key:YOUR-KEY-HERE\` to get your loadstring.\n\nOr paste this in your executor with your key:\n\`\`\`lua\nloadstring(game:HttpGet("${loaderBase}?redeemkey=YOUR-KEY-HERE"))()\n\`\`\``, 0x00ff00),
+          ...createEmbed("🔑 Redeem a Key", `**${script.script_name}**\n\nUse \`/redeem key:YOUR-KEY-HERE\` to get your loadstring.\n\nOr paste this in your executor with your key:\n\`\`\`lua\nKey = "YOUR-KEY-HERE"\nloadstring(game:HttpGet("${loaderBase}?redeemkey="..Key))()\n\`\`\``, 0x00ff00),
           flags: 64,
         });
       }
@@ -1009,6 +1030,95 @@ Deno.serve(async (req) => {
           return reply(InteractionResponseType.UPDATE_MESSAGE, {
             ...createEmbed("🔑 Complete the Link to Get Your Key", `**Script:** ${config.scripts?.script_name}\n**Provider:** ${config.provider}\n\n🔗 **Click the link below to start:**\n${verifyLink}\n\n1️⃣ You'll be redirected to ${config.provider}\n2️⃣ Complete the full task\n3️⃣ You'll be redirected back to receive your key automatically\n\n🚫 **Bypassing will be detected** — the system verifies your completion.`, 0x5865f2),
             flags: 64,
+            components: [],
+          });
+        }
+
+        // ── whitelist_user: generate key for Discord user and DM them ──
+        if (action === "whitelist_user") {
+          const extraPayload = JSON.parse(extraData);
+          const targetUserId = extraPayload.targetUser;
+          const expiryHours = extraPayload.expiry ?? 24;
+
+          const { data: script } = await supabase
+            .from("scripts")
+            .select("id, script_name, slug, owner_id")
+            .eq("id", scriptId)
+            .eq("owner_id", userId)
+            .single();
+
+          if (!script) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Script not found or you don't own it.", 0xff0000),
+              components: [],
+            });
+          }
+
+          // Generate a unique key
+          const key = generateKey();
+          const expiresAt = expiryHours === 0
+            ? new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString() // ~100 years = lifetime
+            : new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
+
+          // Store key in generated_keys
+          const { error: keyInsertError } = await supabase
+            .from("generated_keys")
+            .insert({
+              key,
+              script_id: script.id,
+              discord_id: targetUserId,
+              expires_at: expiresAt,
+              redeemed: false,
+            });
+
+          if (keyInsertError) {
+            console.error("Key insert error:", keyInsertError);
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Failed to generate key.", 0xff0000),
+              components: [],
+            });
+          }
+
+          const loaderUrl = `https://api.defendlua.lol/s/${script.slug || script.id}`;
+          const loadstringCode = `Key = "${key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
+
+          // DM the target user
+          const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
+          if (botToken) {
+            try {
+              // Create DM channel
+              const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
+                method: "POST",
+                headers: { "Authorization": `Bot ${botToken}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ recipient_id: targetUserId }),
+              });
+              const dmChannel = await dmRes.json();
+
+              if (dmChannel.id) {
+                const expiryText = expiryHours === 0 ? "♾️ Lifetime" : `${expiryHours} hours`;
+                await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+                  method: "POST",
+                  headers: { "Authorization": `Bot ${botToken}`, "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    embeds: [{
+                      title: "🎉 You've Been Whitelisted!",
+                      description: `You have been whitelisted for **${script.script_name}**!\n\n**Your Key:** \`${key}\`\n**Expires:** ${expiryText}\n\nPaste this in your executor:\n\`\`\`lua\n${loadstringCode}\n\`\`\`\n\nOr use \`/redeem key:${key}\` in Discord.`,
+                      color: 0x00ff00,
+                      footer: { text: "DefendLua Bot" },
+                      timestamp: new Date().toISOString(),
+                    }],
+                  }),
+                });
+              }
+            } catch (err) {
+              console.error("Failed to DM user:", err);
+            }
+          }
+
+          const expiryText = expiryHours === 0 ? "♾️ Lifetime" : `${expiryHours}h`;
+
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("✅ User Whitelisted", `Successfully whitelisted <@${targetUserId}> for **${script.script_name}**!\n\n**Key:** \`${key}\`\n**Expires:** ${expiryText}\n\nThe user has been DM'd with their key and loadstring.`, 0x00ff00),
             components: [],
           });
         }

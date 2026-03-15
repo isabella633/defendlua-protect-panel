@@ -31,7 +31,11 @@ const commands = [
   { name: "webhook", description: "Set or remove a Discord webhook URL for a script", default_member_permissions: ADMIN_ONLY, options: [{ name: "url", description: "Webhook URL (leave empty to remove)", type: 3, required: false }] },
 
   // Commands that need typed input
-  { name: "whitelist", description: "Add HWID to whitelist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to whitelist", type: 3, required: true }] },
+  { name: "whitelist", description: "Whitelist a Discord user (generates a key & DMs them)", default_member_permissions: ADMIN_ONLY, options: [
+    { name: "user", description: "Discord user to whitelist", type: 6, required: false },
+    { name: "hwid", description: "HWID to whitelist (manual)", type: 3, required: false },
+    { name: "expiry", description: "Key expiry in hours (0 = lifetime, default: 24)", type: 4, required: false },
+  ]},
   { name: "unwhitelist", description: "Remove HWID from whitelist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
   { name: "blacklist", description: "Add HWID to blacklist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to blacklist", type: 3, required: true }] },
   { name: "unblacklist", description: "Remove HWID from blacklist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
