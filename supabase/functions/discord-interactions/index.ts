@@ -576,9 +576,9 @@ Deno.serve(async (req) => {
           const scriptSlug = keyData.scripts?.slug;
 
           // Build a short loadstring that auto-redeems on execution
-          const loaderUrl = `https://api.defendlua.lol/s/${scriptSlug || keyData.script_id}`;
+          const loaderUrl = `${supabaseUrl}/functions/v1/serve-raw-script?id=${scriptSlug || keyData.script_id}`;
 
-          const loadstring = `loadstring(game:HttpGet("${loaderUrl}?redeemkey=${safeKey}"))()`;
+          const loadstring = `loadstring(game:HttpGet("${loaderUrl}&redeemkey=${safeKey}"))()`;
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("✅ Redeem Key", `**Script:** ${scriptName}\n**Key:** \`${safeKey}\`\n\nPaste this in your executor — it will auto-redeem your key and load the script:\n\`\`\`lua\n${loadstring}\n\`\`\``, 0x00ff00),
@@ -685,7 +685,7 @@ Deno.serve(async (req) => {
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
         if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
-        const loaderUrl = `https://api.defendlua.lol/s/${script.slug}`;
+        const loaderUrl = `${supabaseUrl}/functions/v1/serve-raw-script?id=${script.slug}`;
         const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
 
         return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
@@ -723,10 +723,10 @@ Deno.serve(async (req) => {
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
         if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
-        const loaderBase = `https://api.defendlua.lol/s/${script.slug || scriptId}`;
+        const loaderBase = `${supabaseUrl}/functions/v1/serve-raw-script?id=${script.slug || scriptId}`;
 
         return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-          ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse \`/redeem key:YOUR-KEY-HERE\` to get your loadstring.\n\nOr paste this in your executor with your key:\n\`\`\`lua\nloadstring(game:HttpGet("${loaderBase}?redeemkey=YOUR-KEY-HERE"))()\n\`\`\``, 0x00ff00),
+          ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse \`/redeem key:YOUR-KEY-HERE\` to get your loadstring.\n\nOr paste this in your executor with your key:\n\`\`\`lua\nloadstring(game:HttpGet("${loaderBase}&redeemkey=YOUR-KEY-HERE"))()\n\`\`\``, 0x00ff00),
           flags: 64,
         });
       }
