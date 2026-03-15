@@ -308,7 +308,8 @@ ${constPool}
 };
 
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
-const generateCollectorScript = (scriptId: string, scriptSlug?: string): string => {
+const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKey?: string): string => {
+  const redeemParam = redeemKey ? `&redeemkey=${encodeURIComponent(redeemKey)}` : '';
   const baseUrl = `https://api.defendlua.lol/s/${scriptSlug || scriptId}?key=`;
   
   // Generate unique random identifiers
@@ -345,16 +346,24 @@ const generateCollectorScript = (scriptId: string, scriptSlug?: string): string 
  local _RS=nil
  pcall(function()
  if game and game.HttpGet then
- _RS=game:HttpGet(_URL.._HW)
- elseif syn and syn.request then
- local r=syn.request({Url=_URL.._HW,Method="GET"})
- if r and r.Body then _RS=r.Body end
- elseif request then
- local r=request({Url=_URL.._HW,Method="GET"})
- if r and r.Body then _RS=r.Body end
- elseif http_request then
- local r=http_request({Url=_URL.._HW,Method="GET"})
- if r and r.Body then _RS=r.Body end
+  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ''}"
+  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  _RS=game:HttpGet(_FULL)
+  elseif syn and syn.request then
+  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ''}"
+  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local r=syn.request({Url=_FULL,Method="GET"})
+  if r and r.Body then _RS=r.Body end
+  elseif request then
+  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ''}"
+  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local r=request({Url=_FULL,Method="GET"})
+  if r and r.Body then _RS=r.Body end
+  elseif http_request then
+  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ''}"
+  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local r=http_request({Url=_FULL,Method="GET"})
+  if r and r.Body then _RS=r.Body end
  end
  end)
  if _RS and #_RS>10 then
@@ -611,7 +620,7 @@ Deno.serve(async (req) => {
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
       
-      const collectorScript = generateCollectorScript(scriptId, lookupSlug || undefined);
+      const collectorScript = generateCollectorScript(scriptId, lookupSlug || undefined, redeemKey || undefined);
       return new Response(collectorScript, {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
