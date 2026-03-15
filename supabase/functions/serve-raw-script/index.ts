@@ -1133,8 +1133,59 @@ end
     };
     
     const protectedScript = obfuscateScript(script.script_key, hwid);
-    
-    return new Response(protectedScript, {
+
+    // Check owner's subscription plan for promotional watermark
+    let ownerPlan = 'free';
+    const { data: ownerSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', script.owner_id)
+      .maybeSingle();
+    if (ownerSub) {
+      ownerPlan = ownerSub.plan;
+    }
+
+    // Inject promotional watermark for free plan users (cannot be removed)
+    const promotionCode = `
+local _DL_SG = Instance.new("ScreenGui")
+local _DL_FR = Instance.new("Frame")
+local _DL_PR = Instance.new("TextLabel")
+local _DL_US = Instance.new("UIStroke")
+_DL_SG.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+_DL_SG.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+_DL_SG.ResetOnSpawn = false
+_DL_FR.Parent = _DL_SG
+_DL_FR.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+_DL_FR.BackgroundTransparency = 1.000
+_DL_FR.Position = UDim2.new(1, -180, 0, 10)
+_DL_FR.Size = UDim2.new(0, 170, 0, 60)
+_DL_PR.Name = "Promotion"
+_DL_PR.Parent = _DL_FR
+_DL_PR.BackgroundTransparency = 1.000
+_DL_PR.Size = UDim2.new(1, 0, 1, 0)
+_DL_PR.Font = Enum.Font.LuckiestGuy
+_DL_PR.Text = "DEFENDLUA.LOL"
+_DL_PR.TextColor3 = Color3.fromRGB(255, 255, 255)
+_DL_PR.TextScaled = true
+_DL_PR.TextWrapped = true
+_DL_US.Parent = _DL_PR
+_DL_US.Thickness = 2.5
+_DL_US.Transparency = 0
+task.spawn(function()
+    local _h = 0
+    while task.wait() do
+        _h = _h + (1/300)
+        if _h > 1 then _h = 0 end
+        _DL_PR.TextColor3 = Color3.fromHSV(_h, 0.8, 1)
+    end
+end)
+`;
+
+    const finalScript = ownerPlan === 'free' 
+      ? promotionCode + "\n" + protectedScript 
+      : protectedScript;
+
+    return new Response(finalScript, {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "text/plain" },
     });
