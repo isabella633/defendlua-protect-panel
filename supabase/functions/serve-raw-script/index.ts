@@ -443,6 +443,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const scriptId = url.searchParams.get("id");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
+    const redeemKey = url.searchParams.get("redeemkey");
     
     // Get client IP for rate limiting
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || 
