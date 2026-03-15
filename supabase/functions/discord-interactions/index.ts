@@ -867,15 +867,16 @@ Deno.serve(async (req) => {
             .eq("enabled", true)
             .single();
 
-          if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          if (!config) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("❌ Error", "Script not found or key system disabled.", 0xff0000),
-            components: [],
+            flags: 64,
           });
 
           const scriptName = config.scripts?.script_name || "Unknown";
 
-          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed(`📦 ${scriptName}`, `**Provider:** ${config.provider}\n**Key Duration:** ${config.key_expiry_hours}h\n**Redeem Mode:** ${config.redeem_action}\n\nChoose an action below:`, 0x5865f2),
+            flags: 64,
             components: [
               {
                 type: ComponentType.ACTION_ROW,
