@@ -441,7 +441,8 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const scriptId = url.searchParams.get("id");
+    let scriptId = url.searchParams.get("id");
+    const scriptSlug = url.searchParams.get("slug");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
     const redeemKey = url.searchParams.get("redeemkey");
     
