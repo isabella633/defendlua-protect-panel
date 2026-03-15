@@ -309,7 +309,8 @@ ${constPool}
 
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
 const generateCollectorScript = (scriptId: string, scriptSlug?: string): string => {
-  const baseUrl = `https://api.defendlua.lol/s/${scriptSlug || scriptId}?key=`;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "https://uwfuuhhcjlxgyeecpeii.supabase.co";
+  const baseUrl = `${supabaseUrl}/functions/v1/serve-raw-script?id=${scriptSlug || scriptId}&key=`;
   
   // Generate unique random identifiers
   const ts = Date.now();
