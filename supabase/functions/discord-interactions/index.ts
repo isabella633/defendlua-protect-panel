@@ -792,7 +792,6 @@ end`;
 
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse the \`/redeem\` command with your key:\n\`/redeem key:YOUR-KEY-HERE\`\n\nThis will give you a Lua script that auto-whitelists your HWID.`, 0x00ff00),
-          flags: 64,
           components: [],
         });
       }
