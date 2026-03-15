@@ -793,9 +793,9 @@ Deno.serve(async (req) => {
           { name: "📋 Redeem Mode", value: config?.redeem_action === "whitelist" ? "HWID Whitelist" : "Temporary Pass", inline: true },
         ];
 
-        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+        return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
           ...createEmbed(`📊 Stats: ${script.script_name}`, "Your access stats for this script", 0x5865f2, fields),
-          components: [],
+          flags: 64,
         });
       }
 
