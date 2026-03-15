@@ -934,7 +934,7 @@ end`;
 
           if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
             ...createEmbed("❌ Error", "Script not found or key system disabled.", 0xff0000),
-            flags: 64, components: [],
+            components: [],
           });
 
           const scriptName = config.scripts?.script_name || "Unknown";
