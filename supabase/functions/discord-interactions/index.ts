@@ -757,7 +757,6 @@ end`;
 
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed("📥 Script Loader", `**${script.script_name}**\n\nCopy and execute this in your executor:\n\`\`\`lua\n${luaLoader}\n\`\`\``, 0x5865f2),
-          flags: 64,
           components: [],
         });
       }
