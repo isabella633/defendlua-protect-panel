@@ -786,8 +786,10 @@ Deno.serve(async (req) => {
             redeemed_hwid: hwid,
           }).eq("id", keyData.id);
 
-          // If whitelist mode, add HWID to whitelist too
-          if (config?.redeem_action === "whitelist" && hwidList.length < hwidLimit) {
+          // Always add HWID to whitelist on key redemption (so it shows on the website)
+          // This covers both key system "whitelist" mode and direct /whitelist command keys
+          const shouldWhitelist = !config || config.redeem_action === "whitelist";
+          if (shouldWhitelist && !hwidList.includes(hwid) && hwidList.length < hwidLimit) {
             const updatedList = [...hwidList, hwid];
             await supabaseAdmin.from("scripts").update({ hwid_list: updatedList }).eq("id", scriptId);
           }
