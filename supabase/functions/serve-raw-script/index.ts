@@ -308,8 +308,10 @@ ${constPool}
 };
 
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
-const generateCollectorScript = (scriptId: string): string => {
-  const baseUrl = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
+const generateCollectorScript = (scriptId: string, scriptSlug?: string): string => {
+  const baseUrl = scriptSlug
+    ? `https://defendlua.lol/s/${scriptSlug}?key=`
+    : `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
   
   // Generate unique random identifiers
   const ts = Date.now();
@@ -441,7 +443,8 @@ Deno.serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const scriptId = url.searchParams.get("id");
+    let scriptId = url.searchParams.get("id");
+    const scriptSlug = url.searchParams.get("slug");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
     const redeemKey = url.searchParams.get("redeemkey");
     
@@ -464,11 +467,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!scriptId) {
+    if (!scriptId && !scriptSlug) {
       return new Response('print("ERROR: Script ID not provided")', {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
+    }
+
+    // Determine if the provided scriptId is a UUID or a slug
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const lookupSlug = scriptSlug || (scriptId && !uuidRegex.test(scriptId) ? scriptId : null);
+
+    // If we have a slug (explicit or detected), resolve to UUID
+    if (lookupSlug) {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      );
+      const { data: slugScript } = await supabaseAdmin
+        .from("scripts")
+        .select("id, slug")
+        .eq("slug", lookupSlug)
+        .single();
+      if (!slugScript) {
+        return new Response('print("ACCESS DENIED")', {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        });
+      }
+      scriptId = slugScript.id;
     }
     
     // Rate limit by script ID: 100 requests per hour per script
@@ -488,7 +515,7 @@ Deno.serve(async (req) => {
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
       
-      const collectorScript = generateCollectorScript(scriptId);
+      const collectorScript = generateCollectorScript(scriptId, lookupSlug || undefined);
       return new Response(collectorScript, {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
