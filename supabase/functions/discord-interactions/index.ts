@@ -941,7 +941,6 @@ end`;
 
           return reply(InteractionResponseType.UPDATE_MESSAGE, {
             ...createEmbed(`📦 ${scriptName}`, `**Provider:** ${config.provider}\n**Key Duration:** ${config.key_expiry_hours}h\n**Redeem Mode:** ${config.redeem_action}\n\nChoose an action below:`, 0x5865f2),
-            flags: 64,
             components: [
               {
                 type: ComponentType.ACTION_ROW,
