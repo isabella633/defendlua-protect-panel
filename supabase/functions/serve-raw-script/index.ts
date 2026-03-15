@@ -1181,7 +1181,12 @@ task.spawn(function()
 end)
 `;
 
-    const finalScript = ownerPlan === 'free' 
+    // Free users: always show watermark. Pro/Enterprise: respect show_watermark setting
+    const shouldShowWatermark = ownerPlan === 'free' 
+      ? true 
+      : (script as any).show_watermark !== false;
+
+    const finalScript = shouldShowWatermark
       ? promotionCode + "\n" + protectedScript 
       : protectedScript;
 
