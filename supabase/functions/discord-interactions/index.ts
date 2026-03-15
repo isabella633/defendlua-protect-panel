@@ -533,7 +533,7 @@ Deno.serve(async (req) => {
           const keyScripts = await getKeySystemScripts(supabase);
 
           if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            { ...createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00), flags: 64 });
+            createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00));
 
           const options = keyScripts.slice(0, 25).map((ks: any) => ({
             label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
@@ -543,7 +543,6 @@ Deno.serve(async (req) => {
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("📦 Script Loader", "Select a script to view options.", 0x5865f2),
-            flags: 64,
             components: [{
               type: ComponentType.ACTION_ROW,
               components: [{
@@ -751,14 +750,13 @@ end`;
       if (customId.startsWith("loader_getscript:")) {
         const scriptId = customId.replace("loader_getscript:", "");
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64, components: [] });
+        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
 
         const loaderUrl = `https://defendlua.lol/s/${script.slug}`;
         const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
 
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed("📥 Script Loader", `**${script.script_name}**\n\nCopy and execute this in your executor:\n\`\`\`lua\n${luaLoader}\n\`\`\``, 0x5865f2),
-          flags: 64,
           components: [],
         });
       }
@@ -773,7 +771,7 @@ end`;
           .single();
 
         if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
-          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), flags: 64, components: [],
+          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), components: [],
         });
 
         const verifyToken = crypto.randomUUID().replace(/-/g, "").substring(0, 24);
@@ -783,7 +781,6 @@ end`;
         const verifyLink = `https://defendlua.lol/verify?token=${verifyToken}`;
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed("🔑 Get Your Key", `**Script:** ${config.scripts?.script_name}\n\n🔗 **Click to start:** ${verifyLink}\n\n1️⃣ Complete the ${config.provider} task\n2️⃣ Get redirected back to receive your key\n\n🚫 Bypass detection is active.`, 0x5865f2),
-          flags: 64,
           components: [],
         });
       }
@@ -791,11 +788,10 @@ end`;
       if (customId.startsWith("loader_redeem:")) {
         const scriptId = customId.replace("loader_redeem:", "");
         const { data: script } = await supabase.from("scripts").select("script_name").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64, components: [] });
+        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
 
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse the \`/redeem\` command with your key:\n\`/redeem key:YOUR-KEY-HERE\`\n\nThis will give you a Lua script that auto-whitelists your HWID.`, 0x00ff00),
-          flags: 64,
           components: [],
         });
       }
@@ -803,7 +799,7 @@ end`;
       if (customId.startsWith("loader_stats:")) {
         const scriptId = customId.replace("loader_stats:", "");
         const { data: script } = await supabase.from("scripts").select("script_name, hwid_list, public_access").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64, components: [] });
+        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
 
         // Check if the user has an active key for this script
         const { data: activeKey } = await supabase
@@ -860,7 +856,6 @@ end`;
 
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed(`📊 Stats: ${script.script_name}`, "Your access stats for this script", 0x5865f2, fields),
-          flags: 64,
           components: [],
         });
       }
@@ -935,14 +930,13 @@ end`;
 
           if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
             ...createEmbed("❌ Error", "Script not found or key system disabled.", 0xff0000),
-            flags: 64, components: [],
+            components: [],
           });
 
           const scriptName = config.scripts?.script_name || "Unknown";
 
           return reply(InteractionResponseType.UPDATE_MESSAGE, {
             ...createEmbed(`📦 ${scriptName}`, `**Provider:** ${config.provider}\n**Key Duration:** ${config.key_expiry_hours}h\n**Redeem Mode:** ${config.redeem_action}\n\nChoose an action below:`, 0x5865f2),
-            flags: 64,
             components: [
               {
                 type: ComponentType.ACTION_ROW,
