@@ -16,6 +16,7 @@ import LinkDiscord from "./pages/LinkDiscord";
 import NotFound from "./pages/NotFound";
 import Verify from "./pages/Verify";
 import ResetPassword from "./pages/ResetPassword";
+import ScriptRedirect from "./pages/ScriptRedirect";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/link-discord" element={<LinkDiscord />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify" element={<Verify />} />
+          <Route path="/s/:slug" element={<ScriptRedirect />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
