@@ -308,8 +308,10 @@ ${constPool}
 };
 
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
-const generateCollectorScript = (scriptId: string): string => {
-  const baseUrl = `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
+const generateCollectorScript = (scriptId: string, scriptSlug?: string): string => {
+  const baseUrl = scriptSlug
+    ? `https://defendlua.lol/s/${scriptSlug}?key=`
+    : `https://uwfuuhhcjlxgyeecpeii.supabase.co/functions/v1/serve-raw-script?id=${scriptId}&key=`;
   
   // Generate unique random identifiers
   const ts = Date.now();
