@@ -1137,7 +1137,7 @@ Deno.serve(async (req) => {
           const expiryText = expiryHours === 0 ? "♾️ Lifetime" : `${expiryHours}h`;
 
           return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("✅ User Whitelisted", `Successfully whitelisted <@${targetUserId}> for **${script.script_name}**!\n\n**Key:** \`${key}\`\n**Expires:** ${expiryText}\n\nThe user has been DM'd with their key and loadstring.`, 0x00ff00),
+            ...createEmbed("✅ User Whitelisted", `<@${targetUserId}> has been whitelisted for **${script.script_name}**! 🎉\n\nThey've been sent the key and loader in their DMs.\n**Expires:** ${expiryText}`, 0x00ff00),
             components: [],
           });
         }
