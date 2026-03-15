@@ -856,7 +856,6 @@ end`;
 
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed(`📊 Stats: ${script.script_name}`, "Your access stats for this script", 0x5865f2, fields),
-          flags: 64,
           components: [],
         });
       }
