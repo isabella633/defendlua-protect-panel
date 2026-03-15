@@ -761,41 +761,63 @@ Deno.serve(async (req) => {
     const isHwidWhitelisted = hwidList.includes(hwid);
     const isIpWhitelisted = ipList.length === 0 || ipList.includes(clientIp);
 
-    // ── Auto-redeem key if redeemkey param is provided ──
+    // ── Key-based access: verify redeemkey on EVERY request ──
     let redeemWhitelisted = false;
-    if (redeemKey && !isHwidWhitelisted) {
+    if (redeemKey) {
       const { data: keyData } = await supabaseAdmin
         .from("generated_keys")
-        .select("id, redeemed, expires_at, script_id")
+        .select("id, redeemed, redeemed_hwid, expires_at, script_id")
         .eq("key", redeemKey.toUpperCase().trim())
         .eq("script_id", scriptId)
         .single();
 
-      if (keyData && !keyData.redeemed && new Date(keyData.expires_at) > new Date()) {
-        // Get redeem action config
-        const { data: config } = await supabaseAdmin
-          .from("key_system_configs")
-          .select("redeem_action")
-          .eq("script_id", scriptId)
-          .single();
+      if (keyData && new Date(keyData.expires_at) > new Date()) {
+        if (!keyData.redeemed) {
+          // First-time redemption: lock key to this HWID
+          const { data: config } = await supabaseAdmin
+            .from("key_system_configs")
+            .select("redeem_action")
+            .eq("script_id", scriptId)
+            .single();
 
-        // Mark key as redeemed
-        await supabaseAdmin.from("generated_keys").update({
-          redeemed: true,
-          redeemed_at: new Date().toISOString(),
-          redeemed_hwid: hwid,
-        }).eq("id", keyData.id);
+          await supabaseAdmin.from("generated_keys").update({
+            redeemed: true,
+            redeemed_at: new Date().toISOString(),
+            redeemed_hwid: hwid,
+          }).eq("id", keyData.id);
 
-        // If whitelist mode, add HWID
-        if (config?.redeem_action === "whitelist" && hwidList.length < hwidLimit) {
-          const updatedList = [...hwidList, hwid];
-          await supabaseAdmin.from("scripts").update({ hwid_list: updatedList }).eq("id", scriptId);
+          // If whitelist mode, add HWID to whitelist too
+          if (config?.redeem_action === "whitelist" && hwidList.length < hwidLimit) {
+            const updatedList = [...hwidList, hwid];
+            await supabaseAdmin.from("scripts").update({ hwid_list: updatedList }).eq("id", scriptId);
+          }
           redeemWhitelisted = true;
-          console.log("Auto-redeemed key and whitelisted HWID:", { scriptId, hwid, key: redeemKey });
+          console.log("Key redeemed and HWID-locked:", { scriptId, hwid, key: redeemKey });
+        } else if (keyData.redeemed_hwid === hwid) {
+          // Key already redeemed by THIS HWID — allow access
+          redeemWhitelisted = true;
+          console.log("Key re-used by same HWID:", { scriptId, hwid });
         } else {
-          redeemWhitelisted = true; // temporary access
-          console.log("Auto-redeemed key (temporary access):", { scriptId, key: redeemKey });
+          // Key redeemed by a DIFFERENT HWID — deny
+          console.log("Key HWID mismatch:", { scriptId, expected: keyData.redeemed_hwid, got: hwid });
+          await supabaseAdmin.from("access_logs").insert({
+            script_id: scriptId, hwid, ip_address: clientIp,
+            status: "denied", reason: "Key HWID mismatch",
+          });
+          await sendDiscordWebhook("Denied", "Key HWID Mismatch", 0xFF0000);
+          return new Response('print("ACCESS DENIED: This key is locked to a different device.")', {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "text/plain" },
+          });
         }
+      } else if (keyData && new Date(keyData.expires_at) <= new Date()) {
+        // Key expired
+        await supabaseAdmin.from("access_logs").insert({
+          script_id: scriptId, hwid, ip_address: clientIp,
+          status: "denied", reason: "Key expired",
+        });
+        return new Response('print("ACCESS DENIED: Your key has expired.")', {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        });
       }
     }
     
