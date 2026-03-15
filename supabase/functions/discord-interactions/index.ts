@@ -1123,6 +1123,7 @@ Deno.serve(async (req) => {
           });
         }
 
+        const { data: script, error: scriptError } = await supabase
           .from("scripts")
           .select("*")
           .eq("id", scriptId)
