@@ -788,7 +788,7 @@ end`;
       if (customId.startsWith("loader_redeem:")) {
         const scriptId = customId.replace("loader_redeem:", "");
         const { data: script } = await supabase.from("scripts").select("script_name").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64, components: [] });
+        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
 
         return reply(InteractionResponseType.UPDATE_MESSAGE, {
           ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse the \`/redeem\` command with your key:\n\`/redeem key:YOUR-KEY-HERE\`\n\nThis will give you a Lua script that auto-whitelists your HWID.`, 0x00ff00),
