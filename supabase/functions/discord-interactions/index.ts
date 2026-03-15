@@ -576,11 +576,9 @@ Deno.serve(async (req) => {
           const scriptSlug = keyData.scripts?.slug;
 
           // Build a short loadstring that auto-redeems on execution
-          const loaderUrl = scriptSlug
-            ? `https://defendlua.lol/s/${scriptSlug}`
-            : `${supabaseUrl}/functions/v1/serve-raw-script?id=${keyData.script_id}`;
+          const loaderUrl = `https://defendlua.lol/s/${scriptSlug || keyData.script_id}`;
 
-          const loadstring = `loadstring(game:HttpGet("${loaderUrl}${scriptSlug ? '?' : '&'}redeemkey=${safeKey}"))()`;
+          const loadstring = `loadstring(game:HttpGet("${loaderUrl}?redeemkey=${safeKey}"))()`;
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("✅ Redeem Key", `**Script:** ${scriptName}\n**Key:** \`${safeKey}\`\n\nPaste this in your executor — it will auto-redeem your key and load the script:\n\`\`\`lua\n${loadstring}\n\`\`\``, 0x00ff00),
