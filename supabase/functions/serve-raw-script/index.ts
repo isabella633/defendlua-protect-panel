@@ -308,7 +308,8 @@ ${constPool}
 };
 
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
-const generateCollectorScript = (scriptId: string, scriptSlug?: string): string => {
+const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKey?: string): string => {
+  const redeemParam = redeemKey ? `&redeemkey=${encodeURIComponent(redeemKey)}` : '';
   const baseUrl = `https://api.defendlua.lol/s/${scriptSlug || scriptId}?key=`;
   
   // Generate unique random identifiers
