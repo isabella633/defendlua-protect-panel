@@ -685,14 +685,14 @@ Deno.serve(async (req) => {
       if (customId.startsWith("loader_getscript:")) {
         const scriptId = customId.replace("loader_getscript:", "");
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
+        if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
         const loaderUrl = `https://defendlua.lol/s/${script.slug}`;
         const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
 
-        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+        return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
           ...createEmbed("📥 Script Loader", `**${script.script_name}**\n\nCopy and execute this in your executor:\n\`\`\`lua\n${luaLoader}\n\`\`\``, 0x5865f2),
-          components: [],
+          flags: 64,
         });
       }
 
@@ -705,8 +705,8 @@ Deno.serve(async (req) => {
           .eq("enabled", true)
           .single();
 
-        if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
-          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), components: [],
+        if (!config) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), flags: 64,
         });
 
         const verifyToken = crypto.randomUUID().replace(/-/g, "").substring(0, 24);
@@ -714,31 +714,31 @@ Deno.serve(async (req) => {
         await supabase.from("key_link_verifications").insert({ token: verifyToken, discord_id: discordId, script_id: scriptId });
 
         const verifyLink = `https://defendlua.lol/verify?token=${verifyToken}`;
-        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+        return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
           ...createEmbed("🔑 Get Your Key", `**Script:** ${config.scripts?.script_name}\n\n🔗 **Click to start:** ${verifyLink}\n\n1️⃣ Complete the ${config.provider} task\n2️⃣ Get redirected back to receive your key\n\n🚫 Bypass detection is active.`, 0x5865f2),
-          components: [],
+          flags: 64,
         });
       }
 
       if (customId.startsWith("loader_redeem:")) {
         const scriptId = customId.replace("loader_redeem:", "");
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
+        if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
         const loaderBase = script.slug
           ? `https://defendlua.lol/s/${script.slug}`
           : `${supabaseUrl}/functions/v1/serve-raw-script?id=${scriptId}`;
 
-        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+        return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
           ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse \`/redeem key:YOUR-KEY-HERE\` to get your loadstring.\n\nOr paste this in your executor with your key:\n\`\`\`lua\nloadstring(game:HttpGet("${loaderBase}${script.slug ? '?' : '&'}redeemkey=YOUR-KEY-HERE"))()\n\`\`\``, 0x00ff00),
-          components: [],
+          flags: 64,
         });
       }
 
       if (customId.startsWith("loader_stats:")) {
         const scriptId = customId.replace("loader_stats:", "");
         const { data: script } = await supabase.from("scripts").select("script_name, hwid_list, public_access").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
+        if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
         // Check if the user has an active key for this script
         const { data: activeKey } = await supabase
@@ -793,9 +793,9 @@ Deno.serve(async (req) => {
           { name: "📋 Redeem Mode", value: config?.redeem_action === "whitelist" ? "HWID Whitelist" : "Temporary Pass", inline: true },
         ];
 
-        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+        return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
           ...createEmbed(`📊 Stats: ${script.script_name}`, "Your access stats for this script", 0x5865f2, fields),
-          components: [],
+          flags: 64,
         });
       }
 
@@ -867,15 +867,16 @@ Deno.serve(async (req) => {
             .eq("enabled", true)
             .single();
 
-          if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          if (!config) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("❌ Error", "Script not found or key system disabled.", 0xff0000),
-            components: [],
+            flags: 64,
           });
 
           const scriptName = config.scripts?.script_name || "Unknown";
 
-          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed(`📦 ${scriptName}`, `**Provider:** ${config.provider}\n**Key Duration:** ${config.key_expiry_hours}h\n**Redeem Mode:** ${config.redeem_action}\n\nChoose an action below:`, 0x5865f2),
+            flags: 64,
             components: [
               {
                 type: ComponentType.ACTION_ROW,
