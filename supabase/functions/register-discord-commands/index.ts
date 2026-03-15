@@ -37,9 +37,8 @@ const commands = [
   ]},
   { name: "removesetup", description: "Remove the key system from a script (select from dropdown)" },
   { name: "getkey", description: "Get a key for a script by completing a link" },
-  { name: "redeem", description: "Redeem a key to get access to a script", options: [
+  { name: "redeem", description: "Redeem a key — gives you a script to execute that auto-whitelists your HWID", options: [
     { name: "key", description: "The key you received", type: 3, required: true },
-    { name: "hwid", description: "Your HWID to whitelist", type: 3, required: true },
   ]},
 ];
 
