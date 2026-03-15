@@ -533,7 +533,7 @@ Deno.serve(async (req) => {
           const keyScripts = await getKeySystemScripts(supabase);
 
           if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            { ...createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00), flags: 64 });
+            createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00));
 
           const options = keyScripts.slice(0, 25).map((ks: any) => ({
             label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
