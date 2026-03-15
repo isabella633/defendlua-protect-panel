@@ -527,6 +527,34 @@ Deno.serve(async (req) => {
           });
         }
 
+        // ── /loader (any user: browse scripts with key systems) ──
+        case "loader": {
+          const keyScripts = await getKeySystemScripts(supabase);
+
+          if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            { ...createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00), flags: 64 });
+
+          const options = keyScripts.slice(0, 25).map((ks: any) => ({
+            label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
+            description: `${ks.provider} | ${ks.key_expiry_hours}h keys | ${ks.redeem_action}`,
+            value: `loader:${ks.script_id}`,
+          }));
+
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            ...createEmbed("📦 Script Loader", "Select a script to view options.", 0x5865f2),
+            flags: 64,
+            components: [{
+              type: ComponentType.ACTION_ROW,
+              components: [{
+                type: ComponentType.STRING_SELECT,
+                custom_id: "select_script_loader",
+                placeholder: "Select a script",
+                options,
+              }],
+            }],
+          });
+        }
+
         // ── /redeem (any user: redeem a key — returns a Lua script) ──
         case "redeem": {
           const key = getOpt("key");
