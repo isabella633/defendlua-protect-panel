@@ -474,16 +474,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If we have a slug but no ID, resolve slug to ID
-    if (!scriptId && scriptSlug) {
+    // Determine if the provided scriptId is a UUID or a slug
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const lookupSlug = scriptSlug || (scriptId && !uuidRegex.test(scriptId) ? scriptId : null);
+
+    // If we have a slug (explicit or detected), resolve to UUID
+    if (lookupSlug) {
       const supabaseAdmin = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       );
       const { data: slugScript } = await supabaseAdmin
         .from("scripts")
-        .select("id")
-        .eq("slug", scriptSlug)
+        .select("id, slug")
+        .eq("slug", lookupSlug)
         .single();
       if (!slugScript) {
         return new Response('print("ACCESS DENIED")', {
