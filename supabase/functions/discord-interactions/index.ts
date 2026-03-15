@@ -242,7 +242,7 @@ Deno.serve(async (req) => {
             { name: "🔑 /setup", value: "Set up key system (Linkvertise/WorkInk)", inline: true },
             { name: "🗑️ /removesetup", value: "Remove key system (dropdown)", inline: true },
             { name: "🎫 /getkey", value: "Get a key by completing a link", inline: true },
-            { name: "✅ /redeem <key> <hwid>", value: "Redeem a key to get access", inline: true },
+            { name: "✅ /redeem <key>", value: "Redeem a key (gives you a script to run)", inline: true },
           ];
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             createEmbed("📖 DefendLua Bot Commands", "Commands with **(dropdown)** let you pick a script. Destructive actions require **(confirm)**.", 0x5865f2, fields));
