@@ -805,6 +805,44 @@ end`;
         const scriptId = parts[1];
         const extraData = parts.slice(2).join(":");
 
+        // ── loader: show action buttons for selected script ──
+        if (action === "loader") {
+          const { data: config } = await supabase
+            .from("key_system_configs")
+            .select("*, scripts:script_id(id, script_name, slug)")
+            .eq("script_id", scriptId)
+            .eq("enabled", true)
+            .single();
+
+          if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Script not found or key system disabled.", 0xff0000),
+            flags: 64, components: [],
+          });
+
+          const scriptName = config.scripts?.script_name || "Unknown";
+
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed(`📦 ${scriptName}`, `**Provider:** ${config.provider}\n**Key Duration:** ${config.key_expiry_hours}h\n**Redeem Mode:** ${config.redeem_action}\n\nChoose an action below:`, 0x5865f2),
+            flags: 64,
+            components: [
+              {
+                type: ComponentType.ACTION_ROW,
+                components: [
+                  { type: ComponentType.BUTTON, style: ButtonStyle.PRIMARY, label: "📥 Get Script", custom_id: `loader_getscript:${scriptId}`, emoji: { name: "📥" } },
+                  { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "🔑 Get Key", custom_id: `loader_getkey:${scriptId}`, emoji: { name: "🔑" } },
+                ],
+              },
+              {
+                type: ComponentType.ACTION_ROW,
+                components: [
+                  { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "✅ Redeem", custom_id: `loader_redeem:${scriptId}`, emoji: { name: "✅" } },
+                  { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "📊 Stats", custom_id: `loader_stats:${scriptId}`, emoji: { name: "📊" } },
+                ],
+              },
+            ],
+          });
+        }
+
         // ── getkey: special handling (doesn't require ownership) ──
         if (action === "getkey") {
           // Get the key system config
