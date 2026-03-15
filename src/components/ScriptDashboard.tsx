@@ -450,10 +450,10 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
 
           {/* Watermark Notice for Free Users */}
           {(subscription?.plan === 'free' || !subscription?.plan) && (
-            <Card className="mb-6 border-yellow-500/30 bg-gradient-to-br from-yellow-500/5 to-background">
+            <Card className="mb-6 border-amber-500/30 bg-gradient-to-br from-accent/5 to-background">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
+                  <Shield className="w-5 h-5 text-accent mt-0.5 shrink-0" />
                   <div>
                     <h4 className="font-semibold text-sm mb-1">Promotional Watermark Active</h4>
                     <p className="text-xs text-muted-foreground mb-2">
