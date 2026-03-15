@@ -738,7 +738,7 @@ Deno.serve(async (req) => {
       if (customId.startsWith("loader_stats:")) {
         const scriptId = customId.replace("loader_stats:", "");
         const { data: script } = await supabase.from("scripts").select("script_name, hwid_list, public_access").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
+        if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
         // Check if the user has an active key for this script
         const { data: activeKey } = await supabase
