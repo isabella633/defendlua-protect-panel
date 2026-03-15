@@ -243,6 +243,7 @@ Deno.serve(async (req) => {
             { name: "🗑️ /removesetup", value: "Remove key system (dropdown)", inline: true },
             { name: "🎫 /getkey", value: "Get a key by completing a link", inline: true },
             { name: "✅ /redeem <key>", value: "Redeem a key (gives you a script to run)", inline: true },
+            { name: "📦 /loader", value: "Browse scripts — get script, key, redeem, stats", inline: true },
           ];
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             createEmbed("📖 DefendLua Bot Commands", "Commands with **(dropdown)** let you pick a script. Destructive actions require **(confirm)**.", 0x5865f2, fields));
@@ -527,6 +528,34 @@ Deno.serve(async (req) => {
           });
         }
 
+        // ── /loader (any user: browse scripts with key systems) ──
+        case "loader": {
+          const keyScripts = await getKeySystemScripts(supabase);
+
+          if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            { ...createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00), flags: 64 });
+
+          const options = keyScripts.slice(0, 25).map((ks: any) => ({
+            label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
+            description: `${ks.provider} | ${ks.key_expiry_hours}h keys | ${ks.redeem_action}`,
+            value: `loader:${ks.script_id}`,
+          }));
+
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            ...createEmbed("📦 Script Loader", "Select a script to view options.", 0x5865f2),
+            flags: 64,
+            components: [{
+              type: ComponentType.ACTION_ROW,
+              components: [{
+                type: ComponentType.STRING_SELECT,
+                custom_id: "select_script_loader",
+                placeholder: "Select a script",
+                options,
+              }],
+            }],
+          });
+        }
+
         // ── /redeem (any user: redeem a key — returns a Lua script) ──
         case "redeem": {
           const key = getOpt("key");
@@ -718,6 +747,124 @@ end`;
         }
       }
 
+      // ── LOADER BUTTONS ──
+      if (customId.startsWith("loader_getscript:")) {
+        const scriptId = customId.replace("loader_getscript:", "");
+        const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
+        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64, components: [] });
+
+        const loaderUrl = `https://defendlua.lol/s/${script.slug}`;
+        const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
+
+        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed("📥 Script Loader", `**${script.script_name}**\n\nCopy and execute this in your executor:\n\`\`\`lua\n${luaLoader}\n\`\`\``, 0x5865f2),
+          flags: 64,
+          components: [],
+        });
+      }
+
+      if (customId.startsWith("loader_getkey:")) {
+        const scriptId = customId.replace("loader_getkey:", "");
+        const { data: config } = await supabase
+          .from("key_system_configs")
+          .select("*, scripts:script_id(script_name)")
+          .eq("script_id", scriptId)
+          .eq("enabled", true)
+          .single();
+
+        if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), flags: 64, components: [],
+        });
+
+        const verifyToken = crypto.randomUUID().replace(/-/g, "").substring(0, 24);
+        await supabase.from("key_link_verifications").delete().eq("discord_id", discordId).eq("script_id", scriptId);
+        await supabase.from("key_link_verifications").insert({ token: verifyToken, discord_id: discordId, script_id: scriptId });
+
+        const verifyLink = `https://defendlua.lol/verify?token=${verifyToken}`;
+        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed("🔑 Get Your Key", `**Script:** ${config.scripts?.script_name}\n\n🔗 **Click to start:** ${verifyLink}\n\n1️⃣ Complete the ${config.provider} task\n2️⃣ Get redirected back to receive your key\n\n🚫 Bypass detection is active.`, 0x5865f2),
+          flags: 64,
+          components: [],
+        });
+      }
+
+      if (customId.startsWith("loader_redeem:")) {
+        const scriptId = customId.replace("loader_redeem:", "");
+        const { data: script } = await supabase.from("scripts").select("script_name").eq("id", scriptId).single();
+        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64, components: [] });
+
+        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed("✅ Redeem a Key", `**${script.script_name}**\n\nUse the \`/redeem\` command with your key:\n\`/redeem key:YOUR-KEY-HERE\`\n\nThis will give you a Lua script that auto-whitelists your HWID.`, 0x00ff00),
+          flags: 64,
+          components: [],
+        });
+      }
+
+      if (customId.startsWith("loader_stats:")) {
+        const scriptId = customId.replace("loader_stats:", "");
+        const { data: script } = await supabase.from("scripts").select("script_name, hwid_list, public_access").eq("id", scriptId).single();
+        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64, components: [] });
+
+        // Check if the user has an active key for this script
+        const { data: activeKey } = await supabase
+          .from("generated_keys")
+          .select("redeemed, redeemed_at, expires_at")
+          .eq("discord_id", discordId)
+          .eq("script_id", scriptId)
+          .eq("redeemed", true)
+          .order("redeemed_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Check if user's HWID is whitelisted
+        const isWhitelisted = false; // Can't check without HWID from Discord side
+
+        let accessStatus = "❌ No active access";
+        let timeLeft = "N/A";
+
+        if (activeKey) {
+          const expiresAt = new Date(activeKey.expires_at);
+          const now = new Date();
+          if (expiresAt > now) {
+            const hoursLeft = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
+            const minsLeft = Math.floor(((expiresAt.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60));
+            if (hoursLeft > 8760) {
+              timeLeft = "♾️ Lifetime";
+              accessStatus = "✅ Active (Lifetime)";
+            } else {
+              timeLeft = `${hoursLeft}h ${minsLeft}m`;
+              accessStatus = "✅ Active";
+            }
+          } else {
+            accessStatus = "⏰ Expired";
+            timeLeft = "Expired";
+          }
+        }
+
+        // Get key system config for this script
+        const { data: config } = await supabase
+          .from("key_system_configs")
+          .select("key_expiry_hours, redeem_action")
+          .eq("script_id", scriptId)
+          .single();
+
+        const fields = [
+          { name: "📜 Script", value: script.script_name, inline: true },
+          { name: "🌐 Access", value: script.public_access ? "Public" : "Private", inline: true },
+          { name: "👥 Whitelisted", value: `${script.hwid_list?.length || 0} users`, inline: true },
+          { name: "🔑 Your Status", value: accessStatus, inline: true },
+          { name: "⏱️ Time Left", value: timeLeft, inline: true },
+          { name: "🔄 Key Duration", value: config ? (config.key_expiry_hours >= 8760 ? "Lifetime" : `${config.key_expiry_hours}h`) : "N/A", inline: true },
+          { name: "📋 Redeem Mode", value: config?.redeem_action === "whitelist" ? "HWID Whitelist" : "Temporary Pass", inline: true },
+        ];
+
+        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed(`📊 Stats: ${script.script_name}`, "Your access stats for this script", 0x5865f2, fields),
+          flags: 64,
+          components: [],
+        });
+      }
+
       // ── BUTTON: blacklist from webhook notification ──
       if (customId.startsWith("blacklist_")) {
         const hwid = customId.replace("blacklist_", "");
@@ -776,6 +923,44 @@ end`;
         const action = parts[0];
         const scriptId = parts[1];
         const extraData = parts.slice(2).join(":");
+
+        // ── loader: show action buttons for selected script ──
+        if (action === "loader") {
+          const { data: config } = await supabase
+            .from("key_system_configs")
+            .select("*, scripts:script_id(id, script_name, slug)")
+            .eq("script_id", scriptId)
+            .eq("enabled", true)
+            .single();
+
+          if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Script not found or key system disabled.", 0xff0000),
+            flags: 64, components: [],
+          });
+
+          const scriptName = config.scripts?.script_name || "Unknown";
+
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed(`📦 ${scriptName}`, `**Provider:** ${config.provider}\n**Key Duration:** ${config.key_expiry_hours}h\n**Redeem Mode:** ${config.redeem_action}\n\nChoose an action below:`, 0x5865f2),
+            flags: 64,
+            components: [
+              {
+                type: ComponentType.ACTION_ROW,
+                components: [
+                  { type: ComponentType.BUTTON, style: ButtonStyle.PRIMARY, label: "📥 Get Script", custom_id: `loader_getscript:${scriptId}`, emoji: { name: "📥" } },
+                  { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "🔑 Get Key", custom_id: `loader_getkey:${scriptId}`, emoji: { name: "🔑" } },
+                ],
+              },
+              {
+                type: ComponentType.ACTION_ROW,
+                components: [
+                  { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "✅ Redeem", custom_id: `loader_redeem:${scriptId}`, emoji: { name: "✅" } },
+                  { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "📊 Stats", custom_id: `loader_stats:${scriptId}`, emoji: { name: "📊" } },
+                ],
+              },
+            ],
+          });
+        }
 
         // ── getkey: special handling (doesn't require ownership) ──
         if (action === "getkey") {

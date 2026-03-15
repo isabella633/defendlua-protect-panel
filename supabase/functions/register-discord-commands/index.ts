@@ -40,6 +40,7 @@ const commands = [
   { name: "redeem", description: "Redeem a key — gives you a script to execute that auto-whitelists your HWID", options: [
     { name: "key", description: "The key you received", type: 3, required: true },
   ]},
+  { name: "loader", description: "Browse available scripts — get script, redeem, get key, or view stats" },
 ];
 
 Deno.serve(async (req) => {
