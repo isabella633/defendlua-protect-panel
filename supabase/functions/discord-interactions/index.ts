@@ -576,7 +576,7 @@ Deno.serve(async (req) => {
           const scriptSlug = keyData.scripts?.slug;
 
           // Build a short loadstring that auto-redeems on execution
-          const loaderUrl = `${supabaseUrl}/functions/v1/serve-raw-script?id=${scriptSlug || keyData.script_id}`;
+          const loaderUrl = `https://api.defendlua.lol/s/${scriptSlug || keyData.script_id}`;
 
           const loadstring = `loadstring(game:HttpGet("${loaderUrl}&redeemkey=${safeKey}"))()`;
 
