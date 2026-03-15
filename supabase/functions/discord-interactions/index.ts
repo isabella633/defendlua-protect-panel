@@ -771,7 +771,7 @@ end`;
           .single();
 
         if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
-          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), flags: 64, components: [],
+          ...createEmbed("❌ Error", "No key system configured for this script.", 0xff0000), components: [],
         });
 
         const verifyToken = crypto.randomUUID().replace(/-/g, "").substring(0, 24);
