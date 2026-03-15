@@ -750,7 +750,7 @@ end`;
       if (customId.startsWith("loader_getscript:")) {
         const scriptId = customId.replace("loader_getscript:", "");
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
-        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64, components: [] });
+        if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), components: [] });
 
         const loaderUrl = `https://defendlua.lol/s/${script.slug}`;
         const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
