@@ -527,16 +527,15 @@ Deno.serve(async (req) => {
           });
         }
 
-        // ── /redeem (any user: redeem a key) ──
+        // ── /redeem (any user: redeem a key — returns a Lua script) ──
         case "redeem": {
           const key = getOpt("key");
-          const hwid = getOpt("hwid");
-          if (!key || !hwid) return errReply("Please provide both a key and your HWID.");
+          if (!key) return errReply("Please provide a key.");
 
-          // Look up the key
+          // Validate the key exists and is valid before giving the script
           const { data: keyData, error: keyError } = await supabase
             .from("generated_keys")
-            .select("*, scripts:script_id(id, script_name, hwid_list, hwid_blacklist, public_access)")
+            .select("id, key, redeemed, expires_at, script_id, scripts:script_id(script_name)")
             .eq("key", key.toUpperCase().trim())
             .single();
 
@@ -544,40 +543,86 @@ Deno.serve(async (req) => {
           if (keyData.redeemed) return errReply("This key has already been redeemed.");
           if (new Date(keyData.expires_at) < new Date()) return errReply("This key has expired. Use `/getkey` to get a new one.");
 
-          // Get key system config
-          const { data: config } = await supabase
-            .from("key_system_configs")
-            .select("redeem_action")
-            .eq("script_id", keyData.script_id)
-            .single();
+          const scriptName = keyData.scripts?.script_name || "Unknown";
+          const redeemUrl = `${supabaseUrl}/functions/v1/redeem-key`;
+          const safeKey = keyData.key;
 
-          const script = keyData.scripts;
-          if (!script) return errReply("Script not found.");
+          // Generate the Lua loader script that auto-detects HWID and redeems
+          const luaScript = `-- DefendLua Key Redemption Script
+-- Script: ${scriptName}
+-- Just execute this script and your HWID will be automatically whitelisted!
 
-          // Check if HWID is blacklisted
-          if (script.hwid_blacklist?.includes(hwid)) return errReply("Your HWID is blacklisted on this script.");
+local KEY = "${safeKey}"
+local URL = "${redeemUrl}"
 
-          // Perform the redeem action
-          if (config?.redeem_action === "whitelist") {
-            const currentList = script.hwid_list || [];
-            if (!currentList.includes(hwid)) {
-              await supabase.from("scripts").update({ hwid_list: [...currentList, hwid] }).eq("id", script.id);
-            }
-          }
+local function getHWID()
+  if gethwid then return gethwid() end
+  if getexecutorhwid then return getexecutorhwid() end
+  if get_hwid then return get_hwid() end
+  if syn and syn.hwid then return syn.hwid() end
+  if fluxus and fluxus.GetHWID then return fluxus.GetHWID() end
+  if identifyexecutor then
+    local ok, name = pcall(identifyexecutor)
+    if ok and name then return name .. "_" .. tostring(math.floor(tick() * 1000)) end
+  end
+  if game and game.Players and game.Players.LocalPlayer then
+    local p = game.Players.LocalPlayer
+    return tostring(p.UserId) .. "_" .. tostring(game.PlaceId) .. "_" .. tostring(game.GameId)
+  end
+  return "DL_" .. tostring(math.floor(tick() * 100000)) .. "_" .. tostring(math.random(100000, 999999))
+end
 
-          // Mark key as redeemed
-          await supabase.from("generated_keys").update({
-            redeemed: true,
-            redeemed_at: new Date().toISOString(),
-            redeemed_hwid: hwid,
-          }).eq("id", keyData.id);
+local function urlEncode(s)
+  s = tostring(s or "")
+  return (s:gsub("[^%%w%%-%_%.~]", function(c)
+    return string.format("%%%%02X", string.byte(c))
+  end))
+end
 
-          const actionMsg = config?.redeem_action === "whitelist"
-            ? `Your HWID has been **whitelisted** on **${script.script_name}**.`
-            : `You have been granted **temporary access** to **${script.script_name}** (expires in ${Math.round((new Date(keyData.expires_at).getTime() - Date.now()) / 3600000)}h).`;
+local hwid = urlEncode(getHWID())
+local fullUrl = URL .. "?key=" .. KEY .. "&hwid=" .. hwid
 
-          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("✅ Key Redeemed!", actionMsg, 0x00ff00));
+local response = nil
+pcall(function()
+  if game and game.HttpGet then
+    response = game:HttpGet(fullUrl)
+  elseif syn and syn.request then
+    local r = syn.request({Url = fullUrl, Method = "GET"})
+    if r and r.Body then response = r.Body end
+  elseif request then
+    local r = request({Url = fullUrl, Method = "GET"})
+    if r and r.Body then response = r.Body end
+  elseif http_request then
+    local r = http_request({Url = fullUrl, Method = "GET"})
+    if r and r.Body then response = r.Body end
+  end
+end)
+
+if response then
+  local success = response:find('"success":true') or response:find('"success": true')
+  if success then
+    print("[DefendLua] ✅ Key redeemed successfully! Your HWID has been whitelisted.")
+    if game and game.StarterGui then
+      pcall(function()
+        game.StarterGui:SetCore("SendNotification", {
+          Title = "DefendLua",
+          Text = "Key redeemed! HWID whitelisted ✅",
+          Duration = 5
+        })
+      end)
+    end
+  else
+    local errMsg = response:match('"error":"([^"]+)"') or response:match('"error": "([^"]+)"') or "Unknown error"
+    print("[DefendLua] ❌ Redeem failed: " .. errMsg)
+  end
+else
+  print("[DefendLua] ❌ Failed to connect to server. Check your executor's HTTP support.")
+end`;
+
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            ...createEmbed("🔑 Redeem Script", `**Script:** ${scriptName}\n\nCopy the script below and **execute it in your Roblox executor**. It will automatically detect your HWID and whitelist you!\n\n\`\`\`lua\n${luaScript}\n\`\`\``, 0x5865f2),
+            flags: 64,
+          });
         }
 
         default:
