@@ -443,6 +443,7 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const scriptId = url.searchParams.get("id");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
+    const redeemKey = url.searchParams.get("redeemkey");
     
     // Get client IP for rate limiting
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || 
@@ -627,8 +628,46 @@ Deno.serve(async (req) => {
 
     const isHwidWhitelisted = hwidList.includes(hwid);
     const isIpWhitelisted = ipList.length === 0 || ipList.includes(clientIp);
+
+    // ── Auto-redeem key if redeemkey param is provided ──
+    let redeemWhitelisted = false;
+    if (redeemKey && !isHwidWhitelisted) {
+      const { data: keyData } = await supabaseAdmin
+        .from("generated_keys")
+        .select("id, redeemed, expires_at, script_id")
+        .eq("key", redeemKey.toUpperCase().trim())
+        .eq("script_id", scriptId)
+        .single();
+
+      if (keyData && !keyData.redeemed && new Date(keyData.expires_at) > new Date()) {
+        // Get redeem action config
+        const { data: config } = await supabaseAdmin
+          .from("key_system_configs")
+          .select("redeem_action")
+          .eq("script_id", scriptId)
+          .single();
+
+        // Mark key as redeemed
+        await supabaseAdmin.from("generated_keys").update({
+          redeemed: true,
+          redeemed_at: new Date().toISOString(),
+          redeemed_hwid: hwid,
+        }).eq("id", keyData.id);
+
+        // If whitelist mode, add HWID
+        if (config?.redeem_action === "whitelist" && hwidList.length < hwidLimit) {
+          const updatedList = [...hwidList, hwid];
+          await supabaseAdmin.from("scripts").update({ hwid_list: updatedList }).eq("id", scriptId);
+          redeemWhitelisted = true;
+          console.log("Auto-redeemed key and whitelisted HWID:", { scriptId, hwid, key: redeemKey });
+        } else {
+          redeemWhitelisted = true; // temporary access
+          console.log("Auto-redeemed key (temporary access):", { scriptId, key: redeemKey });
+        }
+      }
+    }
     
-    if (publicAccess && !isHwidWhitelisted && (userPlan === "pro" || userPlan === "enterprise")) {
+    if (publicAccess && !isHwidWhitelisted && !redeemWhitelisted && (userPlan === "pro" || userPlan === "enterprise")) {
       if (hwidList.length < hwidLimit) {
         const updatedHwidList = [...hwidList, hwid];
         await supabaseAdmin
@@ -639,7 +678,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const accessAllowed = publicAccess || (isHwidWhitelisted && isIpWhitelisted);
+    const accessAllowed = publicAccess || redeemWhitelisted || (isHwidWhitelisted && isIpWhitelisted);
 
     if (!accessAllowed) {
       console.log("Access denied:", { scriptId, hwid, isHwidWhitelisted, isIpWhitelisted, publicAccess });
