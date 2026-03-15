@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
             { name: "ℹ️ /info", value: "Full script details (dropdown)", inline: true },
             { name: "📋 /logs", value: "Recent access logs (dropdown)", inline: true },
             { name: "🛡️ /denied", value: "Recently denied HWIDs (dropdown)", inline: true },
-            { name: "✅ /whitelist <hwid>", value: "Add HWID to whitelist (dropdown)", inline: true },
+            { name: "✅ /whitelist @user [expiry]", value: "Whitelist a Discord user (generates key & DMs them)", inline: true },
             { name: "🗑️ /unwhitelist <hwid>", value: "Remove from whitelist (dropdown)", inline: true },
             { name: "🚫 /blacklist <hwid>", value: "Add HWID to blacklist (dropdown)", inline: true },
             { name: "♻️ /unblacklist <hwid>", value: "Remove from blacklist (dropdown)", inline: true },
