@@ -465,11 +465,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!scriptId) {
+    if (!scriptId && !scriptSlug) {
       return new Response('print("ERROR: Script ID not provided")', {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
+    }
+
+    // If we have a slug but no ID, resolve slug to ID
+    if (!scriptId && scriptSlug) {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      );
+      const { data: slugScript } = await supabaseAdmin
+        .from("scripts")
+        .select("id")
+        .eq("slug", scriptSlug)
+        .single();
+      if (!slugScript) {
+        return new Response('print("ACCESS DENIED")', {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        });
+      }
+      scriptId = slugScript.id;
     }
     
     // Rate limit by script ID: 100 requests per hour per script
