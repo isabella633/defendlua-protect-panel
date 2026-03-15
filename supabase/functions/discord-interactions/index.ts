@@ -543,7 +543,6 @@ Deno.serve(async (req) => {
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("📦 Script Loader", "Select a script to view options.", 0x5865f2),
-            flags: 64,
             components: [{
               type: ComponentType.ACTION_ROW,
               components: [{
