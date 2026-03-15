@@ -376,8 +376,31 @@ Deno.serve(async (req) => {
           return scriptSelectMenu("webhook", scripts, "🔗 Select a script for webhook", desc, url || "__remove__");
         }
 
+        // ── /whitelist (supports @user mention OR hwid) ──
+        case "whitelist": {
+          const targetUser = getOpt("user");
+          const hwid = getOpt("hwid");
+          const expiry = getOpt("expiry");
+
+          if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
+
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("You don't have any scripts yet.");
+
+          if (targetUser) {
+            // Discord user-based whitelist: generate key + DM
+            const extraPayload = JSON.stringify({ targetUser, expiry: expiry ?? 24 });
+            return scriptSelectMenu("whitelist_user", scripts, "✅ Select a script to whitelist user", `User: <@${targetUser}>\nExpiry: ${expiry === 0 ? "Lifetime" : `${expiry ?? 24}h`}\nSelect the script below.`, extraPayload);
+          } else {
+            // Legacy HWID-based whitelist
+            return scriptSelectMenu("whitelist", scripts, "✅ Select a script to whitelist HWID", `HWID: \`${hwid.substring(0, 40)}\`\nSelect the script below.`, hwid);
+          }
+        }
+
         // ── HWID commands with select menu ──
-        case "whitelist":
         case "unwhitelist":
         case "blacklist":
         case "unblacklist": {
@@ -391,7 +414,6 @@ Deno.serve(async (req) => {
           if (!scripts.length) return errReply("You don't have any scripts yet.");
 
           const actionLabels: Record<string, string> = {
-            whitelist: "✅ Select a script to whitelist HWID",
             unwhitelist: "🗑️ Select a script to unwhitelist HWID",
             blacklist: "🚫 Select a script to blacklist HWID",
             unblacklist: "♻️ Select a script to unblacklist HWID",
