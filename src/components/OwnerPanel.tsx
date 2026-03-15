@@ -53,6 +53,7 @@ protectedFunction()`);
   const [hwidBlacklist, setHwidBlacklist] = useState<string[]>([]);
   const [newBlacklistHwid, setNewBlacklistHwid] = useState("");
   const [publicAccess, setPublicAccess] = useState(false);
+  const [showWatermark, setShowWatermark] = useState(true);
   const [accessLogs, setAccessLogs] = useState<any[]>([]);
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "enterprise">("free");
   const [userId, setUserId] = useState<string>("");
