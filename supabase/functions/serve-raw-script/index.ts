@@ -632,7 +632,7 @@ Deno.serve(async (req) => {
 
     const { data: script, error } = await supabaseAdmin
       .from("scripts")
-      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url")
+      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark")
       .eq("id", scriptId)
       .single();
 
