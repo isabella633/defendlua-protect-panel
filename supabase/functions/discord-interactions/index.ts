@@ -685,7 +685,7 @@ Deno.serve(async (req) => {
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
         if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
-        const loaderUrl = `https://api.defendlua.lol/s/${script.slug}`;
+        const loaderUrl = `${supabaseUrl}/functions/v1/serve-raw-script?id=${script.slug}`;
         const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
 
         return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
