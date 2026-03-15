@@ -488,7 +488,27 @@ protectedFunction()`);
                   </div>
                 )}
 
-                {(userPlan === "pro" || userPlan === "enterprise") && (
+                {/* Watermark Toggle - Pro/Enterprise can toggle, Free is forced on */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Promotional Watermark</label>
+                  <div className="flex items-center justify-between bg-muted/50 p-3 rounded border border-border/50">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Show "DEFENDLUA.LOL" watermark</p>
+                      <p className="text-xs text-muted-foreground">
+                        {userPlan === "free" 
+                          ? "Free plan: Watermark is always shown. Upgrade to remove it." 
+                          : "Toggle the in-game promotional watermark"}
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={showWatermark} 
+                      onCheckedChange={setShowWatermark} 
+                      disabled={userPlan === "free"}
+                    />
+                  </div>
+                </div>
+
+
                   <div>
                     <label className="text-sm font-medium mb-2 block flex items-center gap-2">
                       <Bell className="w-4 h-4" />
