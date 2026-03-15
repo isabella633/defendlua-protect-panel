@@ -139,6 +139,7 @@ protectedFunction()`);
       ip_list: ipList,
       hwid_blacklist: hwidBlacklist,
       public_access: publicAccess,
+      show_watermark: showWatermark,
     };
 
     // Only include webhook_url for Pro/Enterprise plans with validation
