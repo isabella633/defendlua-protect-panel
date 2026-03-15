@@ -800,6 +800,40 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ── /getkey select menu (public — no linking required) ──
+      if (customId === "select_script_getkey") {
+        const selectedValue = values[0] || "";
+        const parts = selectedValue.split(":");
+        const scriptId = parts[1];
+
+        const { data: config, error: configError } = await supabase
+          .from("key_system_configs")
+          .select("*, scripts:script_id(id, script_name)")
+          .eq("script_id", scriptId)
+          .eq("enabled", true)
+          .single();
+
+        if (configError || !config) {
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Key system not found or disabled for this script.", 0xff0000),
+            flags: 64,
+            components: [],
+          });
+        }
+
+        const verifyToken = crypto.randomUUID().replace(/-/g, "").substring(0, 24);
+        await supabase.from("key_link_verifications").delete().eq("discord_id", discordId).eq("script_id", scriptId);
+        await supabase.from("key_link_verifications").insert({ token: verifyToken, discord_id: discordId, script_id: scriptId });
+
+        const verifyLink = `https://defendlua.lol/verify?token=${verifyToken}`;
+
+        return reply(InteractionResponseType.UPDATE_MESSAGE, {
+          ...createEmbed("🔑 Complete the Link to Get Your Key", `**Script:** ${config.scripts?.script_name}\n**Provider:** ${config.provider}\n\n🔗 **Click the link below to start:**\n${verifyLink}\n\n1️⃣ You'll be redirected to ${config.provider}\n2️⃣ Complete the full task\n3️⃣ You'll be redirected back to receive your key automatically\n\n🚫 **Bypassing will be detected** — the system verifies your completion.`, 0x5865f2),
+          flags: 64,
+          components: [],
+        });
+      }
+
       // ── All other component interactions require linking ──
       const userId = await getUserId(supabase, discordId);
       if (!userId) return notLinkedReply();
