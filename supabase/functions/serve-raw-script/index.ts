@@ -2,37 +2,41 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Dynamic CORS based on origin
 function getCorsHeaders(req: Request) {
-  const origin = req.headers.get('origin') || '';
+  const origin = req.headers.get("origin") || "";
   const allowedOrigins = [
-    'https://uwfuuhhcjlxgyeecpeii.lovableproject.com',
-    'http://localhost:5173',
-    'http://localhost:3000',
+    "https://uwfuuhhcjlxgyeecpeii.lovableproject.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
   ];
-  
+
   const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-  
+
   return {
-    'Access-Control-Allow-Origin': corsOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    "Access-Control-Allow-Origin": corsOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   };
 }
 
 // Simple in-memory rate limiter using Map (resets on cold starts, but provides basic protection)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
-function checkRateLimit(key: string, limit: number, windowMs: number): { allowed: boolean; remaining: number; resetIn: number } {
+function checkRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): { allowed: boolean; remaining: number; resetIn: number } {
   const now = Date.now();
   const entry = rateLimitMap.get(key);
-  
+
   if (!entry || now > entry.resetTime) {
     rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
     return { allowed: true, remaining: limit - 1, resetIn: windowMs };
   }
-  
+
   if (entry.count >= limit) {
     return { allowed: false, remaining: 0, resetIn: entry.resetTime - now };
   }
-  
+
   entry.count++;
   return { allowed: true, remaining: limit - entry.count, resetIn: entry.resetTime - now };
 }
@@ -52,7 +56,7 @@ function cleanupRateLimits() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // String table encryption with dynamic key generation
-const encryptStringTable = (strings: string[], masterKey: number): { table: number[][], keys: number[] } => {
+const encryptStringTable = (strings: string[], masterKey: number): { table: number[][]; keys: number[] } => {
   const table: number[][] = [];
   const keys: number[] = [];
   for (let i = 0; i < strings.length; i++) {
@@ -76,7 +80,7 @@ const generateStateMachine = (rand: string, states: number): string => {
     const next = (i * 7 + 3) % states;
     jumpTable.push(`[${i}]=function() ${stateVar}=${next} end`);
   }
-  return `local ${stateVar}=0\nlocal _JT_${rand}={${jumpTable.join(',')}}`;
+  return `local ${stateVar}=0\nlocal _JT_${rand}={${jumpTable.join(",")}}`;
 };
 
 // Opaque predicate generator
@@ -145,10 +149,20 @@ local ${vars[6]}=${expected}`;
 };
 
 // Generate massive junk code footer with enhanced confusion
-const generateJunkFooter = (rand: string, rand2: string, rand3: string, fakeVars: string[], salt: number, rot: number): string => {
+const generateJunkFooter = (
+  rand: string,
+  rand2: string,
+  rand3: string,
+  fakeVars: string[],
+  salt: number,
+  rot: number,
+): string => {
   const junkFuncs = [];
-  const funcNames = Array.from({length: 20}, (_, i) => `_${['xX','Xx','zZ','Zz','yY','Yy','wW','Ww','vV','Vv'][i % 10]}${rand2}${i}`);
-  
+  const funcNames = Array.from(
+    { length: 20 },
+    (_, i) => `_${["xX", "Xx", "zZ", "Zz", "yY", "Yy", "wW", "Ww", "vV", "Vv"][i % 10]}${rand2}${i}`,
+  );
+
   // Fake VM instruction decoder
   junkFuncs.push(`
 local ${funcNames[0]}={}
@@ -187,13 +201,11 @@ local ${funcNames[8]}=function()
 end`);
 
   // Fake constant pool with encrypted strings
-  const encStrings = Array.from({length: 10}, () => 
-    Array.from({length: Math.floor(Math.random() * 20) + 5}, () => 
-      Math.floor(Math.random() * 256)
-    )
+  const encStrings = Array.from({ length: 10 }, () =>
+    Array.from({ length: Math.floor(Math.random() * 20) + 5 }, () => Math.floor(Math.random() * 256)),
   );
   junkFuncs.push(`
-local ${funcNames[10]}={${encStrings.map((s, i) => `[${i}]={${s.join(',')}}`).join(',')}}
+local ${funcNames[10]}={${encStrings.map((s, i) => `[${i}]={${s.join(",")}}`).join(",")}}
 local ${funcNames[11]}=function(${funcNames[12]},${funcNames[13]})
   local ${funcNames[14]}=${funcNames[10]}[${funcNames[12]}]
   if not ${funcNames[14]} then return "" end
@@ -244,7 +256,7 @@ local _TRAP_${rand}=function()
 end`;
 
   // Fake encryption layers
-  const cryptVars = Array.from({length: 8}, (_, i) => `_CRY${rand3}${i}`);
+  const cryptVars = Array.from({ length: 8 }, (_, i) => `_CRY${rand3}${i}`);
   const cryptCode = `
 local ${cryptVars[0]}=function(${cryptVars[1]},${cryptVars[2]})
   local ${cryptVars[3]}=""
@@ -265,7 +277,7 @@ local _BUILD_TS=${Date.now()}
 local _SIG_CHECK=0x${(salt * rot).toString(16).toUpperCase()}
 local _ENV_HASH=${(salt + rot) * 31}
 local _ANTI_TAMPER_KEY="${Math.random().toString(36).slice(2, 10)}"
-local _INTEGRITY_SEED=${Math.floor(Math.random() * 0xFFFFFF)}
+local _INTEGRITY_SEED=${Math.floor(Math.random() * 0xffffff)}
 if ${generateOpaquePredicate(rand, false)} then
   for _=1,0 do error("TAMPER_001") end
 end
@@ -279,7 +291,7 @@ end`;
   // Fake constant pool
   const constPool = `
 local _CONST_POOL_${rand2}={
-  [1]=${salt},[2]=${rot},[3]=${salt+rot},[4]=${salt*rot%256},
+  [1]=${salt},[2]=${rot},[3]=${salt + rot},[4]=${(salt * rot) % 256},
   ["sig"]="${rand}",[5]="${rand2}",[6]="${rand3}",
   [7]=0x${salt.toString(16)},[8]=0x${rot.toString(16)},
   ["_verify"]=function(x) return (x*${salt}+${rot})%65536 end,
@@ -297,7 +309,7 @@ local _CONST_POOL_${rand2}={
 
   return `
 --[[FOOTER_${rand}_${Date.now()}]]
-${junkFuncs.join('\n')}
+${junkFuncs.join("\n")}
 ${trapCode}
 ${cryptCode}
 ${deadCode}
@@ -309,15 +321,15 @@ ${constPool}
 
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
 const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKey?: string): string => {
-  const redeemParam = redeemKey ? `&redeemkey=${encodeURIComponent(redeemKey)}` : '';
+  const redeemParam = redeemKey ? `&redeemkey=${encodeURIComponent(redeemKey)}` : "";
   const baseUrl = `https://api.defendlua.lol/s/${scriptSlug || scriptId}?key=`;
-  
+
   // Generate unique random identifiers
   const ts = Date.now();
   const rand1 = Math.random().toString(36).slice(2, 8);
   const rand2 = Math.random().toString(36).slice(2, 8);
   const xorKey = Math.floor(Math.random() * 200) + 50;
-  
+
   // Create the actual loader code (this will be encrypted)
   const actualLoaderCode = `local _URL="${baseUrl}"
  local function _GH()
@@ -346,21 +358,21 @@ const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKe
  local _RS=nil
  pcall(function()
  if game and game.HttpGet then
-  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ''}"
+  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
   local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
   _RS=game:HttpGet(_FULL)
   elseif syn and syn.request then
-  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ''}"
+  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
   local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
   local r=syn.request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
   elseif request then
-  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ''}"
+  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
   local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
   local r=request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
   elseif http_request then
-  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ''}"
+  local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
   local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
   local r=http_request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
@@ -376,10 +388,10 @@ const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKe
   for (let i = 0; i < actualLoaderCode.length; i++) {
     const byte = actualLoaderCode.charCodeAt(i);
     // Simple XOR with rotating key
-    const encrypted = (byte ^ ((xorKey + (i % 8)) & 0xFF)) & 0xFF;
+    const encrypted = (byte ^ ((xorKey + (i % 8)) & 0xff)) & 0xff;
     encryptedBytes.push(encrypted);
   }
-  
+
   // Variable names
   const v = {
     data: `_D${rand1}`,
@@ -388,15 +400,15 @@ const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKe
     res: `_R${rand2}`,
     exec: `_E${rand1}`,
   };
-  
+
   // Generate junk variables for obfuscation
-  const junk = Array.from({length: 8}, (_, i) => `_j${rand2}${i}`);
-  
+  const junk = Array.from({ length: 8 }, (_, i) => `_j${rand2}${i}`);
+
   // Build the obfuscated script
-  const obfuscatedScript = `local ${junk[0]}={${Array.from({length: 15}, () => Math.floor(Math.random() * 256)).join(',')}}
+  const obfuscatedScript = `local ${junk[0]}={${Array.from({ length: 15 }, () => Math.floor(Math.random() * 256)).join(",")}}
 local ${junk[1]}="${Math.random().toString(36).slice(2, 10)}"
 local ${junk[2]}=${Math.floor(Math.random() * 10000)}
-local ${v.data}={${encryptedBytes.join(',')}}
+local ${v.data}={${encryptedBytes.join(",")}}
 local ${v.key}=${xorKey}
  local ${v.dec}=function()
  local _t={}
@@ -422,7 +434,7 @@ local ${v.key}=${xorKey}
  return table.concat(_t)
  end
 local ${junk[3]}=function()return ${junk[2]}*2 end
-local ${junk[4]}={${Array.from({length: 10}, () => `"${Math.random().toString(36).slice(2, 5)}"`).join(',')}}
+local ${junk[4]}={${Array.from({ length: 10 }, () => `"${Math.random().toString(36).slice(2, 5)}"`).join(",")}}
 local ${v.exec}=function()
 local s=${v.dec}()
 if s and #s>5 then
@@ -440,7 +452,7 @@ local ${junk[7]}=${junk[6]}+1`;
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
-  
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -451,8 +463,12 @@ Deno.serve(async (req) => {
   // Detect browser requests via Accept header or User-Agent
   const acceptHeader = req.headers.get("accept") || "";
   const userAgent = req.headers.get("user-agent") || "";
-  const isBrowser = acceptHeader.includes("text/html") && 
-    (userAgent.includes("Mozilla") || userAgent.includes("Chrome") || userAgent.includes("Safari") || userAgent.includes("Edge"));
+  const isBrowser =
+    acceptHeader.includes("text/html") &&
+    (userAgent.includes("Mozilla") ||
+      userAgent.includes("Chrome") ||
+      userAgent.includes("Safari") ||
+      userAgent.includes("Edge"));
 
   if (isBrowser) {
     const browserErrorPage = `<!DOCTYPE html>
@@ -535,7 +551,7 @@ Deno.serve(async (req) => {
   <div class="container">
     <div class="icon">🛡️</div>
     <h1>Hold up! Seems like you got confused.</h1>
-    <p>This link is meant to be used inside a Roblox script executor, not a web browser. If you're looking for DefendLua, click below.</p>
+    <p>If you're looking for DefendLua, click below.</p>
     <a href="https://defendlua.lol" class="btn">Go to DefendLua</a>
   </div>
 </body>
@@ -552,11 +568,10 @@ Deno.serve(async (req) => {
     const scriptSlug = url.searchParams.get("slug");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
     const redeemKey = url.searchParams.get("redeemkey");
-    
+
     // Get client IP for rate limiting
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || 
-                     req.headers.get("x-real-ip") || 
-                     "unknown";
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
 
     // Rate limit by IP: 30 requests per minute
     const ipRateLimit = checkRateLimit(`ip:${clientIp}`, 30, 60000);
@@ -564,10 +579,10 @@ Deno.serve(async (req) => {
       console.warn("Rate limit exceeded for IP:", clientIp);
       return new Response('print("ERROR: Rate limit exceeded. Please wait before trying again.")', {
         status: 429,
-        headers: { 
-          ...corsHeaders, 
+        headers: {
+          ...corsHeaders,
           "Content-Type": "text/plain",
-          "Retry-After": Math.ceil(ipRateLimit.resetIn / 1000).toString()
+          "Retry-After": Math.ceil(ipRateLimit.resetIn / 1000).toString(),
         },
       });
     }
@@ -602,24 +617,24 @@ Deno.serve(async (req) => {
       }
       scriptId = slugScript.id;
     }
-    
+
     // Rate limit by script ID: 100 requests per hour per script
     const scriptRateLimit = checkRateLimit(`script:${scriptId}`, 100, 3600000);
     if (!scriptRateLimit.allowed) {
       console.warn("Rate limit exceeded for script:", scriptId);
       return new Response('print("ERROR: Script rate limit exceeded. Please try again later.")', {
         status: 429,
-        headers: { 
-          ...corsHeaders, 
+        headers: {
+          ...corsHeaders,
           "Content-Type": "text/plain",
-          "Retry-After": Math.ceil(scriptRateLimit.resetIn / 1000).toString()
+          "Retry-After": Math.ceil(scriptRateLimit.resetIn / 1000).toString(),
         },
       });
     }
 
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
-      
+
       const collectorScript = generateCollectorScript(scriptId, lookupSlug || undefined, redeemKey || undefined);
       return new Response(collectorScript, {
         status: 200,
@@ -641,13 +656,15 @@ Deno.serve(async (req) => {
 
     const { data: script, error } = await supabaseAdmin
       .from("scripts")
-      .select("script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark")
+      .select(
+        "script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark",
+      )
       .eq("id", scriptId)
       .single();
 
     if (error || !script) {
       console.error("Script not found:", error);
-      
+
       // Log the access attempt for debugging (server-side only)
       await supabaseAdmin.from("access_logs").insert({
         script_id: scriptId,
@@ -656,15 +673,12 @@ Deno.serve(async (req) => {
         status: "denied",
         reason: "Script not found",
       });
-      
+
       // Return identical response to access denied to prevent script ID enumeration
-      return new Response(
-        'print("ACCESS DENIED")',
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
-        },
-      );
+      return new Response('print("ACCESS DENIED")', {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
     }
 
     const { data: subscription } = await supabaseAdmin
@@ -682,13 +696,13 @@ Deno.serve(async (req) => {
 
     const sendDiscordWebhook = async (status: string, reason: string, color: number) => {
       if (!webhookUrl || (userPlan !== "pro" && userPlan !== "enterprise")) return;
-      
+
       const discordWebhookRegex = /^https:\/\/discord\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/;
       if (!discordWebhookRegex.test(webhookUrl)) {
         console.warn("Invalid Discord webhook URL format, skipping webhook notification");
         return;
       }
-      
+
       try {
         const embed = {
           title: `DefendLua Access Log`,
@@ -702,7 +716,7 @@ Deno.serve(async (req) => {
             { name: "Script ID", value: `\`${scriptId}\``, inline: true },
           ],
           timestamp: new Date().toISOString(),
-          footer: { text: "DefendLua Protection System" }
+          footer: { text: "DefendLua Protection System" },
         };
 
         await fetch(webhookUrl, {
@@ -710,15 +724,22 @@ Deno.serve(async (req) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             embeds: [embed],
-            components: status === "denied" ? [] : [{
-              type: 1,
-              components: [{
-                type: 2,
-                style: 4,
-                label: "Blacklist this HWID",
-                custom_id: `blacklist_${hwid.slice(0, 50)}`
-              }]
-            }]
+            components:
+              status === "denied"
+                ? []
+                : [
+                    {
+                      type: 1,
+                      components: [
+                        {
+                          type: 2,
+                          style: 4,
+                          label: "Blacklist this HWID",
+                          custom_id: `blacklist_${hwid.slice(0, 50)}`,
+                        },
+                      ],
+                    },
+                  ],
           }),
         });
       } catch (webhookError) {
@@ -728,7 +749,7 @@ Deno.serve(async (req) => {
 
     if (hwidBlacklist.includes(hwid)) {
       console.log("Access denied - HWID blacklisted:", { scriptId, hwid });
-      
+
       await supabaseAdmin.from("access_logs").insert({
         script_id: scriptId,
         hwid: hwid,
@@ -736,24 +757,24 @@ Deno.serve(async (req) => {
         status: "denied",
         reason: "HWID blacklisted",
       });
-      
-      await sendDiscordWebhook("Denied", "HWID Blacklisted", 0xFF0000);
+
+      await sendDiscordWebhook("Denied", "HWID Blacklisted", 0xff0000);
 
       // Return identical response to prevent enumeration
-      return new Response(
-        'print("ACCESS DENIED")',
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
-        },
-      );
+      return new Response('print("ACCESS DENIED")', {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
     }
 
     const getHwidLimit = (plan: string): number => {
       switch (plan) {
-        case "enterprise": return 1000;
-        case "pro": return 100;
-        default: return 10;
+        case "enterprise":
+          return 1000;
+        case "pro":
+          return 100;
+        default:
+          return 10;
       }
     };
     const hwidLimit = getHwidLimit(userPlan);
@@ -780,11 +801,14 @@ Deno.serve(async (req) => {
             .eq("script_id", scriptId)
             .single();
 
-          await supabaseAdmin.from("generated_keys").update({
-            redeemed: true,
-            redeemed_at: new Date().toISOString(),
-            redeemed_hwid: hwid,
-          }).eq("id", keyData.id);
+          await supabaseAdmin
+            .from("generated_keys")
+            .update({
+              redeemed: true,
+              redeemed_at: new Date().toISOString(),
+              redeemed_hwid: hwid,
+            })
+            .eq("id", keyData.id);
 
           // Always add HWID to whitelist on key redemption (so it shows on the website)
           // This covers both key system "whitelist" mode and direct /whitelist command keys
@@ -803,33 +827,38 @@ Deno.serve(async (req) => {
           // Key redeemed by a DIFFERENT HWID — deny
           console.log("Key HWID mismatch:", { scriptId, expected: keyData.redeemed_hwid, got: hwid });
           await supabaseAdmin.from("access_logs").insert({
-            script_id: scriptId, hwid, ip_address: clientIp,
-            status: "denied", reason: "Key HWID mismatch",
+            script_id: scriptId,
+            hwid,
+            ip_address: clientIp,
+            status: "denied",
+            reason: "Key HWID mismatch",
           });
-          await sendDiscordWebhook("Denied", "Key HWID Mismatch", 0xFF0000);
+          await sendDiscordWebhook("Denied", "Key HWID Mismatch", 0xff0000);
           return new Response('print("ACCESS DENIED: This key is locked to a different device.")', {
-            status: 403, headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "text/plain" },
           });
         }
       } else if (keyData && new Date(keyData.expires_at) <= new Date()) {
         // Key expired
         await supabaseAdmin.from("access_logs").insert({
-          script_id: scriptId, hwid, ip_address: clientIp,
-          status: "denied", reason: "Key expired",
+          script_id: scriptId,
+          hwid,
+          ip_address: clientIp,
+          status: "denied",
+          reason: "Key expired",
         });
         return new Response('print("ACCESS DENIED: Your key has expired.")', {
-          status: 403, headers: { ...corsHeaders, "Content-Type": "text/plain" },
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
       }
     }
-    
+
     if (publicAccess && !isHwidWhitelisted && !redeemWhitelisted && (userPlan === "pro" || userPlan === "enterprise")) {
       if (hwidList.length < hwidLimit) {
         const updatedHwidList = [...hwidList, hwid];
-        await supabaseAdmin
-          .from("scripts")
-          .update({ hwid_list: updatedHwidList })
-          .eq("id", scriptId);
+        await supabaseAdmin.from("scripts").update({ hwid_list: updatedHwidList }).eq("id", scriptId);
         console.log("Auto-whitelisted HWID for public access script:", { scriptId, hwid });
       }
     }
@@ -838,7 +867,7 @@ Deno.serve(async (req) => {
 
     if (!accessAllowed) {
       console.log("Access denied:", { scriptId, hwid, isHwidWhitelisted, isIpWhitelisted, publicAccess });
-      
+
       await supabaseAdmin.from("access_logs").insert({
         script_id: scriptId,
         hwid: hwid,
@@ -846,17 +875,14 @@ Deno.serve(async (req) => {
         status: "denied",
         reason: !isHwidWhitelisted ? "HWID not whitelisted" : "IP not whitelisted",
       });
-      
-      await sendDiscordWebhook("Denied", !isHwidWhitelisted ? "HWID Not Whitelisted" : "IP Not Whitelisted", 0xFF0000);
+
+      await sendDiscordWebhook("Denied", !isHwidWhitelisted ? "HWID Not Whitelisted" : "IP Not Whitelisted", 0xff0000);
 
       // Return identical response to script-not-found to prevent enumeration
-      return new Response(
-        'print("ACCESS DENIED")',
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
-        },
-      );
+      return new Response('print("ACCESS DENIED")', {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
     }
 
     await supabaseAdmin.from("access_logs").insert({
@@ -866,60 +892,60 @@ Deno.serve(async (req) => {
       status: "granted",
       reason: publicAccess ? "Public access" : "Whitelisted",
     });
-    
-    await sendDiscordWebhook("Granted", publicAccess ? "Public Access" : "Whitelisted", 0x00FF00);
+
+    await sendDiscordWebhook("Granted", publicAccess ? "Public Access" : "Whitelisted", 0x00ff00);
 
     console.log("Access granted - serving script:", { scriptId });
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // OBFUSCATION ENGINE - Multi-layer protection for served scripts
     // ═══════════════════════════════════════════════════════════════════════════════
-    
+
     const obfuscateScript = (source: string, hwid: string): string => {
       const timestamp = Date.now();
       const rand1 = Math.random().toString(36).slice(2, 10);
       const rand2 = Math.random().toString(36).slice(2, 10);
       const rand3 = Math.random().toString(36).slice(2, 10);
       const salt = Math.floor(Math.random() * 10000) + 1000;
-      
+
       // Generate dynamic encryption key based on HWID and timestamp
-      const masterKey = hwid.split('').reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), timestamp % 1000);
-      
+      const masterKey = hwid.split("").reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), timestamp % 1000);
+
       // Encrypt the source code with multi-layer XOR cipher
       const encryptSource = (src: string, key: number): number[] => {
         const result: number[] = [];
         const keyBytes = [
-          (key >> 24) & 0xFF,
-          (key >> 16) & 0xFF,
-          (key >> 8) & 0xFF,
-          key & 0xFF,
-          (key * 7) & 0xFF,
-          (key * 13) & 0xFF,
-          (key * 31) & 0xFF,
-          (key * 47) & 0xFF
+          (key >> 24) & 0xff,
+          (key >> 16) & 0xff,
+          (key >> 8) & 0xff,
+          key & 0xff,
+          (key * 7) & 0xff,
+          (key * 13) & 0xff,
+          (key * 31) & 0xff,
+          (key * 47) & 0xff,
         ];
         for (let i = 0; i < src.length; i++) {
           let byte = src.charCodeAt(i);
           // Layer 1: XOR with rotating key
           byte ^= keyBytes[i % keyBytes.length];
           // Layer 2: Add position-based shift
-          byte = (byte + (i * 7)) & 0xFF;
+          byte = (byte + i * 7) & 0xff;
           // Layer 3: XOR with previous byte
-          if (i > 0) byte ^= result[i - 1] & 0x3F;
+          if (i > 0) byte ^= result[i - 1] & 0x3f;
           result.push(byte);
         }
         return result;
       };
-      
+
       const encryptedBytes = encryptSource(source, masterKey);
-      
+
       // Split into chunks for harder analysis
       const chunkSize = Math.floor(encryptedBytes.length / 4) + 1;
       const chunks: number[][] = [];
       for (let i = 0; i < encryptedBytes.length; i += chunkSize) {
         chunks.push(encryptedBytes.slice(i, i + chunkSize));
       }
-      
+
       // Variable name generator with random prefixes
       const varNames = {
         data: `_D${rand1}`,
@@ -937,10 +963,10 @@ Deno.serve(async (req) => {
         timeCheck: `_TC${rand1}`,
         selfCheck: `_SC${rand2}`,
       };
-      
+
       // Calculate integrity hash of encrypted data
       const integrityHash = encryptedBytes.reduce((acc, b, i) => (acc * 31 + b + i) >>> 0, salt);
-      
+
       // Generate anti-debug checks (relaxed for Roblox executors)
       const antiDebugCode = `
 local ${varNames.antiDebug}=function()
@@ -954,9 +980,9 @@ local ${varNames.antiDebug}=function()
   end
   return true
 end`;
-      
+
       // Generate HWID verification (binds script to specific HWID)
-      const hwidHash = hwid.split('').reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
+      const hwidHash = hwid.split("").reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
       const hwidCheckCode = `
 local ${varNames.hwidCheck}=function()
   local _hwid=nil
@@ -971,7 +997,7 @@ local ${varNames.hwidCheck}=function()
   for i=1,#_hwid do _h=(_h*37+string.byte(_hwid,i))%4294967296 end
   return _h==${hwidHash}
 end`;
-      
+
       // Generate environment integrity check
       const envCheckCode = `
 local ${varNames.envCheck}=function()
@@ -990,11 +1016,11 @@ local ${varNames.envCheck}=function()
   end
   return true
 end`;
-      
+
       // Generate time-based check (prevents analysis by detecting long pauses)
       const timeCheckCode = `
 local ${varNames.timeCheck}=(os.clock and os.clock() or tick and tick() or 0)`;
-      
+
       // Generate self-integrity verification
       const selfCheckCode = `
 local ${varNames.selfCheck}=function(_fn)
@@ -1007,19 +1033,19 @@ local ${varNames.selfCheck}=function(_fn)
   end
   return _h>0
 end`;
-      
+
       // Build decryption function
       const decryptCode = `
 local ${varNames.keyBytes}={${[
-        (masterKey >> 24) & 0xFF,
-        (masterKey >> 16) & 0xFF,
-        (masterKey >> 8) & 0xFF,
-        masterKey & 0xFF,
-        (masterKey * 7) & 0xFF,
-        (masterKey * 13) & 0xFF,
-        (masterKey * 31) & 0xFF,
-        (masterKey * 47) & 0xFF
-      ].join(',')}}
+        (masterKey >> 24) & 0xff,
+        (masterKey >> 16) & 0xff,
+        (masterKey >> 8) & 0xff,
+        masterKey & 0xff,
+        (masterKey * 7) & 0xff,
+        (masterKey * 13) & 0xff,
+        (masterKey * 31) & 0xff,
+        (masterKey * 47) & 0xff,
+      ].join(",")}}
 local ${varNames.decrypt}=function(${varNames.data})
   local _t={}
   local _prev=0
@@ -1035,17 +1061,15 @@ local ${varNames.decrypt}=function(${varNames.data})
   end
   return table.concat(_t)
 end`;
-      
+
       // Build data chunks
-      const chunkDefs = chunks.map((chunk, i) => 
-        `local ${varNames.chunk[i]}={${chunk.join(',')}}`
-      ).join('\n');
-      
+      const chunkDefs = chunks.map((chunk, i) => `local ${varNames.chunk[i]}={${chunk.join(",")}}`).join("\n");
+
       // Combine chunks
       const combineCode = `
 local ${varNames.data}={}
-${chunks.map((_, i) => `for _,v in ipairs(${varNames.chunk[i]}) do ${varNames.data}[#${varNames.data}+1]=v end`).join('\n')}`;
-      
+${chunks.map((_, i) => `for _,v in ipairs(${varNames.chunk[i]}) do ${varNames.data}[#${varNames.data}+1]=v end`).join("\n")}`;
+
       // Integrity verification
       const integrityCode = `
 local ${varNames.integrityCheck}=function()
@@ -1053,7 +1077,7 @@ local ${varNames.integrityCheck}=function()
   for i=1,#${varNames.data} do _h=(_h*31+${varNames.data}[i]+i-1)%4294967296 end
   return _h==${integrityHash}
 end`;
-      
+
       // Execution wrapper with all protections
       const execCode = `
  local ${varNames.exec}=function()
@@ -1124,11 +1148,11 @@ end`;
  end`;
 
       // Generate junk code to confuse decompilers (Roblox-compatible)
-      const junkVars = Array.from({length: 15}, (_, i) => `_J${rand3}${i}`);
+      const junkVars = Array.from({ length: 15 }, (_, i) => `_J${rand3}${i}`);
       const junkCode = `
 local ${junkVars[0]}=setmetatable({},{__index=function() return function() end end,__metatable="protected"})
 local ${junkVars[1]}=function(...) local _a={...} return #_a>0 and _a[1] or nil end
-local ${junkVars[2]}={${Array.from({length: 20}, () => Math.floor(Math.random() * 256)).join(',')}}
+local ${junkVars[2]}={${Array.from({ length: 20 }, () => Math.floor(Math.random() * 256)).join(",")}}
 local ${junkVars[3]}=function(_x) return _x and tonumber(tostring(_x or "0"):reverse()) or 0 end
 local ${junkVars[4]}=string.rep("\\0",${Math.floor(Math.random() * 50) + 10})
 local ${junkVars[5]}={__mode="kv",__index=${junkVars[0]}}
@@ -1136,7 +1160,7 @@ local ${junkVars[6]}=function() return ${salt} end
 local ${junkVars[7]}=select("#",pcall(function() end))
 local ${junkVars[8]}="${rand1}${rand2}"
 local ${junkVars[9]}=${timestamp % 65536}`;
-      
+
       // Build final protected script
       const protectedScript = `--[[DefendLua v17.0 | ${timestamp} | ${rand1}]]
 do
@@ -1154,18 +1178,18 @@ ${execCode}
 ${varNames.exec}()
 end
 --[[${Math.random().toString(36).slice(2)}]]`;
-      
+
       return protectedScript;
     };
-    
+
     const protectedScript = obfuscateScript(script.script_key, hwid);
 
     // Check owner's subscription plan for promotional watermark
-    let ownerPlan = 'free';
+    let ownerPlan = "free";
     const { data: ownerSub } = await supabaseAdmin
-      .from('subscriptions')
-      .select('plan')
-      .eq('user_id', script.owner_id)
+      .from("subscriptions")
+      .select("plan")
+      .eq("user_id", script.owner_id)
       .maybeSingle();
     if (ownerSub) {
       ownerPlan = ownerSub.plan;
@@ -1208,13 +1232,9 @@ end)
 `;
 
     // Free users: always show watermark. Pro/Enterprise: respect show_watermark setting
-    const shouldShowWatermark = ownerPlan === 'free' 
-      ? true 
-      : (script as any).show_watermark !== false;
+    const shouldShowWatermark = ownerPlan === "free" ? true : (script as any).show_watermark !== false;
 
-    const finalScript = shouldShowWatermark
-      ? promotionCode + "\n" + protectedScript 
-      : protectedScript;
+    const finalScript = shouldShowWatermark ? promotionCode + "\n" + protectedScript : protectedScript;
 
     return new Response(finalScript, {
       status: 200,
@@ -1222,12 +1242,9 @@ end)
     });
   } catch (error) {
     console.error("Error processing request:", error);
-    return new Response(
-      'print("ERROR: An unexpected error occurred")',
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "text/plain" },
-      },
-    );
+    return new Response('print("ERROR: An unexpected error occurred")', {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "text/plain" },
+    });
   }
 });
