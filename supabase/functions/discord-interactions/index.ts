@@ -1426,6 +1426,69 @@ Deno.serve(async (req) => {
             });
           }
 
+          // ── resetkey ──
+          case "resetkey": {
+            const payload = JSON.parse(extraData);
+            const targetUserId = payload.targetUser;
+            const targetHwid = payload.hwid;
+
+            // Find matching keys for this script
+            let query = supabase
+              .from("generated_keys")
+              .select("id, key, redeemed_hwid, discord_id, expires_at, redeemed")
+              .eq("script_id", script.id)
+              .eq("redeemed", true)
+              .not("redeemed_hwid", "is", null);
+
+            if (targetUserId) {
+              query = query.eq("discord_id", targetUserId);
+            }
+
+            const { data: keys } = await query;
+
+            if (!keys?.length) {
+              return reply(InteractionResponseType.UPDATE_MESSAGE, {
+                ...createEmbed("⚠️ No Keys Found", `No redeemed keys found${targetUserId ? ` for <@${targetUserId}>` : ""} on **${script.script_name}**.`, 0xffaa00),
+                components: [],
+              });
+            }
+
+            // If searching by HWID, filter to matching keys
+            const matchingKeys = targetHwid
+              ? keys.filter((k: any) => k.redeemed_hwid === targetHwid)
+              : keys;
+
+            if (!matchingKeys.length) {
+              return reply(InteractionResponseType.UPDATE_MESSAGE, {
+                ...createEmbed("⚠️ No Keys Found", `No keys with HWID \`${targetHwid?.substring(0, 20)}...\` found on **${script.script_name}**.`, 0xffaa00),
+                components: [],
+              });
+            }
+
+            // Reset all matching keys' HWID locks
+            let resetCount = 0;
+            for (const k of matchingKeys) {
+              // Remove HWID from script whitelist
+              const currentList = script.hwid_list || [];
+              if (k.redeemed_hwid && currentList.includes(k.redeemed_hwid)) {
+                const newList = currentList.filter((h: string) => h !== k.redeemed_hwid);
+                await supabase.from("scripts").update({ hwid_list: newList }).eq("id", script.id);
+                // Refresh script data for next iteration
+                script.hwid_list = newList;
+              }
+
+              // Clear the HWID lock on the key
+              await supabase.from("generated_keys").update({ redeemed_hwid: null, redeemed: false }).eq("id", k.id);
+              resetCount++;
+            }
+
+            const targetDesc = targetUserId ? `<@${targetUserId}>` : `HWID \`${targetHwid?.substring(0, 20)}...\``;
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🔄 Key HWID Reset", `Reset **${resetCount}** key(s) for ${targetDesc} on **${script.script_name}**.\n\nThe user can now redeem their key again on a new device.`, 0x00ff00),
+              components: [],
+            });
+          }
+
           // ── removesetup ──
           case "removesetup": {
             const { error: delError } = await supabase
