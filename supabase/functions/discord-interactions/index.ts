@@ -423,11 +423,16 @@ Deno.serve(async (req) => {
 
           if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
 
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRolesWL = interaction.member?.roles || [];
+          const guildIdWL = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesWL, guildIdWL);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          if (!scripts.length) return errReply("No scripts found.");
 
           if (targetUser) {
             // Discord user-based whitelist: generate key + DM
