@@ -738,33 +738,31 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        if (!keyData || !keyData.redeemed_hwid) {
+        if (!keyData) {
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-            ...createEmbed("❌ No HWID Found", "You don't have a redeemed HWID for this script. Redeem a key first.", 0xff0000),
+            ...createEmbed("❌ No Key Found", "You don't have a redeemed key for this script. Redeem a key first.", 0xff0000),
             flags: 64,
           });
         }
 
         const hwid = keyData.redeemed_hwid;
         const script = keyData.scripts as any;
-        const currentList = script?.hwid_list || [];
+        const scriptName = script?.script_name || "Unknown";
 
-        if (!currentList.includes(hwid)) {
-          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-            ...createEmbed("⚠️ HWID Not Found", `Your HWID is not currently whitelisted on **${script?.script_name}**. You may need to redeem a new key.`, 0xffaa00),
-            flags: 64,
-          });
+        // Remove HWID from whitelist if present
+        if (hwid) {
+          const currentList = script?.hwid_list || [];
+          if (currentList.includes(hwid)) {
+            const newList = currentList.filter((h: string) => h !== hwid);
+            await supabase.from("scripts").update({ hwid_list: newList }).eq("id", scriptId);
+          }
         }
 
-        // Remove the HWID from whitelist
-        const newList = currentList.filter((h: string) => h !== hwid);
-        await supabase.from("scripts").update({ hwid_list: newList }).eq("id", scriptId);
-
         // Clear the redeemed_hwid on the key so they can re-redeem
-        await supabase.from("generated_keys").update({ redeemed_hwid: null, redeemed: false }).eq("discord_id", discordId).eq("script_id", scriptId).eq("redeemed_hwid", hwid);
+        await supabase.from("generated_keys").update({ redeemed_hwid: null, redeemed: false }).eq("discord_id", discordId).eq("script_id", scriptId).eq("redeemed", true).order("redeemed_at", { ascending: false }).limit(1);
 
         return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-          ...createEmbed("⚙️ HWID Reset", `Your HWID has been removed from **${script?.script_name}**.\n\nYou can now redeem a new key to whitelist a different device.`, 0x00ff00),
+          ...createEmbed("⚙️ HWID Reset", `Your HWID lock has been cleared for **${scriptName}**.\n\nYou can now redeem your key again on a new device.`, 0x00ff00),
           flags: 64,
         });
       }
