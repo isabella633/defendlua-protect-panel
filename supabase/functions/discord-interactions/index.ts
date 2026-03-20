@@ -315,13 +315,18 @@ Deno.serve(async (req) => {
 
         // ── /scripts ──
         case "scripts": {
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRoles = interaction.member?.roles || [];
+          const guildId = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRoles, guildId);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
 
           if (!scripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("📋 Your Scripts", "You don't have any scripts yet.", 0x5865f2));
+            createEmbed("📋 Scripts", "No scripts found.", 0x5865f2));
 
           const fields = scripts.slice(0, 15).map((s: any) => ({
             name: `📜 ${s.script_name}`,
@@ -330,24 +335,37 @@ Deno.serve(async (req) => {
           }));
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("📋 Your Scripts", `You have **${scripts.length}** script(s)`, 0x5865f2, fields));
+            createEmbed("📋 Scripts", `**${scripts.length}** script(s)`, 0x5865f2, fields));
         }
 
         // ── SELECT MENU COMMANDS (show dropdown to pick script) ──
+        // Safe commands: staff + owner allowed
         case "stats":
         case "logs":
         case "denied":
         case "keys":
+        case "info":
+        // Dangerous commands: owner only
         case "resetwhitelist":
         case "resetblacklist":
         case "toggle":
-        case "info":
         case "delete": {
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const dangerousCommands = ["resetwhitelist", "resetblacklist", "toggle", "delete"];
+          const memberRoles = interaction.member?.roles || [];
+          const guildId = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          let isStaff = false;
+          if (!userId) {
+            if (dangerousCommands.includes(name)) {
+              return errReply("Only the script owner can use this command.");
+            }
+            userId = await getStaffOwnerId(supabase, memberRoles, guildId);
+            if (!userId) return notLinkedReply();
+            isStaff = true;
+          }
 
           const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          if (!scripts.length) return errReply("No scripts found.");
 
           const titles: Record<string, string> = {
             stats: "📊 Select a script",
