@@ -562,6 +562,61 @@ Deno.serve(async (req) => {
             "Select a script to remove its key system configuration.");
         }
 
+        // ── /role (owner: manage staff roles) ──
+        case "role": {
+          const action = getOpt("action");
+          const roleId = getOpt("role");
+          const guildId = interaction.guild_id;
+
+          if (!guildId) return errReply("This command can only be used in a server.");
+
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          if (action === "list") {
+            const { data: roles } = await supabase
+              .from("discord_bot_roles")
+              .select("role_id")
+              .eq("user_id", userId)
+              .eq("guild_id", guildId);
+
+            if (!roles?.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              { ...createEmbed("👥 Staff Roles", "No staff roles configured. Use `/role add` to add one.", 0x5865f2), flags: 64 });
+
+            const roleList = roles.map((r: any) => `• <@&${r.role_id}>`).join("\n");
+            return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              { ...createEmbed("👥 Staff Roles", `Your staff roles in this server:\n\n${roleList}\n\nMembers with these roles can use basic commands (scripts, whitelist, blacklist, stats, logs, keys, etc.)`, 0x5865f2), flags: 64 });
+          }
+
+          if (!roleId) return errReply("Please provide a role.");
+
+          if (action === "add") {
+            const { error } = await supabase.from("discord_bot_roles").upsert({
+              user_id: userId,
+              guild_id: guildId,
+              role_id: roleId,
+            }, { onConflict: "user_id,guild_id,role_id" });
+
+            if (error) return errReply("Failed to add role.");
+            return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              { ...createEmbed("✅ Staff Role Added", `<@&${roleId}> can now use basic bot commands for your scripts.\n\n**Allowed:** scripts, whitelist, unwhitelist, blacklist, unblacklist, stats, logs, keys, lookup, resetkey\n**Owner only:** delete, rename, webhook, setup, resetwhitelist, resetblacklist, toggle`, 0x00ff00), flags: 64 });
+          }
+
+          if (action === "remove") {
+            const { error } = await supabase.from("discord_bot_roles")
+              .delete()
+              .eq("user_id", userId)
+              .eq("guild_id", guildId)
+              .eq("role_id", roleId);
+
+            if (error) return errReply("Failed to remove role.");
+            return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              { ...createEmbed("✅ Staff Role Removed", `<@&${roleId}> can no longer use bot commands for your scripts.`, 0xff5555), flags: 64 });
+          }
+
+          return errReply("Invalid action.");
+        }
+
         // ── /getkey (any user: get a key by completing a link) ──
         case "getkey": {
           const keyScripts = await getKeySystemScripts(supabase);
