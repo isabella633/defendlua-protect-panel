@@ -91,6 +91,30 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_bot_roles: {
+        Row: {
+          created_at: string
+          guild_id: string
+          id: string
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          guild_id: string
+          id?: string
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          guild_id?: string
+          id?: string
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       discord_link_codes: {
         Row: {
           code: string
