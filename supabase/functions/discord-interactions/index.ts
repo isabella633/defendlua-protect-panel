@@ -102,6 +102,22 @@ async function getUserScripts(supabase: any, userId: string) {
   return data || [];
 }
 
+// Check if a Discord user has a staff role for any owner in this guild
+// Returns the owner's user_id if they have a staff role, or null
+async function getStaffOwnerId(supabase: any, discordMemberRoles: string[], guildId: string): Promise<string | null> {
+  if (!discordMemberRoles?.length || !guildId) return null;
+  const { data } = await supabase
+    .from("discord_bot_roles")
+    .select("user_id, role_id")
+    .eq("guild_id", guildId);
+  if (!data?.length) return null;
+  
+  for (const entry of data) {
+    if (discordMemberRoles.includes(entry.role_id)) return entry.user_id;
+  }
+  return null;
+}
+
 // Get scripts that have key system enabled (for /getkey - any user)
 async function getKeySystemScripts(supabase: any) {
   const { data } = await supabase
