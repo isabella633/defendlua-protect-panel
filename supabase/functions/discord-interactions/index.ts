@@ -514,8 +514,13 @@ Deno.serve(async (req) => {
           const hwid = getOpt("hwid");
           if (!hwid) return errReply("Please provide an HWID to look up.");
 
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRolesLU = interaction.member?.roles || [];
+          const guildIdLU = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesLU, guildIdLU);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
 
