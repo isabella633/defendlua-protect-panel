@@ -303,7 +303,7 @@ protectedFunction()`);
 
   const copyToClipboardFn = async (text: string, type: string) => {
     const { copyToClipboard } = await import("@/lib/copyToClipboard");
-    const ok = await copyToClipboardFn(text);
+    const ok = await copyToClipboard(text);
     if (ok) {
       toast({
         title: "Copied!",
