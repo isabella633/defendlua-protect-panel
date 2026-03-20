@@ -303,7 +303,7 @@ protectedFunction()`);
 
   const copyToClipboardFn = async (text: string, type: string) => {
     const { copyToClipboard } = await import("@/lib/copyToClipboard");
-    const ok = await copyToClipboard(text);
+    const ok = await copyToClipboardFn(text);
     if (ok) {
       toast({
         title: "Copied!",
@@ -385,7 +385,7 @@ protectedFunction()`);
                   <label className="text-sm font-medium mb-2 block">Script ID</label>
                   <div className="flex items-center space-x-2">
                     <Input value={scriptId} readOnly className="bg-muted/50" />
-                    <Button variant="outline" size="icon" onClick={() => copyToClipboard(scriptId, "Script ID")}>
+                    <Button variant="outline" size="icon" onClick={() => copyToClipboardFn(scriptId, "Script ID")}>
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
@@ -667,7 +667,7 @@ protectedFunction()`);
                           onClick={() => {
                             const baseUrl = rawLink.replace("?key=YOUR_HWID", "");
                             const simpleLoader = `loadstring(game:HttpGet("${baseUrl}"))()`;
-                            copyToClipboard(simpleLoader, "Loader script");
+                            copyToClipboardFn(simpleLoader, "Loader script");
                           }}
                           className="w-full"
                         >
