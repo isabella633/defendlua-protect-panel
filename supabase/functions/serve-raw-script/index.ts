@@ -1009,17 +1009,10 @@ end`;
       const timeCheckCode = `
 local ${varNames.timeCheck}=(os.clock and os.clock() or tick and tick() or 0)`;
 
-      // Generate self-integrity verification
+      // Generate self-integrity verification (Roblox-safe, no string.dump)
       const selfCheckCode = `
 local ${varNames.selfCheck}=function(_fn)
-  if type(_fn)~="function" then return false end
-  local _ok,_dump=pcall(string.dump,_fn)
-  if not _ok or not _dump then return true end
-  local _h=0
-  for i=1,math.min(#_dump,200) do
-    _h=(_h*31+string.byte(_dump,i))%2147483647
-  end
-  return _h>0
+  return type(_fn)=="function"
 end`;
 
       // Build decryption function
