@@ -301,14 +301,15 @@ protectedFunction()`);
     });
   };
 
-  const copyToClipboard = async (text: string, type: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+  const copyToClipboardFn = async (text: string, type: string) => {
+    const { copyToClipboard } = await import("@/lib/copyToClipboard");
+    const ok = await copyToClipboard(text);
+    if (ok) {
       toast({
         title: "Copied!",
         description: `${type} copied to clipboard.`,
       });
-    } catch (err) {
+    } else {
       toast({
         title: "Error",
         description: "Failed to copy to clipboard.",
