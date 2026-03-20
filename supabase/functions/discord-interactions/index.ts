@@ -492,11 +492,16 @@ Deno.serve(async (req) => {
 
           if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
 
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRolesRK = interaction.member?.roles || [];
+          const guildIdRK = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesRK, guildIdRK);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          if (!scripts.length) return errReply("No scripts found.");
 
           const extraPayload = JSON.stringify({ targetUser: targetUser || null, hwid: hwid || null });
           return scriptSelectMenu("resetkey", scripts, "🔄 Select a script to reset key HWID",
