@@ -437,6 +437,25 @@ Deno.serve(async (req) => {
           return scriptSelectMenu("rename", scripts, "✏️ Select a script to rename", `New name: **${newName}**\nSelect the script below.`, newName);
         }
 
+        // ── /resetkey (owner: reset a key's HWID lock) ──
+        case "resetkey": {
+          const targetUser = getOpt("user");
+          const hwid = getOpt("hwid");
+
+          if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
+
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("You don't have any scripts yet.");
+
+          const extraPayload = JSON.stringify({ targetUser: targetUser || null, hwid: hwid || null });
+          return scriptSelectMenu("resetkey", scripts, "🔄 Select a script to reset key HWID",
+            targetUser ? `User: <@${targetUser}>\nSelect the script below.` : `HWID: \`${hwid?.substring(0, 40)}\`\nSelect the script below.`,
+            extraPayload);
+        }
+
         // ── /lookup ──
         case "lookup": {
           const hwid = getOpt("hwid");
