@@ -626,7 +626,8 @@ Deno.serve(async (req) => {
           const loadstringCode = `Key = "${safeKey}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-            ...createEmbed("✅ Redeem Key", `**Script:** ${scriptName}\n**Key:** \`${safeKey}\`\n\nPaste this in your executor — it will auto-redeem your key and load the script:\n\`\`\`lua\n${loadstringCode}\n\`\`\``, 0x00ff00),
+            content: loadstringCode,
+            ...createEmbed("✅ Redeem Key", `**Script:** ${scriptName}\n**Key:** \`${safeKey}\`\n\nLong-press the message above to copy your loader code.`, 0x00ff00),
             flags: 64,
           });
         }
@@ -671,7 +672,8 @@ Deno.serve(async (req) => {
           // User has a valid key — show the key-based loadstring
           const luaLoader = `Key = "${existingKey.key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
-            ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nCopy and execute this in your executor:\n\`\`\`lua\n${luaLoader}\n\`\`\``, 0x00ff00),
+            content: luaLoader,
+            ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nHere is your script. Long-press the message above to copy it.`, 0x00ff00),
             flags: 64,
           });
         } else {
