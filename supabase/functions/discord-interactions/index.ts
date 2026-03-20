@@ -969,9 +969,14 @@ Deno.serve(async (req) => {
         });
       }
 
-      // ── All other component interactions require linking ──
-      const userId = await getUserId(supabase, discordId);
-      if (!userId) return notLinkedReply();
+      // ── All other component interactions require linking or staff role ──
+      let userId = await getUserId(supabase, discordId);
+      if (!userId) {
+        const memberRolesComp = interaction.member?.roles || [];
+        const guildIdComp = interaction.guild_id;
+        userId = await getStaffOwnerId(supabase, memberRolesComp, guildIdComp);
+        if (!userId) return notLinkedReply();
+      }
 
       // ── CANCEL BUTTON ──
       if (customId.startsWith("cancel_")) {
