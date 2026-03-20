@@ -998,22 +998,10 @@ local ${varNames.hwidCheck}=function()
   return _h==${hwidHash}
 end`;
 
-      // Generate environment integrity check
+      // Generate environment integrity check (Roblox-safe, no string.dump)
       const envCheckCode = `
 local ${varNames.envCheck}=function()
-  local _dangerous={"getfenv","setfenv","debug.setupvalue","debug.setlocal"}
-  for _,_n in ipairs(_dangerous) do
-    local _parts={}
-    for _p in _n:gmatch("[^.]+") do _parts[#_parts+1]=_p end
-    local _v=_G
-    for _,_p in ipairs(_parts) do
-      if type(_v)=="table" then _v=_v[_p] else break end
-    end
-    if _v and type(_v)=="function" then
-      local _ok,_err=pcall(function() return string.dump(_v) end)
-      if not _ok then return false end
-    end
-  end
+  if _G["DEOBF_FLAG"] or _G["DEBUG_MODE"] or _G["UNLUAC"] or _G["UNLUAU"] then return false end
   return true
 end`;
 
