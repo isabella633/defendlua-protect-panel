@@ -1347,7 +1347,7 @@ Deno.serve(async (req) => {
               ...createEmbed(`🔑 Keys: ${script.script_name}`, `Showing ${keys.length} key(s)`, 0x5865f2, fields),
               components: [],
             });
-          
+          }
 
           // ── DESTRUCTIVE ACTIONS → show confirmation ──
           case "delete": {
