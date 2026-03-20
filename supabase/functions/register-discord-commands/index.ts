@@ -47,6 +47,7 @@ const commands = [
   ]},
 
   // Key System management
+  { name: "keys", description: "List all active keys for a script (select from dropdown)", default_member_permissions: ADMIN_ONLY },
   { name: "setup", description: "Set up a key system for a script", default_member_permissions: ADMIN_ONLY, options: [
     { name: "script", description: "Script name to set up", type: 3, required: true },
     { name: "provider", description: "Link provider", type: 3, required: true, choices: [{ name: "Linkvertise", value: "linkvertise" }, { name: "WorkInk", value: "workink" }] },
