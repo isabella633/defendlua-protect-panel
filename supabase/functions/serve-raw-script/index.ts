@@ -998,22 +998,10 @@ local ${varNames.hwidCheck}=function()
   return _h==${hwidHash}
 end`;
 
-      // Generate environment integrity check
+      // Generate environment integrity check (Roblox-safe, no string.dump)
       const envCheckCode = `
 local ${varNames.envCheck}=function()
-  local _dangerous={"getfenv","setfenv","debug.setupvalue","debug.setlocal"}
-  for _,_n in ipairs(_dangerous) do
-    local _parts={}
-    for _p in _n:gmatch("[^.]+") do _parts[#_parts+1]=_p end
-    local _v=_G
-    for _,_p in ipairs(_parts) do
-      if type(_v)=="table" then _v=_v[_p] else break end
-    end
-    if _v and type(_v)=="function" then
-      local _ok,_err=pcall(function() return string.dump(_v) end)
-      if not _ok then return false end
-    end
-  end
+  if _G["DEOBF_FLAG"] or _G["DEBUG_MODE"] or _G["UNLUAC"] or _G["UNLUAU"] then return false end
   return true
 end`;
 
@@ -1021,17 +1009,10 @@ end`;
       const timeCheckCode = `
 local ${varNames.timeCheck}=(os.clock and os.clock() or tick and tick() or 0)`;
 
-      // Generate self-integrity verification
+      // Generate self-integrity verification (Roblox-safe, no string.dump)
       const selfCheckCode = `
 local ${varNames.selfCheck}=function(_fn)
-  if type(_fn)~="function" then return false end
-  local _ok,_dump=pcall(string.dump,_fn)
-  if not _ok or not _dump then return true end
-  local _h=0
-  for i=1,math.min(#_dump,200) do
-    _h=(_h*31+string.byte(_dump,i))%2147483647
-  end
-  return _h>0
+  return type(_fn)=="function"
 end`;
 
       // Build decryption function
