@@ -1324,9 +1324,9 @@ Deno.serve(async (req) => {
               .order("created_at", { ascending: false })
               .limit(15);
 
-            if (!keys?.length) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            if (!keys?.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
               ...createEmbed("🔑 Keys", `No keys found for **${script.script_name}**.`, 0x5865f2),
-              components: [],
+              flags: 64,
             });
 
             const now = new Date();
