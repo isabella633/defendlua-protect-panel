@@ -96,10 +96,13 @@ const Verify = () => {
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generatedKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    const { copyToClipboard } = await import("@/lib/copyToClipboard");
+    const ok = await copyToClipboard(generatedKey);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const formatExpiry = (iso: string) => {

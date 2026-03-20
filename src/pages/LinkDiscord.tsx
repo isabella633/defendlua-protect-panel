@@ -19,9 +19,10 @@ export default function LinkDiscord() {
   // Official DefendLua Discord Bot
   const OFFICIAL_BOT_INVITE = "https://discord.com/oauth2/authorize?client_id=1385790808900501676&permissions=2147502080&integration_type=0&scope=bot";
 
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(OFFICIAL_BOT_INVITE);
-    toast.success("Invite link copied to clipboard!");
+  const copyInviteLink = async () => {
+    const { copyToClipboard } = await import("@/lib/copyToClipboard");
+    const ok = await copyToClipboard(OFFICIAL_BOT_INVITE);
+    if (ok) toast.success("Invite link copied to clipboard!");
   };
 
   useEffect(() => {
@@ -100,10 +101,11 @@ export default function LinkDiscord() {
     }
   };
 
-  const copyCode = () => {
+  const copyCode = async () => {
     if (linkCode) {
-      navigator.clipboard.writeText(linkCode);
-      toast.success("Code copied to clipboard!");
+      const { copyToClipboard } = await import("@/lib/copyToClipboard");
+      const ok = await copyToClipboard(linkCode);
+      if (ok) toast.success("Code copied to clipboard!");
     }
   };
 
