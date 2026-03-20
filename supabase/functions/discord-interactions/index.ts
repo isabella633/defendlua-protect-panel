@@ -244,6 +244,7 @@ Deno.serve(async (req) => {
             { name: "🎫 /getkey", value: "Get a key by completing a link", inline: true },
             { name: "✅ /redeem <key>", value: "Redeem a key (gives you a script to run)", inline: true },
             { name: "🔄 /resetkey [@user|hwid]", value: "Reset a key's HWID lock (dropdown)", inline: true },
+            { name: "🔑 /keys", value: "List all active keys for a script (dropdown)", inline: true },
             { name: "📦 /loader", value: "Browse scripts — get script, key, redeem, stats", inline: true },
           ];
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -320,6 +321,7 @@ Deno.serve(async (req) => {
         case "stats":
         case "logs":
         case "denied":
+        case "keys":
         case "resetwhitelist":
         case "resetblacklist":
         case "toggle":
@@ -335,6 +337,7 @@ Deno.serve(async (req) => {
             stats: "📊 Select a script",
             logs: "📋 Select a script",
             denied: "🛡️ Select a script",
+            keys: "🔑 Select a script",
             resetwhitelist: "🗑️ Select a script to reset whitelist",
             resetblacklist: "🗑️ Select a script to reset blacklist",
             toggle: "🔄 Select a script to toggle access",
@@ -346,6 +349,7 @@ Deno.serve(async (req) => {
             stats: "Please select a script to view its stats",
             logs: "Please select a script to view access logs",
             denied: "Please select a script to view denied attempts",
+            keys: "Please select a script to view all active keys",
             resetwhitelist: "⚠️ Select a script — you'll be asked to confirm",
             resetblacklist: "⚠️ Select a script — you'll be asked to confirm",
             toggle: "Please select a script to toggle public/private",
@@ -1308,6 +1312,42 @@ Deno.serve(async (req) => {
               components: [],
             });
           }
+
+          // ── keys ──
+          case "keys": {
+            const { data: keys } = await supabase
+              .from("generated_keys")
+              .select("key, discord_id, redeemed, redeemed_hwid, expires_at, created_at")
+              .eq("script_id", script.id)
+              .order("created_at", { ascending: false })
+              .limit(15);
+
+            if (!keys?.length) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🔑 Keys", `No keys found for **${script.script_name}**.`, 0x5865f2),
+              components: [],
+            });
+
+            const now = new Date();
+            const fields = keys.map((k: any) => {
+              const expires = new Date(k.expires_at);
+              const isExpired = expires < now;
+              const isLifetime = (expires.getTime() - new Date(k.created_at).getTime()) > 365 * 24 * 60 * 60 * 1000 * 50;
+              const expiryText = isLifetime ? "♾️ Lifetime" : isExpired ? "⏰ Expired" : `${Math.floor((expires.getTime() - now.getTime()) / 3600000)}h left`;
+              const status = isExpired ? "🔴" : k.redeemed ? "🟢" : "🟡";
+              const hwidText = k.redeemed_hwid ? `\`${k.redeemed_hwid.substring(0, 16)}...\`` : "Not redeemed";
+
+              return {
+                name: `${status} \`${k.key}\``,
+                value: `User: <@${k.discord_id}>\nHWID: ${hwidText}\nExpiry: ${expiryText}${k.redeemed ? " ✅ Redeemed" : " 🔓 Unredeemed"}`,
+                inline: false,
+              };
+            });
+
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed(`🔑 Keys: ${script.script_name}`, `Showing ${keys.length} key(s)`, 0x5865f2, fields),
+              components: [],
+            });
+          
 
           // ── DESTRUCTIVE ACTIONS → show confirmation ──
           case "delete": {
