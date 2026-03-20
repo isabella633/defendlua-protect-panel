@@ -102,6 +102,22 @@ async function getUserScripts(supabase: any, userId: string) {
   return data || [];
 }
 
+// Check if a Discord user has a staff role for any owner in this guild
+// Returns the owner's user_id if they have a staff role, or null
+async function getStaffOwnerId(supabase: any, discordMemberRoles: string[], guildId: string): Promise<string | null> {
+  if (!discordMemberRoles?.length || !guildId) return null;
+  const { data } = await supabase
+    .from("discord_bot_roles")
+    .select("user_id, role_id")
+    .eq("guild_id", guildId);
+  if (!data?.length) return null;
+  
+  for (const entry of data) {
+    if (discordMemberRoles.includes(entry.role_id)) return entry.user_id;
+  }
+  return null;
+}
+
 // Get scripts that have key system enabled (for /getkey - any user)
 async function getKeySystemScripts(supabase: any) {
   const { data } = await supabase
@@ -299,13 +315,18 @@ Deno.serve(async (req) => {
 
         // ── /scripts ──
         case "scripts": {
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRoles = interaction.member?.roles || [];
+          const guildId = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRoles, guildId);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
 
           if (!scripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("📋 Your Scripts", "You don't have any scripts yet.", 0x5865f2));
+            createEmbed("📋 Scripts", "No scripts found.", 0x5865f2));
 
           const fields = scripts.slice(0, 15).map((s: any) => ({
             name: `📜 ${s.script_name}`,
@@ -314,24 +335,37 @@ Deno.serve(async (req) => {
           }));
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("📋 Your Scripts", `You have **${scripts.length}** script(s)`, 0x5865f2, fields));
+            createEmbed("📋 Scripts", `**${scripts.length}** script(s)`, 0x5865f2, fields));
         }
 
         // ── SELECT MENU COMMANDS (show dropdown to pick script) ──
+        // Safe commands: staff + owner allowed
         case "stats":
         case "logs":
         case "denied":
         case "keys":
+        case "info":
+        // Dangerous commands: owner only
         case "resetwhitelist":
         case "resetblacklist":
         case "toggle":
-        case "info":
         case "delete": {
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const dangerousCommands = ["resetwhitelist", "resetblacklist", "toggle", "delete"];
+          const memberRoles = interaction.member?.roles || [];
+          const guildId = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          let isStaff = false;
+          if (!userId) {
+            if (dangerousCommands.includes(name)) {
+              return errReply("Only the script owner can use this command.");
+            }
+            userId = await getStaffOwnerId(supabase, memberRoles, guildId);
+            if (!userId) return notLinkedReply();
+            isStaff = true;
+          }
 
           const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          if (!scripts.length) return errReply("No scripts found.");
 
           const titles: Record<string, string> = {
             stats: "📊 Select a script",
@@ -389,11 +423,16 @@ Deno.serve(async (req) => {
 
           if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
 
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRolesWL = interaction.member?.roles || [];
+          const guildIdWL = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesWL, guildIdWL);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          if (!scripts.length) return errReply("No scripts found.");
 
           if (targetUser) {
             // Discord user-based whitelist: generate key + DM
@@ -412,11 +451,16 @@ Deno.serve(async (req) => {
           const hwid = getOpt("hwid");
           if (!hwid) return errReply("Please provide an HWID.");
 
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRolesHWID = interaction.member?.roles || [];
+          const guildIdHWID = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesHWID, guildIdHWID);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          if (!scripts.length) return errReply("No scripts found.");
 
           const actionLabels: Record<string, string> = {
             unwhitelist: "🗑️ Select a script to unwhitelist HWID",
@@ -448,11 +492,16 @@ Deno.serve(async (req) => {
 
           if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
 
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRolesRK = interaction.member?.roles || [];
+          const guildIdRK = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesRK, guildIdRK);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          if (!scripts.length) return errReply("No scripts found.");
 
           const extraPayload = JSON.stringify({ targetUser: targetUser || null, hwid: hwid || null });
           return scriptSelectMenu("resetkey", scripts, "🔄 Select a script to reset key HWID",
@@ -465,8 +514,13 @@ Deno.serve(async (req) => {
           const hwid = getOpt("hwid");
           if (!hwid) return errReply("Please provide an HWID to look up.");
 
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRolesLU = interaction.member?.roles || [];
+          const guildIdLU = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesLU, guildIdLU);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
 
@@ -544,6 +598,61 @@ Deno.serve(async (req) => {
 
           return scriptSelectMenu("removesetup", scripts, "🗑️ Select a script to remove key system",
             "Select a script to remove its key system configuration.");
+        }
+
+        // ── /role (owner: manage staff roles) ──
+        case "role": {
+          const action = getOpt("action");
+          const roleId = getOpt("role");
+          const guildId = interaction.guild_id;
+
+          if (!guildId) return errReply("This command can only be used in a server.");
+
+          const userId = await getUserId(supabase, discordId);
+          if (!userId) return notLinkedReply();
+
+          if (action === "list") {
+            const { data: roles } = await supabase
+              .from("discord_bot_roles")
+              .select("role_id")
+              .eq("user_id", userId)
+              .eq("guild_id", guildId);
+
+            if (!roles?.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              { ...createEmbed("👥 Staff Roles", "No staff roles configured. Use `/role add` to add one.", 0x5865f2), flags: 64 });
+
+            const roleList = roles.map((r: any) => `• <@&${r.role_id}>`).join("\n");
+            return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              { ...createEmbed("👥 Staff Roles", `Your staff roles in this server:\n\n${roleList}\n\nMembers with these roles can use basic commands (scripts, whitelist, blacklist, stats, logs, keys, etc.)`, 0x5865f2), flags: 64 });
+          }
+
+          if (!roleId) return errReply("Please provide a role.");
+
+          if (action === "add") {
+            const { error } = await supabase.from("discord_bot_roles").upsert({
+              user_id: userId,
+              guild_id: guildId,
+              role_id: roleId,
+            }, { onConflict: "user_id,guild_id,role_id" });
+
+            if (error) return errReply("Failed to add role.");
+            return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              { ...createEmbed("✅ Staff Role Added", `<@&${roleId}> can now use basic bot commands for your scripts.\n\n**Allowed:** scripts, whitelist, unwhitelist, blacklist, unblacklist, stats, logs, keys, lookup, resetkey\n**Owner only:** delete, rename, webhook, setup, resetwhitelist, resetblacklist, toggle`, 0x00ff00), flags: 64 });
+          }
+
+          if (action === "remove") {
+            const { error } = await supabase.from("discord_bot_roles")
+              .delete()
+              .eq("user_id", userId)
+              .eq("guild_id", guildId)
+              .eq("role_id", roleId);
+
+            if (error) return errReply("Failed to remove role.");
+            return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              { ...createEmbed("✅ Staff Role Removed", `<@&${roleId}> can no longer use bot commands for your scripts.`, 0xff5555), flags: 64 });
+          }
+
+          return errReply("Invalid action.");
         }
 
         // ── /getkey (any user: get a key by completing a link) ──
@@ -860,9 +969,14 @@ Deno.serve(async (req) => {
         });
       }
 
-      // ── All other component interactions require linking ──
-      const userId = await getUserId(supabase, discordId);
-      if (!userId) return notLinkedReply();
+      // ── All other component interactions require linking or staff role ──
+      let userId = await getUserId(supabase, discordId);
+      if (!userId) {
+        const memberRolesComp = interaction.member?.roles || [];
+        const guildIdComp = interaction.guild_id;
+        userId = await getStaffOwnerId(supabase, memberRolesComp, guildIdComp);
+        if (!userId) return notLinkedReply();
+      }
 
       // ── CANCEL BUTTON ──
       if (customId.startsWith("cancel_")) {

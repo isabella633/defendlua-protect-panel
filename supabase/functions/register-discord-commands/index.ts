@@ -56,6 +56,12 @@ const commands = [
     { name: "mode", description: "What happens on redeem", type: 3, required: false, choices: [{ name: "Add HWID to whitelist", value: "whitelist" }, { name: "Temporary access pass", value: "temporary" }] },
   ]},
   { name: "removesetup", description: "Remove the key system from a script (select from dropdown)", default_member_permissions: ADMIN_ONLY },
+
+  // Staff role management
+  { name: "role", description: "Manage staff roles that can use basic bot commands", default_member_permissions: ADMIN_ONLY, options: [
+    { name: "action", description: "Add or remove a staff role", type: 3, required: true, choices: [{ name: "Add role", value: "add" }, { name: "Remove role", value: "remove" }, { name: "List roles", value: "list" }] },
+    { name: "role", description: "The Discord role to add/remove", type: 8, required: false },
+  ]},
 ];
 
 Deno.serve(async (req) => {
