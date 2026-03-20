@@ -451,11 +451,16 @@ Deno.serve(async (req) => {
           const hwid = getOpt("hwid");
           if (!hwid) return errReply("Please provide an HWID.");
 
-          const userId = await getUserId(supabase, discordId);
-          if (!userId) return notLinkedReply();
+          const memberRolesHWID = interaction.member?.roles || [];
+          const guildIdHWID = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesHWID, guildIdHWID);
+            if (!userId) return notLinkedReply();
+          }
 
           const scripts = await getUserScripts(supabase, userId);
-          if (!scripts.length) return errReply("You don't have any scripts yet.");
+          if (!scripts.length) return errReply("No scripts found.");
 
           const actionLabels: Record<string, string> = {
             unwhitelist: "🗑️ Select a script to unwhitelist HWID",
