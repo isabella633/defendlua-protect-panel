@@ -1336,7 +1336,7 @@ Deno.serve(async (req) => {
               const isLifetime = (expires.getTime() - new Date(k.created_at).getTime()) > 365 * 24 * 60 * 60 * 1000 * 50;
               const expiryText = isLifetime ? "♾️ Lifetime" : isExpired ? "⏰ Expired" : `${Math.floor((expires.getTime() - now.getTime()) / 3600000)}h left`;
               const status = isExpired ? "🔴" : k.redeemed ? "🟢" : "🟡";
-              const hwidText = k.redeemed_hwid ? `\`${k.redeemed_hwid.substring(0, 16)}...\`` : "Not redeemed";
+              const hwidText = k.redeemed_hwid ? `||${k.redeemed_hwid.substring(0, 16)}...||` : "Not redeemed";
 
               return {
                 name: `${status} \`${k.key}\``,
