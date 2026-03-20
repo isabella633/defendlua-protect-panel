@@ -243,6 +243,7 @@ Deno.serve(async (req) => {
             { name: "🗑️ /removesetup", value: "Remove key system (dropdown)", inline: true },
             { name: "🎫 /getkey", value: "Get a key by completing a link", inline: true },
             { name: "✅ /redeem <key>", value: "Redeem a key (gives you a script to run)", inline: true },
+            { name: "🔄 /resetkey [@user|hwid]", value: "Reset a key's HWID lock (dropdown)", inline: true },
             { name: "📦 /loader", value: "Browse scripts — get script, key, redeem, stats", inline: true },
           ];
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,

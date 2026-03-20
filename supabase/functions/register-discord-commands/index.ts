@@ -41,6 +41,10 @@ const commands = [
   { name: "unblacklist", description: "Remove HWID from blacklist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
   { name: "rename", description: "Rename a script", default_member_permissions: ADMIN_ONLY, options: [{ name: "name", description: "New script name", type: 3, required: true }] },
   { name: "lookup", description: "Check if an HWID is whitelisted/blacklisted across all scripts", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to look up", type: 3, required: true }] },
+  { name: "resetkey", description: "Reset a user's key HWID lock so they can switch devices", default_member_permissions: ADMIN_ONLY, options: [
+    { name: "user", description: "Discord user whose key to reset", type: 6, required: false },
+    { name: "hwid", description: "Specific HWID to reset (manual)", type: 3, required: false },
+  ]},
 
   // Key System management
   { name: "setup", description: "Set up a key system for a script", default_member_permissions: ADMIN_ONLY, options: [
