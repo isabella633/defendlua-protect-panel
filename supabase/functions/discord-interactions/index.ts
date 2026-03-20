@@ -1345,9 +1345,9 @@ Deno.serve(async (req) => {
               };
             });
 
-            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
               ...createEmbed(`🔑 Keys: ${script.script_name}`, `Showing ${keys.length} key(s)`, 0x5865f2, fields),
-              components: [],
+              flags: 64,
             });
           }
 
