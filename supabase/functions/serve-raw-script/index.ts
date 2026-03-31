@@ -675,7 +675,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
       });
 
       // Return identical response to access denied to prevent script ID enumeration
-return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID")', {
+return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
