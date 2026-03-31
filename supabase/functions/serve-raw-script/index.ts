@@ -610,7 +610,7 @@ Deno.serve(async (req) => {
         .eq("slug", lookupSlug)
         .single();
       if (!slugScript) {
-return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID")', {
+return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
