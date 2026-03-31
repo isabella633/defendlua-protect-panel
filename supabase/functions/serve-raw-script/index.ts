@@ -610,7 +610,7 @@ Deno.serve(async (req) => {
         .eq("slug", lookupSlug)
         .single();
       if (!slugScript) {
-return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID")', {
+return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
@@ -675,7 +675,7 @@ return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or
       });
 
       // Return identical response to access denied to prevent script ID enumeration
-return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID")', {
+return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
@@ -761,7 +761,7 @@ return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or
       await sendDiscordWebhook("Denied", "HWID Blacklisted", 0xff0000);
 
       // Return identical response to prevent enumeration
-return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID")', {
+return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
@@ -834,7 +834,7 @@ return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or
             reason: "Key HWID mismatch",
           });
           await sendDiscordWebhook("Denied", "Key HWID Mismatch", 0xff0000);
-return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID: This key is locked to a different device.")', {
+return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("This key is locked to a different device.")', {
             status: 403,
             headers: { ...corsHeaders, "Content-Type": "text/plain" },
           });
@@ -848,7 +848,7 @@ return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or
           status: "denied",
           reason: "Key expired",
         });
-return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID: Your key has expired.")', {
+return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your key has expired.")', {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
@@ -879,7 +879,7 @@ return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or
       await sendDiscordWebhook("Denied", !isHwidWhitelisted ? "HWID Not Whitelisted" : "IP Not Whitelisted", 0xff0000);
 
       // Return identical response to script-not-found to prevent enumeration
-      return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID")', {
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
