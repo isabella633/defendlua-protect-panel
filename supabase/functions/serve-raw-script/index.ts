@@ -879,7 +879,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your 
       await sendDiscordWebhook("Denied", !isHwidWhitelisted ? "HWID Not Whitelisted" : "IP Not Whitelisted", 0xff0000);
 
       // Return identical response to script-not-found to prevent enumeration
-      return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID")', {
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
