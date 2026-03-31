@@ -848,7 +848,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("This 
           status: "denied",
           reason: "Key expired",
         });
-return new Response('game:GetService("Players").LocalPlayer:Kick("Invalid key or HWID: Your key has expired.")', {
+return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your key has expired.")', {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
