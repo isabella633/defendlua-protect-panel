@@ -1,28 +1,23 @@
 project_id = "uwfuuhhcjlxgyeecpeii"
 
-[functions.redeem-activation-code]
-verify_jwt = true
-
-[functions.serve-raw-script]
-verify_jwt = false
-
-[functions.ai-chat]
-verify_jwt = true
-
-[functions.lua-code-assist]
-verify_jwt = true
-
-[functions.discord-bot-api]
-verify_jwt = false
-
-[functions.discord-interactions]
-verify_jwt = false
-
-[functions.downgrade-subscription]
-verify_jwt = true
-
-[functions.register-discord-commands]
-verify_jwt = false
-
-[functions.process-email-queue]
-verify_jwt = true
+[functions]
+  [functions.ai-chat]
+    verify_jwt = true
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.discord-bot-api]
+    verify_jwt = false
+  [functions.discord-interactions]
+    verify_jwt = false
+  [functions.downgrade-subscription]
+    verify_jwt = true
+  [functions.lua-code-assist]
+    verify_jwt = true
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.redeem-activation-code]
+    verify_jwt = true
+  [functions.register-discord-commands]
+    verify_jwt = false
+  [functions.serve-raw-script]
+    verify_jwt = false
