@@ -568,8 +568,8 @@ Deno.serve(async (req) => {
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
 
-    // Rate limit by IP: 30 requests per minute
-    const ipRateLimit = checkRateLimit(`ip:${clientIp}`, 30, 60000);
+    // Rate limit by IP: 30 requests per minute (persistent, survives cold starts)
+    const ipRateLimit = await checkRateLimitDB(rateLimitClient, `ip:${clientIp}`, 30, 60000);
     if (!ipRateLimit.allowed) {
       console.warn("Rate limit exceeded for IP:", clientIp);
       return new Response('print("ERROR: Rate limit exceeded. Please wait before trying again.")', {
