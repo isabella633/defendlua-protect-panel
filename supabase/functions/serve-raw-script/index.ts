@@ -835,7 +835,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
           });
           await sendDiscordWebhook("Denied", "Key HWID Mismatch", 0xff0000);
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("This key is locked to a different device.")', {
-            status: 403,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "text/plain" },
           });
         }
