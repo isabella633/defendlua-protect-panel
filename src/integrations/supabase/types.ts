@@ -403,6 +403,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          count: number
+          expires_at: string
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          expires_at: string
+          key: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          expires_at?: string
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       scripts: {
         Row: {
           created_at: string | null
@@ -572,6 +593,15 @@ export type Database = {
     }
     Functions: {
       can_create_script: { Args: { user_id_param: string }; Returns: boolean }
+      check_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window_ms: number }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          reset_in: number
+        }[]
+      }
+      cleanup_rate_limits: { Args: never; Returns: number }
       count_user_scripts: { Args: { user_id_param: string }; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }

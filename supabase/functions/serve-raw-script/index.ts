@@ -17,37 +17,29 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-// Simple in-memory rate limiter using Map (resets on cold starts, but provides basic protection)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-
-function checkRateLimit(
+// Persistent DB-backed rate limiter (survives cold starts)
+async function checkRateLimitDB(
+  supabase: any,
   key: string,
   limit: number,
   windowMs: number,
-): { allowed: boolean; remaining: number; resetIn: number } {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-
-  if (!entry || now > entry.resetTime) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
-    return { allowed: true, remaining: limit - 1, resetIn: windowMs };
-  }
-
-  if (entry.count >= limit) {
-    return { allowed: false, remaining: 0, resetIn: entry.resetTime - now };
-  }
-
-  entry.count++;
-  return { allowed: true, remaining: limit - entry.count, resetIn: entry.resetTime - now };
-}
-
-// Clean up old rate limit entries periodically (prevent memory leak)
-function cleanupRateLimits() {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap.entries()) {
-    if (now > entry.resetTime) {
-      rateLimitMap.delete(key);
+): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
+  try {
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      p_key: key,
+      p_limit: limit,
+      p_window_ms: windowMs,
+    });
+    if (error || !data || data.length === 0) {
+      console.error('Rate limit check error:', error);
+      // Fail open to avoid blocking legitimate requests
+      return { allowed: true, remaining: limit, resetIn: windowMs };
     }
+    const row = data[0];
+    return { allowed: row.allowed, remaining: row.remaining, resetIn: row.reset_in };
+  } catch (e) {
+    console.error('Rate limit exception:', e);
+    return { allowed: true, remaining: limit, resetIn: windowMs };
   }
 }
 
@@ -457,8 +449,11 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Clean up old rate limit entries
-  cleanupRateLimits();
+  // Create admin client for rate limiting
+  const rateLimitClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
 
   // Detect browser requests via Accept header or User-Agent
   const acceptHeader = req.headers.get("accept") || "";
@@ -573,8 +568,8 @@ Deno.serve(async (req) => {
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
 
-    // Rate limit by IP: 30 requests per minute
-    const ipRateLimit = checkRateLimit(`ip:${clientIp}`, 30, 60000);
+    // Rate limit by IP: 30 requests per minute (persistent, survives cold starts)
+    const ipRateLimit = await checkRateLimitDB(rateLimitClient, `ip:${clientIp}`, 30, 60000);
     if (!ipRateLimit.allowed) {
       console.warn("Rate limit exceeded for IP:", clientIp);
       return new Response('print("ERROR: Rate limit exceeded. Please wait before trying again.")', {
@@ -618,8 +613,8 @@ Deno.serve(async (req) => {
       scriptId = slugScript.id;
     }
 
-    // Rate limit by script ID: 100 requests per hour per script
-    const scriptRateLimit = checkRateLimit(`script:${scriptId}`, 100, 3600000);
+    // Rate limit by script ID: 100 requests per hour per script (persistent)
+    const scriptRateLimit = await checkRateLimitDB(rateLimitClient, `script:${scriptId}`, 100, 3600000);
     if (!scriptRateLimit.allowed) {
       console.warn("Rate limit exceeded for script:", scriptId);
       return new Response('print("ERROR: Script rate limit exceeded. Please try again later.")', {
