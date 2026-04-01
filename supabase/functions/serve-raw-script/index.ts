@@ -613,8 +613,8 @@ Deno.serve(async (req) => {
       scriptId = slugScript.id;
     }
 
-    // Rate limit by script ID: 100 requests per hour per script
-    const scriptRateLimit = checkRateLimit(`script:${scriptId}`, 100, 3600000);
+    // Rate limit by script ID: 100 requests per hour per script (persistent)
+    const scriptRateLimit = await checkRateLimitDB(rateLimitClient, `script:${scriptId}`, 100, 3600000);
     if (!scriptRateLimit.allowed) {
       console.warn("Rate limit exceeded for script:", scriptId);
       return new Response('print("ERROR: Script rate limit exceeded. Please try again later.")', {
