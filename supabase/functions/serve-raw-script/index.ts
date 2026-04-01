@@ -17,37 +17,29 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-// Simple in-memory rate limiter using Map (resets on cold starts, but provides basic protection)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-
-function checkRateLimit(
+// Persistent DB-backed rate limiter (survives cold starts)
+async function checkRateLimitDB(
+  supabase: any,
   key: string,
   limit: number,
   windowMs: number,
-): { allowed: boolean; remaining: number; resetIn: number } {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-
-  if (!entry || now > entry.resetTime) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
-    return { allowed: true, remaining: limit - 1, resetIn: windowMs };
-  }
-
-  if (entry.count >= limit) {
-    return { allowed: false, remaining: 0, resetIn: entry.resetTime - now };
-  }
-
-  entry.count++;
-  return { allowed: true, remaining: limit - entry.count, resetIn: entry.resetTime - now };
-}
-
-// Clean up old rate limit entries periodically (prevent memory leak)
-function cleanupRateLimits() {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap.entries()) {
-    if (now > entry.resetTime) {
-      rateLimitMap.delete(key);
+): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
+  try {
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      p_key: key,
+      p_limit: limit,
+      p_window_ms: windowMs,
+    });
+    if (error || !data || data.length === 0) {
+      console.error('Rate limit check error:', error);
+      // Fail open to avoid blocking legitimate requests
+      return { allowed: true, remaining: limit, resetIn: windowMs };
     }
+    const row = data[0];
+    return { allowed: row.allowed, remaining: row.remaining, resetIn: row.reset_in };
+  } catch (e) {
+    console.error('Rate limit exception:', e);
+    return { allowed: true, remaining: limit, resetIn: windowMs };
   }
 }
 
