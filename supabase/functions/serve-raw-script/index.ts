@@ -610,7 +610,7 @@ Deno.serve(async (req) => {
         .eq("slug", lookupSlug)
         .single();
       if (!slugScript) {
-return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
+        return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
@@ -675,7 +675,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
       });
 
       // Return identical response to access denied to prevent script ID enumeration
-return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
@@ -761,7 +761,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
       await sendDiscordWebhook("Denied", "HWID Blacklisted", 0xff0000);
 
       // Return identical response to prevent enumeration
-return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
@@ -834,10 +834,13 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
             reason: "Key HWID mismatch",
           });
           await sendDiscordWebhook("Denied", "Key HWID Mismatch", 0xff0000);
-return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("This key is locked to a different device.")', {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "text/plain" },
-          });
+          return new Response(
+            'local player = game.Players.LocalPlayer\nplayer:Kick("This key is locked to a different hwid.")',
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            },
+          );
         }
       } else if (keyData && new Date(keyData.expires_at) <= new Date()) {
         // Key expired
@@ -848,7 +851,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("This 
           status: "denied",
           reason: "Key expired",
         });
-return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your key has expired.")', {
+        return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your key has expired.")', {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
