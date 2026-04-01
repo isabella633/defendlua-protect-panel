@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "defendlua-protect-panel"
+const SITE_NAME = "DefendLua Panel"
 const SENDER_DOMAIN = "notify.defendlua.lol"
 const ROOT_DOMAIN = "defendlua.lol"
 const FROM_DOMAIN = "defendlua.lol" // Domain shown in From address (may be root or sender subdomain)
