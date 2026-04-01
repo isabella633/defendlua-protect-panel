@@ -762,7 +762,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
 
       // Return identical response to prevent enumeration
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
-        status: 403,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
     }
