@@ -849,7 +849,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("This 
           reason: "Key expired",
         });
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your key has expired.")', {
-          status: 403,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
       }
