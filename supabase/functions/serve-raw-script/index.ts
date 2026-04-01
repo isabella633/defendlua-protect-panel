@@ -611,7 +611,7 @@ Deno.serve(async (req) => {
         .single();
       if (!slugScript) {
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
-          status: 403,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
       }
