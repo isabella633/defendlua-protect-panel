@@ -611,7 +611,7 @@ Deno.serve(async (req) => {
         .single();
       if (!slugScript) {
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
-          status: 403,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
       }
@@ -676,7 +676,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
 
       // Return identical response to access denied to prevent script ID enumeration
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
-        status: 403,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
     }
@@ -762,7 +762,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
 
       // Return identical response to prevent enumeration
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
-        status: 403,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
     }
@@ -835,7 +835,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Inval
           });
           await sendDiscordWebhook("Denied", "Key HWID Mismatch", 0xff0000);
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("This key is locked to a different device.")', {
-            status: 403,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "text/plain" },
           });
         }
@@ -849,7 +849,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("This 
           reason: "Key expired",
         });
 return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your key has expired.")', {
-          status: 403,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
         });
       }
@@ -880,7 +880,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your 
 
       // Return identical response to script-not-found to prevent enumeration
       return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
-        status: 403,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
     }
