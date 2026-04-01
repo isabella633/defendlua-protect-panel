@@ -113,17 +113,17 @@ Deno.serve(async (req) => {
     // Validate code status - use same generic message for all failures
     if (!codeData.is_active) {
       console.log('Code deactivated');
-      return codeErrorResponse(400);
+      return await codeErrorResponse(400);
     }
 
     if (codeData.used_count >= codeData.max_uses) {
       console.log('Code max uses reached');
-      return codeErrorResponse(400);
+      return await codeErrorResponse(400);
     }
 
     if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
       console.log('Code expired');
-      return codeErrorResponse(400);
+      return await codeErrorResponse(400);
     }
 
     console.log('Code validated, updating subscription for user:', user.id);
