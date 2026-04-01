@@ -95,14 +95,19 @@ Deno.serve(async (req) => {
 
     // Use generic error message for all code validation failures to prevent enumeration
     const genericCodeError = { error: 'Invalid or expired activation code' };
-    const codeErrorResponse = (status: number) => new Response(
-      JSON.stringify(genericCodeError),
-      { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const VALIDATION_DELAY_MS = 200;
+    const codeErrorResponse = async (status: number) => {
+      // Constant-time delay to prevent timing-based enumeration
+      await new Promise(r => setTimeout(r, VALIDATION_DELAY_MS));
+      return new Response(
+        JSON.stringify(genericCodeError),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    };
 
     if (!codeData) {
       console.log('Code not found');
-      return codeErrorResponse(400);
+      return await codeErrorResponse(400);
     }
 
     // Validate code status - use same generic message for all failures
