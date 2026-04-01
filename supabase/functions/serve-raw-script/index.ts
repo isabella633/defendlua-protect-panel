@@ -880,7 +880,7 @@ return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Your 
 
       // Return identical response to script-not-found to prevent enumeration
       return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
-        status: 403,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
     }
