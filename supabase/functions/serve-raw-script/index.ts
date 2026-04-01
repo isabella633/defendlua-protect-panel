@@ -449,8 +449,11 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Clean up old rate limit entries
-  cleanupRateLimits();
+  // Create admin client for rate limiting
+  const rateLimitClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
 
   // Detect browser requests via Accept header or User-Agent
   const acceptHeader = req.headers.get("accept") || "";
