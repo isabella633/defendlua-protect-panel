@@ -470,8 +470,9 @@ Deno.serve(async (req) => {
 
           if (targetUser) {
             // Discord user-based whitelist: generate key + DM
-            const extraPayload = JSON.stringify({ targetUser, expiry: expiry ?? 24 });
-            return scriptSelectMenu("whitelist_user", scripts, "✅ Select a script to whitelist user", `User: <@${targetUser}>\nExpiry: ${expiry === 0 ? "Lifetime" : `${expiry ?? 24}h`}\nSelect the script below.`, extraPayload);
+            const expiryHours = parseDuration(expiry);
+            const extraPayload = JSON.stringify({ targetUser, expiry: expiryHours });
+            return scriptSelectMenu("whitelist_user", scripts, "✅ Select a script to whitelist user", `User: <@${targetUser}>\nExpiry: ${formatDuration(expiryHours)}\nSelect the script below.`, extraPayload);
           } else {
             // Legacy HWID-based whitelist
             return scriptSelectMenu("whitelist", scripts, "✅ Select a script to whitelist HWID", `HWID: \`${hwid.substring(0, 40)}\`\nSelect the script below.`, hwid);
@@ -586,7 +587,7 @@ Deno.serve(async (req) => {
           const scriptName = getOpt("script");
           const provider = getOpt("provider");
           const link = getOpt("link");
-          const expiry = getOpt("expiry") || 24;
+          const expiry = parseDuration(getOpt("expiry"));
           const mode = getOpt("mode") || "whitelist";
 
           if (!scriptName || !provider || !link) return errReply("Please provide a script name, provider, and link.");
@@ -619,7 +620,7 @@ Deno.serve(async (req) => {
           }
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("🔑 Key System Configured!", `**${script.script_name}** now has a key system!\n\n**Provider:** ${provider}\n**Link:** ${link}\n**Key Expiry:** ${expiry}h\n**Redeem Action:** ${mode}\n\n⚠️ **IMPORTANT:** Set your ${provider} redirect/target URL to:\n\`https://defendlua.lol/verify\`\n\nThis ensures users are redirected back to receive their key after completing the task.\n\nUsers can now use \`/getkey\` to get a key!`, 0x00ff00));
+            createEmbed("🔑 Key System Configured!", `**${script.script_name}** now has a key system!\n\n**Provider:** ${provider}\n**Link:** ${link}\n**Key Expiry:** ${formatDuration(expiry)}\n**Redeem Action:** ${mode}\n\n⚠️ **IMPORTANT:** Set your ${provider} redirect/target URL to:\n\`https://defendlua.lol/verify\`\n\nThis ensures users are redirected back to receive their key after completing the task.\n\nUsers can now use \`/getkey\` to get a key!`, 0x00ff00));
         }
 
         // ── /removesetup (owner: remove key system) ──
@@ -698,7 +699,7 @@ Deno.serve(async (req) => {
 
           const options = keyScripts.slice(0, 25).map((ks: any) => ({
             label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
-            description: `Provider: ${ks.provider} | Expires: ${ks.key_expiry_hours}h`,
+            description: `Provider: ${ks.provider} | Expires: ${formatDuration(ks.key_expiry_hours)}`,
             value: `getkey:${ks.script_id}`,
           }));
 
@@ -726,7 +727,7 @@ Deno.serve(async (req) => {
 
           const options = keyScripts.slice(0, 25).map((ks: any) => ({
             label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
-            description: `${ks.provider} | ${ks.key_expiry_hours}h keys | ${ks.redeem_action}`,
+            description: `${ks.provider} | ${formatDuration(ks.key_expiry_hours)} keys | ${ks.redeem_action}`,
             value: `loader:${ks.script_id}`,
           }));
 
@@ -1322,7 +1323,7 @@ Deno.serve(async (req) => {
               const dmChannel = await dmRes.json();
 
               if (dmChannel.id) {
-                const expiryText = expiryHours === 0 ? "♾️ Lifetime" : `${expiryHours} hours`;
+                const expiryText = formatDuration(expiryHours);
                 await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
                   method: "POST",
                   headers: { "Authorization": `Bot ${botToken}`, "Content-Type": "application/json" },
