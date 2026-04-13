@@ -454,6 +454,7 @@ Deno.serve(async (req) => {
           const targetUser = getOpt("user");
           const hwid = getOpt("hwid");
           const expiry = getOpt("expiry");
+          console.log("Whitelist command:", { targetUser, hwid, expiry, options: JSON.stringify(options) });
 
           if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
 
