@@ -34,7 +34,7 @@ const commands = [
   { name: "whitelist", description: "Whitelist a Discord user (generates a key & DMs them)", default_member_permissions: ADMIN_ONLY, options: [
     { name: "user", description: "Discord user to whitelist", type: 6, required: false },
     { name: "hwid", description: "HWID to whitelist (manual)", type: 3, required: false },
-    { name: "expiry", description: "Key expiry in hours (0 = lifetime, default: 24)", type: 4, required: false },
+    { name: "expiry", description: "Key expiry duration (e.g. 24h, 1d, 1w, 1m, 1y, 0 = lifetime)", type: 3, required: false },
   ]},
   { name: "unwhitelist", description: "Remove HWID from whitelist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
   { name: "blacklist", description: "Add HWID to blacklist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to blacklist", type: 3, required: true }] },
@@ -52,7 +52,7 @@ const commands = [
     { name: "script", description: "Script name to set up", type: 3, required: true },
     { name: "provider", description: "Link provider", type: 3, required: true, choices: [{ name: "Linkvertise", value: "linkvertise" }, { name: "WorkInk", value: "workink" }] },
     { name: "link", description: "Your monetization link URL", type: 3, required: true },
-    { name: "expiry", description: "Key expiry in hours (default: 24)", type: 4, required: false },
+    { name: "expiry", description: "Key expiry duration (e.g. 24h, 1d, 1w, 1m, 1y, default: 24h)", type: 3, required: false },
     { name: "mode", description: "What happens on redeem", type: 3, required: false, choices: [{ name: "Add HWID to whitelist", value: "whitelist" }, { name: "Temporary access pass", value: "temporary" }] },
   ]},
   { name: "removesetup", description: "Remove the key system from a script (select from dropdown)", default_member_permissions: ADMIN_ONLY },
