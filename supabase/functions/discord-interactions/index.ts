@@ -127,6 +127,40 @@ async function getKeySystemScripts(supabase: any) {
   return data || [];
 }
 
+// Parse duration string like "1h", "1d", "1w", "1m", "1y", or plain number (hours)
+// Returns hours (0 = lifetime)
+function parseDuration(input: string | number | null | undefined): number {
+  if (input === null || input === undefined || input === "") return 24;
+  const str = String(input).trim().toLowerCase();
+  if (str === "0" || str === "lifetime" || str === "forever") return 0;
+  const match = str.match(/^(\d+(?:\.\d+)?)\s*(h|d|w|m|y|hr|hrs|hour|hours|day|days|week|weeks|month|months|year|years)?$/);
+  if (!match) {
+    const num = Number(str);
+    return isNaN(num) ? 24 : num;
+  }
+  const value = parseFloat(match[1]);
+  const unit = match[2] || "h";
+  switch (unit) {
+    case "h": case "hr": case "hrs": case "hour": case "hours": return value;
+    case "d": case "day": case "days": return value * 24;
+    case "w": case "week": case "weeks": return value * 24 * 7;
+    case "m": case "month": case "months": return value * 24 * 30;
+    case "y": case "year": case "years": return value * 24 * 365;
+    default: return value;
+  }
+}
+
+// Format hours into human-readable duration
+function formatDuration(hours: number): string {
+  if (hours === 0) return "♾️ Lifetime";
+  if (hours >= 24 * 365 * 90) return "♾️ Lifetime"; // ~100 years = lifetime
+  if (hours >= 24 * 365 && hours % (24 * 365) === 0) return `${hours / (24 * 365)}y`;
+  if (hours >= 24 * 30 && hours % (24 * 30) === 0) return `${hours / (24 * 30)}mo`;
+  if (hours >= 24 * 7 && hours % (24 * 7) === 0) return `${hours / (24 * 7)}w`;
+  if (hours >= 24 && hours % 24 === 0) return `${hours / 24}d`;
+  return `${hours}h`;
+}
+
 // Generate a random key string
 function generateKey(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
