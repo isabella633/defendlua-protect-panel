@@ -454,7 +454,6 @@ Deno.serve(async (req) => {
           const targetUser = getOpt("user");
           const hwid = getOpt("hwid");
           const expiry = getOpt("expiry");
-          console.log("Whitelist command:", { targetUser, hwid, expiry, options: JSON.stringify(options) });
 
           if (!targetUser && !hwid) return errReply("Please provide a Discord user (`user`) or an HWID (`hwid`).");
 
@@ -472,7 +471,7 @@ Deno.serve(async (req) => {
           if (targetUser) {
             // Discord user-based whitelist: generate key + DM
             const expiryHours = parseDuration(expiry);
-            const extraPayload = JSON.stringify({ targetUser, expiry: expiryHours });
+            const extraPayload = `${targetUser}|${expiryHours}`;
             return scriptSelectMenu("whitelist_user", scripts, "✅ Select a script to whitelist user", `User: <@${targetUser}>\nExpiry: ${formatDuration(expiryHours)}\nSelect the script below.`, extraPayload);
           } else {
             // Legacy HWID-based whitelist
@@ -1265,9 +1264,15 @@ Deno.serve(async (req) => {
 
         // ── whitelist_user: generate key for Discord user and DM them ──
         if (action === "whitelist_user") {
-          const extraPayload = JSON.parse(extraData);
-          const targetUserId = extraPayload.targetUser;
-          const expiryHours = extraPayload.expiry ?? 24;
+          const [targetUserId, expiryHoursRaw] = extraData.split("|");
+          const expiryHours = Number(expiryHoursRaw || "24");
+
+          if (!targetUserId || Number.isNaN(expiryHours)) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Invalid whitelist request data.", 0xff0000),
+              components: [],
+            });
+          }
 
           const { data: script } = await supabase
             .from("scripts")
