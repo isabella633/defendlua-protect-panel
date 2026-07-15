@@ -5,6 +5,9 @@ function getCorsHeaders(req: Request) {
   const origin = req.headers.get('origin') || '';
   const allowedOrigins = [
     'https://uwfuuhhcjlxgyeecpeii.lovableproject.com',
+    'https://defendlua.lol',
+    'https://www.defendlua.lol',
+    'https://defendlua-protect-panel.lovable.app',
     'http://localhost:5173',
     'http://localhost:3000',
   ];
