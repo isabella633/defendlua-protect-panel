@@ -1516,7 +1516,47 @@ end)
     // Free users: always show watermark. Pro/Enterprise: respect show_watermark setting
     const shouldShowWatermark = ownerPlan === "free" ? true : (script as any).show_watermark !== false;
 
-    const finalScript = shouldShowWatermark ? promotionCode + "\n" + protectedScript : protectedScript;
+    // Luarmor-style updating console loader.
+    // Uses rconsoleprint + rconsoleclear (executor APIs) to overwrite one line in place.
+    // Falls back to a single final print if those APIs are unavailable.
+    const scriptDisplayName = (script.script_name || "Script").toString().replace(/[\r\n"\\]/g, "").slice(0, 48);
+    const loaderPrelude = `
+local _DL_t0 = tick()
+local _DL_rp = rawget(getfenv(), "rconsoleprint") or rawget(getfenv(), "printconsole")
+local _DL_rc = rawget(getfenv(), "rconsoleclear") or rawget(getfenv(), "consoleclear")
+local _DL_rn = rawget(getfenv(), "rconsolename") or rawget(getfenv(), "consolename") or rawget(getfenv(), "setconsolename")
+local _DL_hasCon = type(_DL_rp) == "function"
+if _DL_hasCon and type(_DL_rn) == "function" then pcall(_DL_rn, "DefendLua") end
+local _DL_name = ${JSON.stringify(scriptDisplayName)}
+local _DL_stages = {"Initializing","Verifying environment","Fetching modules","Decrypting payload","Finalizing"}
+local _DL_lastLen = 0
+local function _DL_render(stage, done)
+  local elapsed = (tick() - _DL_t0) * 1000
+  local line = string.format("[DefendLua] %s | %s | %.0fms", _DL_name, stage, elapsed)
+  if _DL_hasCon then
+    if type(_DL_rc) == "function" then pcall(_DL_rc) end
+    pcall(_DL_rp, line .. (done and "\\n" or ""))
+    _DL_lastLen = #line
+  elseif done then
+    print(line)
+  end
+end
+task.spawn(function()
+  for i, s in ipairs(_DL_stages) do
+    _DL_render(s, false)
+    task.wait(0.08 + math.random() * 0.06)
+    if _DL_finished then return end
+  end
+end)
+`;
+    const loaderFinish = `
+_DL_finished = true
+task.wait()
+_DL_render(string.format("Loaded in %.0fms", (tick() - _DL_t0) * 1000), true)
+`;
+
+    const wrappedScript = loaderPrelude + "\n" + protectedScript + "\n" + loaderFinish;
+    const finalScript = shouldShowWatermark ? promotionCode + "\n" + wrappedScript : wrappedScript;
 
     return new Response(finalScript, {
       status: 200,
