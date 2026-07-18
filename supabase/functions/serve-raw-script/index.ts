@@ -1330,9 +1330,10 @@ end`;
    if _elapsed>5 then
      return warn("[DefendLua] Security check failed: Timeout exceeded")
    end
-    -- Inline decrypt→loadstring→xpcall. No intermediate `_src` variable exists
-    -- for an attacker to print(); the decryptor requires the captured loadstring
-    -- identity as an argument, so passing print/writefile garbles the output.
+    -- Inline decrypt -> loadstring -> xpcall. No intermediate _src variable
+    -- exists for an attacker to print(); the decryptor requires the captured
+    -- loadstring identity as an argument, so print/writefile garbles output.
+
     local _fn,_err=${varNames.decrypt}_LS(${varNames.decrypt}(${varNames.data},${varNames.decrypt}_LS),"=(dl)")
     if not _fn then
       return warn("[DefendLua] Load error: "..tostring(_err))
