@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShieldAlert, RefreshCw, Trash2 } from "lucide-react";
+import { ShieldAlert, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TamperLog {
@@ -41,7 +41,6 @@ const REASON_LABELS: Record<string, string> = {
 const TamperLogsDialog = ({ scriptId, scriptName, open, onOpenChange }: Props) => {
   const [logs, setLogs] = useState<TamperLog[]>([]);
   const [loading, setLoading] = useState(false);
-  const [clearing, setClearing] = useState(false);
   const { toast } = useToast();
 
   const fetchLogs = async () => {
@@ -66,19 +65,7 @@ const TamperLogsDialog = ({ scriptId, scriptName, open, onOpenChange }: Props) =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, scriptId]);
 
-  const clearAll = async () => {
-    if (!scriptId) return;
-    if (!confirm("Delete all tamper logs for this script?")) return;
-    setClearing(true);
-    const { error } = await supabase.from("tamper_logs").delete().eq("script_id", scriptId);
-    setClearing(false);
-    if (error) {
-      toast({ title: "Failed to clear logs", description: error.message, variant: "destructive" });
-    } else {
-      setLogs([]);
-      toast({ title: "Tamper logs cleared" });
-    }
-  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
