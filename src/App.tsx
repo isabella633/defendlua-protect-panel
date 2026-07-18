@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import Verify from "./pages/Verify";
 import ResetPassword from "./pages/ResetPassword";
 import ScriptRedirect from "./pages/ScriptRedirect";
+import ScriptAnalytics from "./pages/ScriptAnalytics";
 const queryClient = new QueryClient();
 
 const App = () => (
