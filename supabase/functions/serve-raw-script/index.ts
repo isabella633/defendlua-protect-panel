@@ -1273,19 +1273,6 @@ local ${varNames.decrypt}_makeReader=function(${varNames.data})
   end
   return function()
     if _i>=_n then return nil end
-    -- Per-chunk caller identity mask. Encoder assumes real C load → "[C]".
-    -- Any Lua wrapper of load has a non-"[C]" source, producing a nonzero
-    -- mask that garbles every byte in the chunk.
-    local _cs="[C]"
-    if type(debug)=="table" and type(debug.info)=="function" then
-      local _ok,_v=pcall(debug.info,2,"s")
-      if _ok and type(_v)=="string" then _cs=_v end
-    end
-    local _cm=0
-    if _cs~="[C]" and _cs~="=[C]" then
-      for j=1,#_cs do _cm=(_cm+string.byte(_cs,j)*j)%256 end
-      if _cm==0 then _cm=113 end
-    end
     local _t={}
     local _stop=_i+${CHUNK_STEP}
     if _stop>_n then _stop=_n end
@@ -1302,7 +1289,6 @@ local ${varNames.decrypt}_makeReader=function(${varNames.data})
       _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
       _b=bit32 and bit32.bxor(_b,_hkr) or ((_b>=_hkr) and _b-_hkr or 256+_b-_hkr)%256
       _b=bit32 and bit32.bxor(_b,_es) or ((_b>=_es) and _b-_es or 256+_b-_es)%256
-      _b=bit32 and bit32.bxor(_b,_cm) or ((_b>=_cm) and _b-_cm or 256+_b-_cm)%256
       _t[_j]=string.char(_b)
       _j=_j+1
     end
