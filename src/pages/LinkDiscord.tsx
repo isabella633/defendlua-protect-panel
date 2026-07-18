@@ -161,10 +161,10 @@ export default function LinkDiscord() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" aria-label="Back to home" onClick={() => navigate("/")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <img src={logoImage} alt="DefendLua" className="h-8 w-8" />
+          <img src={logoImage} alt="DefendLua logo" className="h-8 w-8" />
           <h1 className="text-2xl font-bold">Link Discord</h1>
         </div>
 
@@ -231,7 +231,7 @@ export default function LinkDiscord() {
                         readOnly
                         className="font-mono text-lg text-center tracking-wider"
                       />
-                      <Button variant="outline" size="icon" onClick={copyCode}>
+                      <Button variant="outline" size="icon" aria-label="Copy link code" onClick={copyCode}>
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
@@ -319,7 +319,7 @@ export default function LinkDiscord() {
                 readOnly
                 className="font-mono text-xs"
               />
-              <Button variant="outline" size="icon" onClick={copyInviteLink}>
+              <Button variant="outline" size="icon" aria-label="Copy Discord bot invite link" onClick={copyInviteLink}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>

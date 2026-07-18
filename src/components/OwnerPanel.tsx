@@ -388,7 +388,7 @@ protectedFunction()`);
                   <label className="text-sm font-medium mb-2 block">Script ID</label>
                   <div className="flex items-center space-x-2">
                     <Input value={scriptId} readOnly className="bg-muted/50" />
-                    <Button variant="outline" size="icon" onClick={() => copyToClipboardFn(scriptId, "Script ID")}>
+                    <Button variant="outline" size="icon" aria-label="Copy script ID" onClick={() => copyToClipboardFn(scriptId, "Script ID")}>
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
@@ -418,7 +418,7 @@ protectedFunction()`);
                             className="flex items-center justify-between bg-muted/50 p-2 rounded border border-border/50"
                           >
                             <span className="text-sm font-mono">{hwid}</span>
-                            <Button variant="ghost" size="icon" onClick={() => removeHwid(hwid)} className="h-6 w-6">
+                            <Button variant="ghost" size="icon" aria-label="Remove HWID from whitelist" onClick={() => removeHwid(hwid)} className="h-6 w-6">
                               <X className="w-3 h-3" />
                             </Button>
                           </div>
@@ -433,7 +433,7 @@ protectedFunction()`);
                         placeholder="Enter HWID to whitelist"
                         onKeyDown={(e) => e.key === "Enter" && addHwid()}
                       />
-                      <Button variant="outline" size="icon" onClick={addHwid}>
+                      <Button variant="outline" size="icon" aria-label="Add HWID to whitelist" onClick={addHwid}>
                         <Plus className="w-4 h-4" />
                       </Button>
                     </div>
@@ -455,7 +455,7 @@ protectedFunction()`);
                             className="flex items-center justify-between bg-muted/50 p-2 rounded border border-border/50"
                           >
                             <span className="text-sm font-mono">{ip}</span>
-                            <Button variant="ghost" size="icon" onClick={() => removeIp(ip)} className="h-6 w-6">
+                            <Button variant="ghost" size="icon" aria-label="Remove IP from whitelist" onClick={() => removeIp(ip)} className="h-6 w-6">
                               <X className="w-3 h-3" />
                             </Button>
                           </div>
@@ -470,7 +470,7 @@ protectedFunction()`);
                         placeholder="Enter IP to whitelist"
                         onKeyDown={(e) => e.key === "Enter" && addIp()}
                       />
-                      <Button variant="outline" size="icon" onClick={addIp}>
+                      <Button variant="outline" size="icon" aria-label="Add IP to whitelist" onClick={addIp}>
                         <Plus className="w-4 h-4" />
                       </Button>
                     </div>
@@ -603,6 +603,7 @@ protectedFunction()`);
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label="Remove HWID from blacklist"
                               onClick={() => removeBlacklistHwid(hwid)}
                               className="h-6 w-6"
                             >
@@ -620,7 +621,7 @@ protectedFunction()`);
                         placeholder="Enter HWID to blacklist"
                         onKeyDown={(e) => e.key === "Enter" && addBlacklistHwid()}
                       />
-                      <Button variant="outline" size="icon" onClick={addBlacklistHwid}>
+                      <Button variant="outline" size="icon" aria-label="Add HWID to blacklist" onClick={addBlacklistHwid}>
                         <Ban className="w-4 h-4" />
                       </Button>
                     </div>
