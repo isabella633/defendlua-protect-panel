@@ -846,7 +846,27 @@ Deno.serve(async (req) => {
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
         if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
-        // Check if user has a valid (redeemed or unredeemed) key for this script
+        // Check if this script has a key system enabled
+        const { data: keyConfig } = await supabase
+          .from("key_system_configs")
+          .select("script_id")
+          .eq("script_id", scriptId)
+          .eq("enabled", true)
+          .maybeSingle();
+
+        const loaderUrl = `https://api.defendlua.lol/s/${script.slug}`;
+
+        if (!keyConfig) {
+          // No key system — serve script directly
+          const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            content: luaLoader,
+            ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nHere is your script. Long-press the message above to copy it.`, 0x00ff00),
+            flags: 64,
+          });
+        }
+
+        // Key system enabled — check if user has a valid key for this script
         const { data: existingKey } = await supabase
           .from("generated_keys")
           .select("key, redeemed, expires_at")
@@ -854,12 +874,9 @@ Deno.serve(async (req) => {
           .eq("discord_id", discordId)
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
-
-        const loaderUrl = `https://api.defendlua.lol/s/${script.slug}`;
+          .maybeSingle();
 
         if (existingKey && new Date(existingKey.expires_at) > new Date()) {
-          // User has a valid key — show the key-based loadstring
           const luaLoader = `Key = "${existingKey.key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             content: luaLoader,
@@ -867,7 +884,6 @@ Deno.serve(async (req) => {
             flags: 64,
           });
         } else {
-          // No valid key — tell them to get one
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("📜 Get Script", `**${script.script_name}**\n\n⚠️ You don't have a valid key yet.\n\nUse the **Get Key** button to obtain a key first, then come back here to get your script.`, 0xffaa00),
             flags: 64,
