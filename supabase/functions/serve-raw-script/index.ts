@@ -1522,37 +1522,54 @@ end)
     const scriptDisplayName = (script.script_name || "Script").toString().replace(/[\r\n"\\]/g, "").slice(0, 48);
     const loaderPrelude = `
 local _DL_t0 = tick()
-local _DL_rp = rawget(getfenv(), "rconsoleprint") or rawget(getfenv(), "printconsole")
-local _DL_rc = rawget(getfenv(), "rconsoleclear") or rawget(getfenv(), "consoleclear")
-local _DL_rn = rawget(getfenv(), "rconsolename") or rawget(getfenv(), "consolename") or rawget(getfenv(), "setconsolename")
-local _DL_hasCon = type(_DL_rp) == "function"
+local _DL_env = getfenv()
+local _DL_rp = rawget(_DL_env, "rconsoleprint") or rawget(_DL_env, "printconsole")
+local _DL_rc = rawget(_DL_env, "rconsoleclear") or rawget(_DL_env, "consoleclear")
+local _DL_rn = rawget(_DL_env, "rconsolename") or rawget(_DL_env, "consolename") or rawget(_DL_env, "setconsolename")
+local _DL_hasCon = type(_DL_rp) == "function" and type(_DL_rc) == "function"
 if _DL_hasCon and type(_DL_rn) == "function" then pcall(_DL_rn, "DefendLua") end
 local _DL_name = ${JSON.stringify(scriptDisplayName)}
-local _DL_stages = {"Initializing","Verifying environment","Fetching modules","Decrypting payload","Finalizing"}
-local _DL_lastLen = 0
-local function _DL_render(stage, done)
+_DL_finished = false
+local _DL_barW = 24
+local function _DL_paint(pct, done)
   local elapsed = (tick() - _DL_t0) * 1000
-  local line = string.format("[DefendLua] %s | %s | %.0fms", _DL_name, stage, elapsed)
+  local filled = math.floor((pct/100) * _DL_barW + 0.5)
+  local bar = string.rep("#", filled) .. string.rep("-", _DL_barW - filled)
+  local line = string.format("[DefendLua] %s [%s] %3d%% | %.0fms", _DL_name, bar, pct, elapsed)
   if _DL_hasCon then
-    if type(_DL_rc) == "function" then pcall(_DL_rc) end
-    pcall(_DL_rp, line .. (done and "\\n" or ""))
-    _DL_lastLen = #line
+    pcall(_DL_rc)
+    if done then
+      pcall(_DL_rp, "@@GREEN@@")
+      pcall(_DL_rp, line .. " \\226\\156\\147\\n")
+      pcall(_DL_rp, "@@WHITE@@")
+    else
+      pcall(_DL_rp, "@@YELLOW@@")
+      pcall(_DL_rp, line)
+      pcall(_DL_rp, "@@WHITE@@")
+    end
   elseif done then
-    print(line)
+    print(line .. " OK")
   end
 end
 task.spawn(function()
-  for i, s in ipairs(_DL_stages) do
-    _DL_render(s, false)
-    task.wait(0.08 + math.random() * 0.06)
-    if _DL_finished then return end
+  local pct = 0
+  _DL_paint(0, false)
+  while not _DL_finished do
+    task.wait(0.03)
+    if pct < 95 then
+      pct = pct + (95 - pct) * 0.04 + 0.3
+      if pct > 95 then pct = 95 end
+      _DL_paint(math.floor(pct), false)
+    else
+      _DL_paint(95, false)
+    end
   end
 end)
 `;
     const loaderFinish = `
 _DL_finished = true
 task.wait()
-_DL_render(string.format("Loaded in %.0fms", (tick() - _DL_t0) * 1000), true)
+_DL_paint(100, true)
 `;
 
     const wrappedScript = loaderPrelude + "\n" + protectedScript + "\n" + loaderFinish;
