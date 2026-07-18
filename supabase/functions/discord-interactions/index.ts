@@ -867,7 +867,7 @@ Deno.serve(async (req) => {
 
         if (!keyConfig) {
           // No key system — serve script directly
-          const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
+          const luaLoader = buildDefendLuaLoader(`"${loaderUrl}"`);
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             content: luaLoader,
             ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nHere is your script. Long-press the message above to copy it.`, 0x00ff00),
