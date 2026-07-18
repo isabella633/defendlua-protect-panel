@@ -567,6 +567,11 @@ Deno.serve(async (req) => {
     // Get client IP for rate limiting
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
+    const country =
+      req.headers.get("cf-ipcountry") ||
+      req.headers.get("x-vercel-ip-country") ||
+      req.headers.get("x-country") ||
+      null;
 
     // Rate limit by IP: 30 requests per minute (persistent, survives cold starts)
     const ipRateLimit = await checkRateLimitDB(rateLimitClient, `ip:${clientIp}`, 30, 60000);
