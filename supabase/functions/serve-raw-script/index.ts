@@ -567,6 +567,11 @@ Deno.serve(async (req) => {
     // Get client IP for rate limiting
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
+    const country =
+      req.headers.get("cf-ipcountry") ||
+      req.headers.get("x-vercel-ip-country") ||
+      req.headers.get("x-country") ||
+      null;
 
     // Rate limit by IP: 30 requests per minute (persistent, survives cold starts)
     const ipRateLimit = await checkRateLimitDB(rateLimitClient, `ip:${clientIp}`, 30, 60000);
@@ -665,6 +670,7 @@ Deno.serve(async (req) => {
         script_id: scriptId,
         hwid: hwid || "unknown",
         ip_address: clientIp,
+        country,
         status: "denied",
         reason: "Script not found",
       });
@@ -681,6 +687,7 @@ Deno.serve(async (req) => {
         script_id: scriptId,
         hwid: hwid || "unknown",
         ip_address: clientIp,
+        country,
         status: "denied",
         reason: "Script disabled (plan limit)",
       });
@@ -763,6 +770,7 @@ Deno.serve(async (req) => {
         script_id: scriptId,
         hwid: hwid,
         ip_address: clientIp,
+        country,
         status: "denied",
         reason: "HWID blacklisted",
       });
@@ -839,6 +847,7 @@ Deno.serve(async (req) => {
             script_id: scriptId,
             hwid,
             ip_address: clientIp,
+        country,
             status: "denied",
             reason: "Key HWID mismatch",
           });
@@ -857,6 +866,7 @@ Deno.serve(async (req) => {
           script_id: scriptId,
           hwid,
           ip_address: clientIp,
+        country,
           status: "denied",
           reason: "Key expired",
         });
@@ -884,6 +894,7 @@ Deno.serve(async (req) => {
         script_id: scriptId,
         hwid: hwid,
         ip_address: clientIp,
+        country,
         status: "denied",
         reason: !isHwidWhitelisted ? "HWID not whitelisted" : "IP not whitelisted",
       });
@@ -901,6 +912,7 @@ Deno.serve(async (req) => {
       script_id: scriptId,
       hwid: hwid,
       ip_address: clientIp,
+        country,
       status: "granted",
       reason: publicAccess ? "Public access" : "Whitelisted",
     });

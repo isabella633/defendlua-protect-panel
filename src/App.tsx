@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import Verify from "./pages/Verify";
 import ResetPassword from "./pages/ResetPassword";
 import ScriptRedirect from "./pages/ScriptRedirect";
+import ScriptAnalytics from "./pages/ScriptAnalytics";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify" element={<Verify />} />
           <Route path="/s/:slug" element={<ScriptRedirect />} />
+          <Route path="/analytics/:scriptId" element={<ScriptAnalytics />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

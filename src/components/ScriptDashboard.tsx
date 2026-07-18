@@ -42,7 +42,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AIChatWidget from "./AIChatWidget";
+import VersionHistoryDialog from "./VersionHistoryDialog";
 import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle, BarChart3, History } from "lucide-react";
 
 interface Script {
   id: string;
@@ -51,6 +54,9 @@ interface Script {
   updated_at: string;
   script_key: string;
   hwid_list: string[];
+  disabled?: boolean;
+  auto_disabled_at?: string | null;
+  auto_disabled_reason?: string | null;
 }
 
 interface ScriptDashboardProps {
@@ -69,6 +75,10 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
   const [subscription, setSubscription] = useState<any>(null);
   const [userEmail, setUserEmail] = useState("");
   const [discordLink, setDiscordLink] = useState<any>(null);
+  const [historyScript, setHistoryScript] = useState<Script | null>(null);
+  const [dismissedBanner, setDismissedBanner] = useState(
+    () => localStorage.getItem("autoDisabledBannerDismissed") === "1",
+  );
   const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -586,6 +596,41 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
             </Card>
           </div>
 
+          {/* Auto-disabled banner */}
+          {!dismissedBanner && scripts.some((s) => s.auto_disabled_at) && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Some scripts were auto-disabled</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">
+                  Your plan only allows 3 active scripts. The following are currently disabled and won't run for users:
+                </p>
+                <ul className="list-disc list-inside text-sm mb-3">
+                  {scripts
+                    .filter((s) => s.auto_disabled_at)
+                    .map((s) => (
+                      <li key={s.id}>{s.script_name}</li>
+                    ))}
+                </ul>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="hero" onClick={() => navigate("/pricing")}>
+                    Upgrade to Pro
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      localStorage.setItem("autoDisabledBannerDismissed", "1");
+                      setDismissedBanner(true);
+                    }}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Scripts Grid */}
           {filteredScripts.length === 0 ? (
             <Card className="text-center py-12">
@@ -621,9 +666,11 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                           {formatDate(script.created_at)}
                         </CardDescription>
                       </div>
-                      <Badge className="bg-primary/10 text-primary">
-                        Protected
-                      </Badge>
+                      {script.auto_disabled_at ? (
+                        <Badge variant="destructive">Disabled</Badge>
+                      ) : (
+                        <Badge className="bg-primary/10 text-primary">Protected</Badge>
+                      )}
                     </div>
                   </CardHeader>
                   
@@ -644,7 +691,25 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                           <Eye className="w-4 h-4 mr-2" />
                           Manage
                         </Button>
-                        
+
+                        <Button
+                          onClick={() => navigate(`/analytics/${script.id}`)}
+                          variant="outline"
+                          size="sm"
+                          title="Analytics"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                        </Button>
+
+                        <Button
+                          onClick={() => setHistoryScript(script)}
+                          variant="outline"
+                          size="sm"
+                          title="Version history"
+                        >
+                          <History className="w-4 h-4" />
+                        </Button>
+
                         <Button
                           onClick={() => deleteScript(script.id)}
                           variant="outline"
@@ -1004,6 +1069,14 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
       <AIChatWidget 
         userPlan={subscription?.plan || 'free'} 
         userId={userId} 
+      />
+
+      <VersionHistoryDialog
+        scriptId={historyScript?.id ?? null}
+        scriptName={historyScript?.script_name}
+        open={!!historyScript}
+        onOpenChange={(o) => !o && setHistoryScript(null)}
+        onRestored={fetchScripts}
       />
     </div>
   );

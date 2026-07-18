@@ -17,6 +17,7 @@ export type Database = {
       access_logs: {
         Row: {
           accessed_at: string | null
+          country: string | null
           hwid: string
           id: string
           ip_address: string | null
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           accessed_at?: string | null
+          country?: string | null
           hwid: string
           id?: string
           ip_address?: string | null
@@ -35,6 +37,7 @@ export type Database = {
         }
         Update: {
           accessed_at?: string | null
+          country?: string | null
           hwid?: string
           id?: string
           ip_address?: string | null
@@ -424,8 +427,39 @@ export type Database = {
         }
         Relationships: []
       }
+      script_versions: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          script_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          script_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          script_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_versions_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scripts: {
         Row: {
+          auto_disabled_at: string | null
+          auto_disabled_reason: string | null
           created_at: string | null
           disabled: boolean
           hwid_blacklist: string[] | null
@@ -442,6 +476,8 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          auto_disabled_at?: string | null
+          auto_disabled_reason?: string | null
           created_at?: string | null
           disabled?: boolean
           hwid_blacklist?: string[] | null
@@ -458,6 +494,8 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          auto_disabled_at?: string | null
+          auto_disabled_reason?: string | null
           created_at?: string | null
           disabled?: boolean
           hwid_blacklist?: string[] | null
@@ -608,6 +646,7 @@ export type Database = {
           reset_in: number
         }[]
       }
+      cleanup_old_access_logs: { Args: never; Returns: number }
       cleanup_rate_limits: { Args: never; Returns: number }
       count_user_scripts: { Args: { user_id_param: string }; Returns: number }
       delete_email: {
