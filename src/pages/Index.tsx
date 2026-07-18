@@ -367,7 +367,7 @@ const Index = () => {
                   </ul>
                   <Link to="/pricing">
                     <Button variant={plan.popular ? "default" : "outline"} className="w-full">
-                      Learn More
+                      Learn more about {plan.name} plan
                     </Button>
                   </Link>
                 </CardContent>
