@@ -1166,70 +1166,38 @@ local ${junkVars[7]}=select("#",pcall(function() end))
 local ${junkVars[8]}="${rand1}${rand2}"
 local ${junkVars[9]}=${timestamp % 65536}`;
 
-      // Anti-hook preamble: detects loadstring/HttpGet hijacking, reports to
-      // the tamper endpoint (server logs IP, resolves Discord user from HWID),
-      // then kicks + errors — no infinite loop.
-      const scriptSlugEsc = (script.slug || "").replace(/"/g, '\\"');
-      const hwidEsc = hwid.replace(/"/g, '\\"');
+      // Anti-hook preamble: detects loadstring/HttpGet hijacking (e.g. attackers
+      // replacing loadstring with a Lua wrapper to capture decrypted source).
+      // Runs before any decryption, kicks on tamper so plaintext never reaches
+      // the hooked function.
       const antiHookCode = `
-local _DL_report=function(_reason)
-  pcall(function()
-    local _u="https://api.defendlua.lol/functions/v1/report-tamper?s=${scriptSlugEsc}&h=${hwidEsc}&r="..tostring(_reason)
-    if game and game.HttpGet then pcall(function() game:HttpGet(_u) end)
-    elseif syn and syn.request then pcall(function() syn.request({Url=_u,Method="GET"}) end)
-    elseif request then pcall(function() request({Url=_u,Method="GET"}) end)
-    elseif http_request then pcall(function() http_request({Url=_u,Method="GET"}) end)
-    end
-  end)
-end
 local _DL_kick=function(_r)
-  _DL_report(_r)
   pcall(function()
     local _plr=game:GetService("Players").LocalPlayer
-    local _msg="[DefendLua] Tamper detected: "..tostring(_r).."\nThe owner has been notified and been given the following information: Ip, Hwid, discord user id"
-    if _plr then _plr:Kick(_msg) end
+    if _plr then _plr:Kick(_r) end
   end)
-  error("[DefendLua] Tamper detected: "..tostring(_r).."\nThe owner has been notified and been given the following information: Ip, Hwid, discord user id",0)
+  pcall(function() while true do end end)
+  error(_r,0)
 end
--- 1) iscclosure (Synapse/Wave/Solara/Xeno)
+-- 1) C-closure check (Solara/Wave/Swift/Xeno/Synapse/Krnl expose iscclosure)
 if type(iscclosure)=="function" then
   local _o1,_r1=pcall(iscclosure,loadstring)
-  if _o1 and _r1==false then _DL_kick("loadstring_hooked") end
+  if _o1 and _r1==false then _DL_kick("[DefendLua] Environment tampering detected (LS-C)") end
   local _o2,_r2=pcall(iscclosure,game.HttpGet)
-  if _o2 and _r2==false then _DL_kick("httpget_hooked") end
+  if _o2 and _r2==false then _DL_kick("[DefendLua] Environment tampering detected (HG-C)") end
 end
--- 2) islclosure (inverse, some executors)
-if type(islclosure)=="function" then
-  local _o,_r=pcall(islclosure,loadstring)
-  if _o and _r==true then _DL_kick("loadstring_lua_wrapper") end
-end
--- 3) getfenv trick — errors on real C closures, succeeds on Lua wrappers.
--- Works on every executor and vanilla Lua.
-do
-  local _ok,_env=pcall(getfenv,loadstring)
-  if _ok and type(_env)=="table" then _DL_kick("loadstring_lua_wrapper") end
-  local _ok2,_env2=pcall(getfenv,game.HttpGet)
-  if _ok2 and type(_env2)=="table" then _DL_kick("httpget_hooked") end
-end
--- 4) debug.info / debug.getinfo source check
-if type(debug)=="table" then
-  if type(debug.info)=="function" then
-    local _o,_s=pcall(debug.info,loadstring,"s")
-    if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
-      _DL_kick("loadstring_lua_wrapper")
-    end
+-- 2) debug.info source check (hooked Lua wrappers report a script path, not "[C]")
+if type(debug)=="table" and type(debug.info)=="function" then
+  local _o,_s=pcall(debug.info,loadstring,"s")
+  if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
+    _DL_kick("[DefendLua] Environment tampering detected (LS-D)")
   end
-  if type(debug.getinfo)=="function" then
-    local _o,_i=pcall(debug.getinfo,loadstring)
-    if _o and type(_i)=="table" then
-      if _i.what and _i.what~="C" then _DL_kick("loadstring_lua_wrapper") end
-      if _i.source and _i.source~="" and _i.source~="=[C]" and _i.source~="[C]" then
-        _DL_kick("loadstring_lua_wrapper")
-      end
-    end
-  end
+end
+-- 3) Fallback: tostring of a C function has no source path
+local _o3,_ts=pcall(tostring,loadstring)
+if _o3 and type(_ts)=="string" and _ts:find(":%d") then
+  _DL_kick("[DefendLua] Environment tampering detected (LS-T)")
 end`;
-
 
       // Build final protected script
       const protectedScript = `--[[DefendLua v17.1 | ${timestamp} | ${rand1}]]
