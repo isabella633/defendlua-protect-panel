@@ -1529,7 +1529,7 @@ Deno.serve(async (req) => {
           }
 
           const loaderUrl = `https://api.defendlua.lol/s/${script.slug || script.id}`;
-          const loadstringCode = `Key = "${key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
+          const loadstringCode = buildDefendLuaLoader(`"${loaderUrl}?redeemkey="..Key`, `Key = "${key}"\n`);
 
           // DM the target user
           const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
