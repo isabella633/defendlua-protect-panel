@@ -596,6 +596,41 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
             </Card>
           </div>
 
+          {/* Auto-disabled banner */}
+          {!dismissedBanner && scripts.some((s) => s.auto_disabled_at) && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Some scripts were auto-disabled</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">
+                  Your plan only allows 3 active scripts. The following are currently disabled and won't run for users:
+                </p>
+                <ul className="list-disc list-inside text-sm mb-3">
+                  {scripts
+                    .filter((s) => s.auto_disabled_at)
+                    .map((s) => (
+                      <li key={s.id}>{s.script_name}</li>
+                    ))}
+                </ul>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="hero" onClick={() => navigate("/pricing")}>
+                    Upgrade to Pro
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      localStorage.setItem("autoDisabledBannerDismissed", "1");
+                      setDismissedBanner(true);
+                    }}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Scripts Grid */}
           {filteredScripts.length === 0 ? (
             <Card className="text-center py-12">
