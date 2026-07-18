@@ -1463,7 +1463,8 @@ end
       return protectedScript;
     };
 
-    const protectedScript = obfuscateScript(script.script_key, hwid);
+    // Obfuscation disabled — serving raw script per owner request
+    const protectedScript = script.script_key;
 
     // Check owner's subscription plan for promotional watermark
     let ownerPlan = "free";
