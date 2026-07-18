@@ -1330,55 +1330,55 @@ end`;
    if _elapsed>5 then
      return warn("[DefendLua] Security check failed: Timeout exceeded")
    end
-   local _src=${varNames.decrypt}(${varNames.data})
-   if not _src or #_src<5 then
-     return warn("[DefendLua] Decryption failed")
-   end
-   local _fn,_err=loadstring(_src)
-   if not _fn then
-     return warn("[DefendLua] Load error: "..tostring(_err))
-   end
-   if not ${varNames.selfCheck}(_fn) then
-     return warn("[DefendLua] Security check failed: Function tampered")
-   end
+    -- Inline decrypt→loadstring→xpcall. No intermediate `_src` variable exists
+    -- for an attacker to print(); the decryptor requires the captured loadstring
+    -- identity as an argument, so passing print/writefile garbles the output.
+    local _fn,_err=${varNames.decrypt}_LS(${varNames.decrypt}(${varNames.data},${varNames.decrypt}_LS),"=(dl)")
+    if not _fn then
+      return warn("[DefendLua] Load error: "..tostring(_err))
+    end
+    if not ${varNames.selfCheck}(_fn) then
+      return warn("[DefendLua] Security check failed: Function tampered")
+    end
 
-   -- Safe JSON sanitizer (available globally for user scripts)
-   pcall(function()
-     if not _G._DL_SAN then
-       _G._DL_SAN=function(v,depth)
-         depth=depth or 0
-         if depth>4 then return tostring(v) end
-         local t=type(v)
-         if t=="nil" or t=="string" or t=="boolean" then return v end
-         if t=="number" then
-           if v~=v or v==math.huge or v==-math.huge then return 0 end
-           return v
-         end
-         if t=="table" then
-           local o={}
-           for k,val in pairs(v) do
-             local kk=(type(k)=="string" or type(k)=="number") and k or tostring(k)
-             local vv=_G._DL_SAN(val,depth+1)
-             if vv~=nil then o[kk]=vv end
-           end
-           return o
-         end
-         return tostring(v)
-       end
-     end
-   end)
+    -- Safe JSON sanitizer (available globally for user scripts)
+    pcall(function()
+      if not _G._DL_SAN then
+        _G._DL_SAN=function(v,depth)
+          depth=depth or 0
+          if depth>4 then return tostring(v) end
+          local t=type(v)
+          if t=="nil" or t=="string" or t=="boolean" then return v end
+          if t=="number" then
+            if v~=v or v==math.huge or v==-math.huge then return 0 end
+            return v
+          end
+          if t=="table" then
+            local o={}
+            for k,val in pairs(v) do
+              local kk=(type(k)=="string" or type(k)=="number") and k or tostring(k)
+              local vv=_G._DL_SAN(val,depth+1)
+              if vv~=nil then o[kk]=vv end
+            end
+            return o
+          end
+          return tostring(v)
+        end
+      end
+    end)
 
-   local _handler=function(e)
-     if debug and debug.traceback then
-       return debug.traceback(e,2)
-     end
-     return tostring(e)
-   end
-   local _ok,_runErr=xpcall(_fn,_handler)
-   if not _ok then
-     warn("[DefendLua] Runtime error: "..tostring(_runErr))
-   end
- end`;
+    local _handler=function(e)
+      if debug and debug.traceback then
+        return debug.traceback(e,2)
+      end
+      return tostring(e)
+    end
+    local _ok,_runErr=xpcall(_fn,_handler)
+    if not _ok then
+      warn("[DefendLua] Runtime error: "..tostring(_runErr))
+    end
+  end`;
+
 
       // Generate junk code to confuse decompilers (Roblox-compatible)
       const junkVars = Array.from({ length: 15 }, (_, i) => `_J${rand3}${i}`);
