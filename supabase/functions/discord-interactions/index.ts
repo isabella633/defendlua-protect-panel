@@ -504,11 +504,12 @@ Deno.serve(async (req) => {
             `HWID: \`${hwid!.substring(0, 40)}\`\nSelect the script below.`, hwid!);
         }
 
-        // ── HWID commands with select menu ──
+        // ── /blacklist and /unblacklist (by user or HWID) ──
         case "blacklist":
         case "unblacklist": {
+          const targetUser = getOpt("user");
           const hwid = getOpt("hwid");
-          if (!hwid) return errReply("Please provide an HWID.");
+          if (!targetUser && !hwid) return errReply("Please provide a Discord `user` or an `hwid`.");
 
           const memberRolesHWID = interaction.member?.roles || [];
           const guildIdHWID = interaction.guild_id;
@@ -521,12 +522,20 @@ Deno.serve(async (req) => {
           const scripts = await getUserScripts(supabase, userId);
           if (!scripts.length) return errReply("No scripts found.");
 
+          if (targetUser) {
+            const userAction = name === "blacklist" ? "blacklist_user" : "unblacklist_user";
+            const label = name === "blacklist"
+              ? "🚫 Select a script to blacklist user"
+              : "♻️ Select a script to unblacklist user";
+            return scriptSelectMenu(userAction, scripts, label,
+              `User: <@${targetUser}>\nSelect the script below.`, targetUser);
+          }
+
           const actionLabels: Record<string, string> = {
             blacklist: "🚫 Select a script to blacklist HWID",
             unblacklist: "♻️ Select a script to unblacklist HWID",
           };
-
-          return scriptSelectMenu(name, scripts, actionLabels[name], `HWID: \`${hwid.substring(0, 40)}\`\nSelect the script below.`, hwid);
+          return scriptSelectMenu(name, scripts, actionLabels[name], `HWID: \`${hwid!.substring(0, 40)}\`\nSelect the script below.`, hwid!);
         }
 
         // ── /rename (needs new name + select menu) ──
