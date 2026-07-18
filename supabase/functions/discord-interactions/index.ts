@@ -479,8 +479,32 @@ Deno.serve(async (req) => {
           }
         }
 
+        // ── /unwhitelist (by user or HWID) ──
+        case "unwhitelist": {
+          const targetUser = getOpt("user");
+          const hwid = getOpt("hwid");
+          if (!targetUser && !hwid) return errReply("Please provide a Discord `user` or an `hwid`.");
+
+          const memberRolesUW = interaction.member?.roles || [];
+          const guildIdUW = interaction.guild_id;
+          let userId = await getUserId(supabase, discordId);
+          if (!userId) {
+            userId = await getStaffOwnerId(supabase, memberRolesUW, guildIdUW);
+            if (!userId) return notLinkedReply();
+          }
+
+          const scripts = await getUserScripts(supabase, userId);
+          if (!scripts.length) return errReply("No scripts found.");
+
+          if (targetUser) {
+            return scriptSelectMenu("unwhitelist_user", scripts, "🗑️ Select a script to unwhitelist user",
+              `User: <@${targetUser}>\nSelect the script below.`, targetUser);
+          }
+          return scriptSelectMenu("unwhitelist", scripts, "🗑️ Select a script to unwhitelist HWID",
+            `HWID: \`${hwid!.substring(0, 40)}\`\nSelect the script below.`, hwid!);
+        }
+
         // ── HWID commands with select menu ──
-        case "unwhitelist":
         case "blacklist":
         case "unblacklist": {
           const hwid = getOpt("hwid");
@@ -498,7 +522,6 @@ Deno.serve(async (req) => {
           if (!scripts.length) return errReply("No scripts found.");
 
           const actionLabels: Record<string, string> = {
-            unwhitelist: "🗑️ Select a script to unwhitelist HWID",
             blacklist: "🚫 Select a script to blacklist HWID",
             unblacklist: "♻️ Select a script to unblacklist HWID",
           };
