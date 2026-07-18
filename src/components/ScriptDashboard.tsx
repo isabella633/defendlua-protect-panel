@@ -43,9 +43,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AIChatWidget from "./AIChatWidget";
 import VersionHistoryDialog from "./VersionHistoryDialog";
+import TamperLogsDialog from "./TamperLogsDialog";
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, BarChart3, History } from "lucide-react";
+import { AlertTriangle, BarChart3, History, ShieldAlert } from "lucide-react";
 
 interface Script {
   id: string;
