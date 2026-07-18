@@ -75,6 +75,10 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
   const [subscription, setSubscription] = useState<any>(null);
   const [userEmail, setUserEmail] = useState("");
   const [discordLink, setDiscordLink] = useState<any>(null);
+  const [historyScript, setHistoryScript] = useState<Script | null>(null);
+  const [dismissedBanner, setDismissedBanner] = useState(
+    () => localStorage.getItem("autoDisabledBannerDismissed") === "1",
+  );
   const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const { toast } = useToast();
   const navigate = useNavigate();
