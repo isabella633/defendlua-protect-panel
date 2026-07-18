@@ -1191,24 +1191,43 @@ local _DL_kick=function(_r)
   end)
   error("[DefendLua] Tamper detected: "..tostring(_r).."\nThe owner has been notified and been given the following information: Ip, Hwid, discord user id",0)
 end
--- 1) C-closure check
+-- 1) iscclosure (Synapse/Wave/Solara/Xeno)
 if type(iscclosure)=="function" then
   local _o1,_r1=pcall(iscclosure,loadstring)
   if _o1 and _r1==false then _DL_kick("loadstring_hooked") end
   local _o2,_r2=pcall(iscclosure,game.HttpGet)
   if _o2 and _r2==false then _DL_kick("httpget_hooked") end
 end
--- 2) debug.info source check
-if type(debug)=="table" and type(debug.info)=="function" then
-  local _o,_s=pcall(debug.info,loadstring,"s")
-  if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
-    _DL_kick("loadstring_lua_wrapper")
-  end
+-- 2) islclosure (inverse, some executors)
+if type(islclosure)=="function" then
+  local _o,_r=pcall(islclosure,loadstring)
+  if _o and _r==true then _DL_kick("loadstring_lua_wrapper") end
 end
--- 3) Fallback: tostring of a real C function has no source path
-local _o3,_ts=pcall(tostring,loadstring)
-if _o3 and type(_ts)=="string" and _ts:find(":%d") then
-  _DL_kick("loadstring_tostring_leak")
+-- 3) getfenv trick — errors on real C closures, succeeds on Lua wrappers.
+-- Works on every executor and vanilla Lua.
+do
+  local _ok,_env=pcall(getfenv,loadstring)
+  if _ok and type(_env)=="table" then _DL_kick("loadstring_lua_wrapper") end
+  local _ok2,_env2=pcall(getfenv,game.HttpGet)
+  if _ok2 and type(_env2)=="table" then _DL_kick("httpget_hooked") end
+end
+-- 4) debug.info / debug.getinfo source check
+if type(debug)=="table" then
+  if type(debug.info)=="function" then
+    local _o,_s=pcall(debug.info,loadstring,"s")
+    if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
+      _DL_kick("loadstring_lua_wrapper")
+    end
+  end
+  if type(debug.getinfo)=="function" then
+    local _o,_i=pcall(debug.getinfo,loadstring)
+    if _o and type(_i)=="table" then
+      if _i.what and _i.what~="C" then _DL_kick("loadstring_lua_wrapper") end
+      if _i.source and _i.source~="" and _i.source~="=[C]" and _i.source~="[C]" then
+        _DL_kick("loadstring_lua_wrapper")
+      end
+    end
+  end
 end`;
 
 
