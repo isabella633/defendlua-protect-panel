@@ -27,6 +27,35 @@ interface LogRow {
 }
 
 const DAYS = 30;
+const ANALYTICS_LIMIT = 100000;
+const PAGE_SIZE = 1000;
+
+const fetchAccessLogs = async (scriptId: string, since: string): Promise<LogRow[]> => {
+  const rows: LogRow[] = [];
+
+  for (let from = 0; from < ANALYTICS_LIMIT; from += PAGE_SIZE) {
+    const to = Math.min(from + PAGE_SIZE - 1, ANALYTICS_LIMIT - 1);
+    const { data, error } = await supabase
+      .from("access_logs")
+      .select("id, hwid, ip_address, accessed_at, status, reason, country")
+      .eq("script_id", scriptId)
+      .gte("accessed_at", since)
+      .order("accessed_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      console.error("Failed to load analytics logs", error);
+      break;
+    }
+
+    const page = (data as LogRow[]) || [];
+    rows.push(...page);
+
+    if (page.length < PAGE_SIZE || rows.length >= ANALYTICS_LIMIT) break;
+  }
+
+  return rows.slice(0, ANALYTICS_LIMIT);
+};
 
 const ScriptAnalytics = () => {
   const { scriptId } = useParams();
@@ -41,19 +70,13 @@ const ScriptAnalytics = () => {
       setLoading(true);
       const since = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-      const [{ data: script }, { data: logRows }] = await Promise.all([
+      const [{ data: script }, logRows] = await Promise.all([
         supabase.from("scripts").select("script_name").eq("id", scriptId).maybeSingle(),
-        supabase
-          .from("access_logs")
-          .select("id, hwid, ip_address, accessed_at, status, reason, country")
-          .eq("script_id", scriptId)
-          .gte("accessed_at", since)
-          .order("accessed_at", { ascending: false })
-          .limit(100000),
+        fetchAccessLogs(scriptId, since),
       ]);
 
       if (script) setScriptName(script.script_name);
-      setLogs((logRows as LogRow[]) || []);
+      setLogs(logRows);
       setLoading(false);
     })();
   }, [scriptId]);
