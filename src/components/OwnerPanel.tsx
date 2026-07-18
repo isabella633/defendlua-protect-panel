@@ -114,6 +114,7 @@ protectedFunction()`);
       setPublicAccess(data.public_access || false);
       setShowWatermark((data as any).show_watermark !== false);
       setWebhookUrl((data as any).webhook_url || "");
+      setCliProtectionMode(((data as any).cli_protection_mode as "obfuscate" | "vm") || "obfuscate");
       setRawLink(`https://api.defendlua.lol/s/${data.slug}`);
     }
 
