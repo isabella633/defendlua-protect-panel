@@ -1166,9 +1166,43 @@ local ${junkVars[7]}=select("#",pcall(function() end))
 local ${junkVars[8]}="${rand1}${rand2}"
 local ${junkVars[9]}=${timestamp % 65536}`;
 
+      // Anti-hook preamble: detects loadstring/HttpGet hijacking (e.g. attackers
+      // replacing loadstring with a Lua wrapper to capture decrypted source).
+      // Runs before any decryption, kicks on tamper so plaintext never reaches
+      // the hooked function.
+      const antiHookCode = `
+local _DL_kick=function(_r)
+  pcall(function()
+    local _plr=game:GetService("Players").LocalPlayer
+    if _plr then _plr:Kick(_r) end
+  end)
+  pcall(function() while true do end end)
+  error(_r,0)
+end
+-- 1) C-closure check (Solara/Wave/Swift/Xeno/Synapse/Krnl expose iscclosure)
+if type(iscclosure)=="function" then
+  local _o1,_r1=pcall(iscclosure,loadstring)
+  if _o1 and _r1==false then _DL_kick("[DefendLua] Environment tampering detected (LS-C)") end
+  local _o2,_r2=pcall(iscclosure,game.HttpGet)
+  if _o2 and _r2==false then _DL_kick("[DefendLua] Environment tampering detected (HG-C)") end
+end
+-- 2) debug.info source check (hooked Lua wrappers report a script path, not "[C]")
+if type(debug)=="table" and type(debug.info)=="function" then
+  local _o,_s=pcall(debug.info,loadstring,"s")
+  if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
+    _DL_kick("[DefendLua] Environment tampering detected (LS-D)")
+  end
+end
+-- 3) Fallback: tostring of a C function has no source path
+local _o3,_ts=pcall(tostring,loadstring)
+if _o3 and type(_ts)=="string" and _ts:find(":%d") then
+  _DL_kick("[DefendLua] Environment tampering detected (LS-T)")
+end`;
+
       // Build final protected script
-      const protectedScript = `--[[DefendLua v17.0 | ${timestamp} | ${rand1}]]
+      const protectedScript = `--[[DefendLua v17.1 | ${timestamp} | ${rand1}]]
 do
+${antiHookCode}
 ${junkCode}
 ${antiDebugCode}
 ${hwidCheckCode}
@@ -1183,6 +1217,7 @@ ${execCode}
 ${varNames.exec}()
 end
 --[[${Math.random().toString(36).slice(2)}]]`;
+
 
       return protectedScript;
     };
