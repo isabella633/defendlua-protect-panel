@@ -1357,6 +1357,78 @@ Deno.serve(async (req) => {
           });
         }
 
+        // ── blacklist_user / unblacklist_user: (un)blacklist all HWIDs bound to a Discord user's keys ──
+        if (action === "blacklist_user" || action === "unblacklist_user") {
+          const targetUserId = extraData;
+          if (!targetUserId) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "No user provided.", 0xff0000),
+              components: [],
+            });
+          }
+
+          const { data: script } = await supabase
+            .from("scripts")
+            .select("id, script_name, hwid_list, hwid_blacklist")
+            .eq("id", scriptId)
+            .eq("owner_id", userId)
+            .single();
+
+          if (!script) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Script not found or you don't own it.", 0xff0000),
+              components: [],
+            });
+          }
+
+          const { data: keys } = await supabase
+            .from("generated_keys")
+            .select("redeemed_hwid")
+            .eq("script_id", script.id)
+            .eq("discord_id", targetUserId)
+            .not("redeemed_hwid", "is", null);
+
+          const userHwids: string[] = Array.from(new Set((keys || []).map((k: any) => k.redeemed_hwid).filter(Boolean)));
+
+          if (!userHwids.length) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("⚠️ No HWIDs Found", `<@${targetUserId}> has no redeemed HWIDs on **${script.script_name}**.`, 0xffaa00),
+              components: [],
+            });
+          }
+
+          const currentBL: string[] = script.hwid_blacklist || [];
+          const currentWL: string[] = script.hwid_list || [];
+
+          if (action === "blacklist_user") {
+            const toAdd = userHwids.filter((h: string) => !currentBL.includes(h));
+            const newBL = [...currentBL, ...toAdd];
+            const newWL = currentWL.filter((h: string) => !userHwids.includes(h));
+            const { error } = await supabase.from("scripts").update({ hwid_blacklist: newBL, hwid_list: newWL }).eq("id", script.id);
+            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to update blacklist.", 0xff0000), components: [] });
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🚫 User Blacklisted", `Blacklisted **${toAdd.length}** HWID${toAdd.length === 1 ? "" : "s"} for <@${targetUserId}> on **${script.script_name}**.`, 0xff0000),
+              components: [],
+            });
+          } else {
+            const toRemove = userHwids.filter((h: string) => currentBL.includes(h));
+            if (!toRemove.length) {
+              return reply(InteractionResponseType.UPDATE_MESSAGE, {
+                ...createEmbed("⚠️ Nothing to Remove", `<@${targetUserId}> has no HWIDs on the blacklist for **${script.script_name}**.`, 0xffaa00),
+                components: [],
+              });
+            }
+            const newBL = currentBL.filter((h: string) => !toRemove.includes(h));
+            const { error } = await supabase.from("scripts").update({ hwid_blacklist: newBL }).eq("id", script.id);
+            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to update blacklist.", 0xff0000), components: [] });
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("♻️ User Unblacklisted", `Removed **${toRemove.length}** HWID${toRemove.length === 1 ? "" : "s"} for <@${targetUserId}> from the blacklist of **${script.script_name}**.`, 0x00ff00),
+              components: [],
+            });
+          }
+        }
+
+
 
         if (action === "whitelist_user") {
           const [targetUserId, expiryHoursRaw] = extraData.split("|");
