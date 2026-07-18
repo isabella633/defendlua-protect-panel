@@ -1285,7 +1285,70 @@ Deno.serve(async (req) => {
           });
         }
 
-        // ── whitelist_user: generate key for Discord user and DM them ──
+        // ── unwhitelist_user: remove all HWIDs bound to a Discord user's keys ──
+        if (action === "unwhitelist_user") {
+          const targetUserId = extraData;
+          if (!targetUserId) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "No user provided.", 0xff0000),
+              components: [],
+            });
+          }
+
+          const { data: script } = await supabase
+            .from("scripts")
+            .select("id, script_name, hwid_list")
+            .eq("id", scriptId)
+            .eq("owner_id", userId)
+            .single();
+
+          if (!script) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Script not found or you don't own it.", 0xff0000),
+              components: [],
+            });
+          }
+
+          const { data: keys } = await supabase
+            .from("generated_keys")
+            .select("id, redeemed_hwid")
+            .eq("script_id", script.id)
+            .eq("discord_id", targetUserId)
+            .not("redeemed_hwid", "is", null);
+
+          const userHwids = (keys || []).map((k: any) => k.redeemed_hwid).filter(Boolean);
+          const currentList: string[] = script.hwid_list || [];
+          const toRemove = userHwids.filter((h: string) => currentList.includes(h));
+
+          if (!toRemove.length) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("⚠️ Nothing to Remove", `<@${targetUserId}> has no HWIDs on the whitelist for **${script.script_name}**.`, 0xffaa00),
+              components: [],
+            });
+          }
+
+          const newList = currentList.filter((h: string) => !toRemove.includes(h));
+          const { error: upErr } = await supabase.from("scripts").update({ hwid_list: newList }).eq("id", script.id);
+          if (upErr) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Failed to update whitelist.", 0xff0000),
+              components: [],
+            });
+          }
+
+          // Also clear the HWID lock on those keys so the user can re-redeem elsewhere if needed
+          const keyIds = (keys || []).filter((k: any) => toRemove.includes(k.redeemed_hwid)).map((k: any) => k.id);
+          if (keyIds.length) {
+            await supabase.from("generated_keys").update({ redeemed_hwid: null, redeemed: false }).in("id", keyIds);
+          }
+
+          return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("🗑️ User Unwhitelisted", `Removed **${toRemove.length}** HWID${toRemove.length === 1 ? "" : "s"} for <@${targetUserId}> from **${script.script_name}**.`, 0x00ff00),
+            components: [],
+          });
+        }
+
+
         if (action === "whitelist_user") {
           const [targetUserId, expiryHoursRaw] = extraData.split("|");
           const expiryHours = Number(expiryHoursRaw || "24");
