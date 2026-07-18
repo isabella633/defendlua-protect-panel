@@ -54,6 +54,7 @@ protectedFunction()`);
   const [newBlacklistHwid, setNewBlacklistHwid] = useState("");
   const [publicAccess, setPublicAccess] = useState(false);
   const [showWatermark, setShowWatermark] = useState(true);
+  const [cliProtectionMode, setCliProtectionMode] = useState<"obfuscate" | "vm">("obfuscate");
   const [accessLogs, setAccessLogs] = useState<any[]>([]);
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "enterprise">("free");
   const [userId, setUserId] = useState<string>("");
@@ -100,7 +101,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from("scripts")
-      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark")
+      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark, cli_protection_mode")
       .eq("id", scriptId)
       .single();
 
@@ -113,6 +114,7 @@ protectedFunction()`);
       setPublicAccess(data.public_access || false);
       setShowWatermark((data as any).show_watermark !== false);
       setWebhookUrl((data as any).webhook_url || "");
+      setCliProtectionMode(((data as any).cli_protection_mode as "obfuscate" | "vm") || "obfuscate");
       setRawLink(`https://api.defendlua.lol/s/${data.slug}`);
     }
 
@@ -140,6 +142,7 @@ protectedFunction()`);
       hwid_blacklist: hwidBlacklist,
       public_access: publicAccess,
       show_watermark: showWatermark,
+      cli_protection_mode: cliProtectionMode,
     };
 
     // Only include webhook_url for Pro/Enterprise plans with validation
@@ -506,7 +509,48 @@ protectedFunction()`);
                       onCheckedChange={setShowWatermark} 
                       disabled={userPlan === "free"}
                     />
+                </div>
+
+                {/* Luau CLI protection mode */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Luau CLI Protection</label>
+                  <div className="bg-muted/50 p-3 rounded border border-border/50 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Applies only when auto-detection identifies your script as standalone Luau CLI (no Roblox globals). Roblox scripts always use the full protection pipeline.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCliProtectionMode("obfuscate")}
+                        className={`text-left p-3 rounded border transition ${
+                          cliProtectionMode === "obfuscate"
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-border"
+                        }`}
+                      >
+                        <p className="text-sm font-medium">Plain obfuscation</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Fast XOR + chunked payload. Small size, minimal runtime overhead.
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCliProtectionMode("vm")}
+                        className={`text-left p-3 rounded border transition ${
+                          cliProtectionMode === "vm"
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-border"
+                        }`}
+                      >
+                        <p className="text-sm font-medium">VM-style (stronger)</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Multi-layer decrypt, reversed chunks, integrity check, and closure wrapping. Larger payload, harder to dump.
+                        </p>
+                      </button>
+                    </div>
                   </div>
+                </div>
+
                 </div>
 
                 {(userPlan === "pro" || userPlan === "enterprise") && (

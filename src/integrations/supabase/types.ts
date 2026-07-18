@@ -460,6 +460,7 @@ export type Database = {
         Row: {
           auto_disabled_at: string | null
           auto_disabled_reason: string | null
+          cli_protection_mode: string
           created_at: string | null
           disabled: boolean
           hwid_blacklist: string[] | null
@@ -478,6 +479,7 @@ export type Database = {
         Insert: {
           auto_disabled_at?: string | null
           auto_disabled_reason?: string | null
+          cli_protection_mode?: string
           created_at?: string | null
           disabled?: boolean
           hwid_blacklist?: string[] | null
@@ -496,6 +498,7 @@ export type Database = {
         Update: {
           auto_disabled_at?: string | null
           auto_disabled_reason?: string | null
+          cli_protection_mode?: string
           created_at?: string | null
           disabled?: boolean
           hwid_blacklist?: string[] | null

@@ -657,7 +657,7 @@ Deno.serve(async (req) => {
     const { data: script, error } = await supabaseAdmin
       .from("scripts")
       .select(
-        "script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark, disabled",
+        "script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark, disabled, cli_protection_mode",
       )
       .eq("id", scriptId)
       .single();
@@ -847,7 +847,65 @@ return _fn()
 `;
       };
 
-      let cliOut = obfuscateCLI(script.script_key);
+      // VM-style: multi-layer decode (XOR pass 1 + byte reversal + XOR pass 2)
+      // with per-chunk integrity checksum. Payload runs inside a sealed closure
+      // that verifies its own decoded bytes before invoking `load`.
+      const obfuscateCLIVM = (source: string): string => {
+        const k1 = Math.floor(Math.random() * 200) + 30;
+        const k2 = Math.floor(Math.random() * 200) + 30;
+        const bytes: number[] = [];
+        // Pass A: XOR with rolling key
+        for (let i = 0; i < source.length; i++) {
+          bytes.push(source.charCodeAt(i) ^ ((k1 + (i % 251)) & 0xff));
+        }
+        // Pass B: reverse
+        bytes.reverse();
+        // Pass C: XOR with second rolling key
+        for (let i = 0; i < bytes.length; i++) {
+          bytes[i] = bytes[i] ^ ((k2 * (i + 1)) & 0xff);
+        }
+        // Checksum (sum mod 2^24) computed over final bytes
+        let sum = 0;
+        for (const b of bytes) sum = (sum + b) % 0xffffff;
+
+        const chunks: string[] = [];
+        const chunkSize = 64;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          chunks.push(bytes.slice(i, i + chunkSize).join(","));
+        }
+        const v = (p: string) => "_" + p + Math.random().toString(36).slice(2, 6);
+        const D = v("d"), B = v("b"), R = v("r"), X = v("x"), S = v("s"), F = v("f"), K = v("k");
+        return `--[[DefendLua-CLI-VM v1.0]]
+local ${D}={${chunks.map((c) => `{${c}}`).join(",")}}
+local ${B}={}
+for _i=1,#${D} do for _j=1,#${D}[_i] do ${B}[#${B}+1]=${D}[_i][_j] end end
+-- integrity gate
+local ${S}=0 for _i=1,#${B} do ${S}=(${S}+${B}[_i])%16777215 end
+if ${S}~=${sum} then error("[DefendLua] payload integrity check failed",0) end
+local ${K}=(bit32 and bit32.bxor) or function(a,b) local r,p=0,1 for _=1,8 do local x,y=a%2,b%2 if x~=y then r=r+p end a,b,p=(a-x)/2,(b-y)/2,p*2 end return r end
+-- reverse pass C
+for _i=1,#${B} do ${B}[_i]=${K}(${B}[_i],(${k2}*_i)%256) end
+-- reverse pass B (byte reversal)
+local ${R}={} for _i=1,#${B} do ${R}[_i]=${B}[#${B}-_i+1] end
+-- reverse pass A
+local ${X}={}
+for _i=1,#${R} do
+  local _kk=(${k1}+((_i-1)%251))%256
+  ${X}[_i]=string.char(${K}(${R}[_i],_kk))
+end
+local _src=table.concat(${X})
+local ${F}=(function()
+  local _fn,_err=load(_src,"=(dlua-vm)")
+  if not _fn then error("[DefendLua] payload load failed: "..tostring(_err),0) end
+  return _fn
+end)()
+return ${F}()
+`;
+      };
+
+      const cliMode = ((script as any).cli_protection_mode || "obfuscate") as "obfuscate" | "vm";
+      let cliOut = cliMode === "vm" ? obfuscateCLIVM(script.script_key) : obfuscateCLI(script.script_key);
+      console.log("CLI protection mode:", cliMode);
 
       // Free-plan watermark (CLI-safe): stdout banner instead of ScreenGui
       const { data: ownerSubCli } = await supabaseAdmin
