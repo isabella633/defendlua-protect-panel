@@ -1199,7 +1199,13 @@ local ${varNames.selfCheck}=function(_fn)
   return type(_fn)=="function"
 end`;
 
-      // Build decryption function
+      // Build decryption function.
+      // SECURITY: env-tamper check is WOVEN into the decryption key. On a clean
+      // executor `_es` is 0 and decryption yields the real source. If loadstring
+      // is Lua-hooked (the classic `loadstring=function(s) print(s)...end` dump
+      // attack) `_es` becomes nonzero, every byte gets XOR-garbled, the attacker's
+      // print() sees random bytes, and loadstring() fails to compile. There is
+      // no separate anti-tamper block to delete — the check IS the key.
       const decryptCode = `
 local ${varNames.keyBytes}={${[
         (masterKey >> 24) & 0xff,
@@ -1212,6 +1218,23 @@ local ${varNames.keyBytes}={${[
         (masterKey * 47) & 0xff,
       ].join(",")}}
 local ${varNames.decrypt}=function(${varNames.data})
+  local _es=0
+  if type(iscclosure)=="function" then
+    local _o1,_r1=pcall(iscclosure,loadstring)
+    if _o1 and _r1==false then _es=(_es+173)%256 end
+    local _o2,_r2=pcall(iscclosure,game.HttpGet)
+    if _o2 and _r2==false then _es=(_es+91)%256 end
+  end
+  if type(debug)=="table" and type(debug.info)=="function" then
+    local _o,_s=pcall(debug.info,loadstring,"s")
+    if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
+      _es=(_es+217)%256
+    end
+  end
+  local _o3,_ts=pcall(tostring,loadstring)
+  if _o3 and type(_ts)=="string" and _ts:find(":%d") then
+    _es=(_es+59)%256
+  end
   local _t={}
   local _prev=0
   for i=1,#${varNames.data} do
@@ -1222,6 +1245,7 @@ local ${varNames.decrypt}=function(${varNames.data})
     if _b<0 then _b=_b+256 end
     local _k=${varNames.keyBytes}[((i-1)%8)+1]
     _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
+    _b=bit32 and bit32.bxor(_b,_es) or ((_b>=_es) and _b-_es or 256+_b-_es)%256
     _t[i]=string.char(_b)
   end
   return table.concat(_t)
