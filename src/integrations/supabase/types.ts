@@ -578,6 +578,53 @@ export type Database = {
         }
         Relationships: []
       }
+      tamper_logs: {
+        Row: {
+          created_at: string
+          discord_user_id: string | null
+          discord_username: string | null
+          hwid: string | null
+          id: string
+          ip: string | null
+          reason: string
+          script_id: string | null
+          script_slug: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          discord_user_id?: string | null
+          discord_username?: string | null
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          reason: string
+          script_id?: string | null
+          script_slug?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          discord_user_id?: string | null
+          discord_username?: string | null
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          reason?: string
+          script_id?: string | null
+          script_slug?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tamper_logs_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           created_at: string | null
