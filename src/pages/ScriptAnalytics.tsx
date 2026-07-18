@@ -49,7 +49,7 @@ const ScriptAnalytics = () => {
           .eq("script_id", scriptId)
           .gte("accessed_at", since)
           .order("accessed_at", { ascending: false })
-          .limit(5000),
+          .limit(100000),
       ]);
 
       if (script) setScriptName(script.script_name);
