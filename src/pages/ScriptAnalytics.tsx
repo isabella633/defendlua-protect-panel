@@ -163,14 +163,26 @@ const ScriptAnalytics = () => {
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={perDay}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="day" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Legend />
+                  <BarChart data={perDay} barCategoryGap="20%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} vertical={false} />
+                    <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis allowDecimals={false} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.15 }}
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                        color: "hsl(var(--foreground))",
+                        boxShadow: "0 10px 30px -10px hsl(var(--primary) / 0.3)",
+                        padding: "8px 12px",
+                      }}
+                      labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600, marginBottom: 4 }}
+                      itemStyle={{ color: "hsl(var(--foreground))" }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: 12 }} iconType="circle" />
                     <Bar dataKey="granted" stackId="a" fill="hsl(var(--primary))" />
-                    <Bar dataKey="denied" stackId="a" fill="#ef4444" />
+                    <Bar dataKey="denied" stackId="a" fill="#ef4444" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
