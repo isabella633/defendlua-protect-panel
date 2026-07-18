@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import SEO from "@/components/SEO";
 
 const Purchase = () => {
   const [activationCode, setActivationCode] = useState("");
@@ -66,6 +67,7 @@ const Purchase = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-blue/20 via-white to-soft-purple/20">
+      <SEO title="Redeem Activation Code — DefendLua" description="Redeem your DefendLua Pro activation code to unlock unlimited scripts, HWIDs, and advanced analytics." path="/purchase" />
       {/* Navigation */}
       <nav className="border-b border-soft-blue/20 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">

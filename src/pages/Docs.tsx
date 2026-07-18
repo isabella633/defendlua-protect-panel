@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import SEO from "@/components/SEO";
 
 const Docs = () => {
   const sections = [
@@ -145,6 +146,7 @@ const Docs = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-blue/20 via-white to-soft-purple/20">
+      <SEO title="Documentation — DefendLua" description="DefendLua docs: getting started, script protection, HWID whitelist, IP whitelist, Discord bot, and API reference." path="/docs" />
       {/* Navigation */}
       <nav className="border-b border-soft-blue/20 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">

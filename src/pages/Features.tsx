@@ -2,6 +2,7 @@ import { Shield, Zap, Code, Lock, Activity, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 
 const Features = () => {
   const features = [
@@ -50,6 +51,7 @@ const Features = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-blue/20 via-white to-soft-purple/20">
+      <SEO title="Features — DefendLua Lua Script Protection" description="Explore DefendLua features: HWID locks, IP whitelists, obfuscation, real-time logs, and analytics for Lua & Roblox scripts." path="/features" />
       {/* Navigation */}
       <nav className="border-b border-soft-blue/20 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">

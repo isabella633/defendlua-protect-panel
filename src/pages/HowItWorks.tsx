@@ -2,6 +2,7 @@ import { Shield, Upload, Key, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 
 const HowItWorks = () => {
   const steps = [
@@ -41,6 +42,7 @@ end`,
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-blue/20 via-white to-soft-purple/20">
+      <SEO title="How It Works — DefendLua" description="Upload, protect, and distribute your Lua scripts securely in 4 simple steps with DefendLua's obfuscation and HWID protection." path="/how-it-works" />
       {/* Navigation */}
       <nav className="border-b border-soft-blue/20 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">

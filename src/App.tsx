@@ -18,6 +18,7 @@ import Verify from "./pages/Verify";
 import ResetPassword from "./pages/ResetPassword";
 import ScriptRedirect from "./pages/ScriptRedirect";
 import ScriptAnalytics from "./pages/ScriptAnalytics";
+import BlogObfuscation from "./pages/BlogObfuscation";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/verify" element={<Verify />} />
           <Route path="/s/:slug" element={<ScriptRedirect />} />
           <Route path="/analytics/:scriptId" element={<ScriptAnalytics />} />
+          <Route path="/blog/lua-obfuscation-vs-protection" element={<BlogObfuscation />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
