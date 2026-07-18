@@ -750,18 +750,32 @@ Deno.serve(async (req) => {
           });
         }
 
-        // ── /loader (any user: browse scripts with key systems) ──
+        // ── /loader (any user: browse all scripts) ──
         case "loader": {
-          const keyScripts = await getKeySystemScripts(supabase);
+          const { data: allScripts } = await supabase
+            .from("scripts")
+            .select("id, script_name")
+            .order("created_at", { ascending: false });
 
-          if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          if (!allScripts?.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00));
 
-          const options = keyScripts.slice(0, 25).map((ks: any) => ({
-            label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
-            description: `${ks.provider} | ${formatDuration(ks.key_expiry_hours)} keys | ${ks.redeem_action}`,
-            value: `loader:${ks.script_id}`,
-          }));
+          const { data: configs } = await supabase
+            .from("key_system_configs")
+            .select("script_id, provider, key_expiry_hours, redeem_action")
+            .eq("enabled", true);
+          const configMap = new Map((configs || []).map((c: any) => [c.script_id, c]));
+
+          const options = allScripts.slice(0, 25).map((s: any) => {
+            const cfg: any = configMap.get(s.id);
+            return {
+              label: s.script_name?.substring(0, 100) || "Unknown",
+              description: cfg
+                ? `${cfg.provider} | ${formatDuration(cfg.key_expiry_hours)} keys | ${cfg.redeem_action}`.substring(0, 100)
+                : "Direct script — no key required",
+              value: `loader:${s.id}`,
+            };
+          });
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("📦 Script Loader", "Select a script to view options.", 0x5865f2),
