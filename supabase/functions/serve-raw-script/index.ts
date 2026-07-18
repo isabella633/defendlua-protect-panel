@@ -1403,13 +1403,16 @@ local ${junkVars[9]}=${timestamp % 65536}`;
       // the hooked function.
       const antiHookCode = `
 local _DL_kick=function(_r)
+  -- Freeze the thread indefinitely instead of kicking. Prevents dumped
+  -- output from being used and locks up any hooked executor context.
   pcall(function()
-    local _plr=game:GetService("Players").LocalPlayer
-    if _plr then _plr:Kick(_r) end
+    while true do
+      for i=1,2^31-1 do end
+    end
   end)
-  pcall(function() while true do end end)
-  error(_r,0)
+  while true do end
 end
+
 -- 1) C-closure check (Solara/Wave/Swift/Xeno/Synapse/Krnl expose iscclosure)
 if type(iscclosure)=="function" then
   local _o1,_r1=pcall(iscclosure,loadstring)
