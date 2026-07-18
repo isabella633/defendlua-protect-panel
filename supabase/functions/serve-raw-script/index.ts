@@ -1210,20 +1210,22 @@ local ${varNames.selfCheck}=function(_fn)
   return type(_fn)=="function"
 end`;
 
-      // Build decryption function.
-      // SECURITY (v18): The decryption key is bound to runtime values the
-      // attacker cannot fake without being the whitelisted user:
-      //   1) Runtime HWID hash XORed byte-by-byte into the key stream. Wrong
-      //      machine → every decrypted byte is garbled, so `print(decrypt(...))`
-      //      yields random bytes even if all boolean tamper gates are stripped.
-      //   2) `#hwid` folded into the position shift.
-      //   3) The identity of `loadstring` captured at load time. The decryptor
-      //      takes it as a required argument and compares against the snapshot
-      //      taken before any user code runs; swapping in `print`/`writefile`
-      //      shifts _es and garbles output. Combined with (4), there is no
-      //      plaintext `_src` variable in the emitted script to intercept.
+      // Build streaming decrypt reader.
+      // SECURITY (v19): The final plaintext NEVER exists as a single string.
+      // We call load(reader) where reader yields small decrypted chunks straight
+      // into the C parser. A `loadstring` wrapper (the exact attack pattern
+      // from the transcript) cannot intercept — we don't use loadstring at all.
+      //
+      //   1) `load` snapshot captured at load time, then verified with
+      //      iscclosure + debug.info == "[C]". Kick if wrapped.
+      //   2) HWID hash XORed into the key stream — wrong machine → garbage.
+      //   3) Per-chunk XOR mask derived from debug.info(2,"s") of the reader's
+      //      caller. Encoder assumes "[C]". If an attacker wraps `load` with a
+      //      Lua function to concatenate chunks, the source string is not
+      //      "[C]" and every chunk decrypts to random bytes.
       const expectedHwidHash = hwid.split("").reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
       const hwidLenByte = hwid.length & 0xff;
+      const CHUNK_STEP = 64;
       const decryptCode = `
 local ${varNames.keyBytes}={${[
         (masterKey >> 24) & 0xff,
@@ -1235,13 +1237,14 @@ local ${varNames.keyBytes}={${[
         (masterKey * 31) & 0xff,
         (masterKey * 47) & 0xff,
       ].join(",")}}
--- Snapshot loadstring identity at load time. Any later Lua-side rebinding of
--- the global cannot change what this upvalue points to.
-local ${varNames.decrypt}_LS=loadstring
-local ${varNames.decrypt}=function(${varNames.data},_ls)
+-- Snapshot load at load time. A later Lua-side rebinding of _G.load cannot
+-- change what this upvalue points to.
+local ${varNames.decrypt}_LD=load
+local ${varNames.decrypt}_makeReader=function(${varNames.data})
+  local _i=0
+  local _n=#${varNames.data}
+  local _prev=0
   local _es=0
-  if _ls~=${varNames.decrypt}_LS then _es=(_es+131)%256 end
-  local _rh=0
   local _hw
   if gethwid then _hw=gethwid()
   elseif getexecutorhwid then _hw=getexecutorhwid()
@@ -1249,49 +1252,62 @@ local ${varNames.decrypt}=function(${varNames.data},_ls)
   elseif syn and syn.hwid then _hw=syn.hwid()
   elseif fluxus and fluxus.GetHWID then _hw=fluxus.GetHWID()
   end
+  local _rh=0
   if type(_hw)=="string" and #_hw>0 then
     for i=1,#_hw do _rh=(_rh*37+string.byte(_hw,i))%4294967296 end
   else
     _rh=${expectedHwidHash}
   end
   local _hlen=(_hw and #_hw or ${hwidLenByte})%256
-  local _hk1=_rh%256
-  local _hk2=math.floor(_rh/256)%256
-  local _hk3=math.floor(_rh/65536)%256
-  local _hk4=math.floor(_rh/16777216)%256
-  local _hkt={_hk1,_hk2,_hk3,_hk4}
+  local _hkt={_rh%256,math.floor(_rh/256)%256,math.floor(_rh/65536)%256,math.floor(_rh/16777216)%256}
+  -- One-shot load-identity gates fold into _es.
   if type(iscclosure)=="function" then
-    local _o1,_r1=pcall(iscclosure,loadstring)
+    local _o1,_r1=pcall(iscclosure,${varNames.decrypt}_LD)
     if _o1 and _r1==false then _es=(_es+173)%256 end
-    local _o2,_r2=pcall(iscclosure,game.HttpGet)
-    if _o2 and _r2==false then _es=(_es+91)%256 end
   end
   if type(debug)=="table" and type(debug.info)=="function" then
-    local _o,_s=pcall(debug.info,loadstring,"s")
+    local _o,_s=pcall(debug.info,${varNames.decrypt}_LD,"s")
     if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
       _es=(_es+217)%256
     end
   end
-  local _o3,_ts=pcall(tostring,loadstring)
-  if _o3 and type(_ts)=="string" and _ts:find(":%d") then
-    _es=(_es+59)%256
+  return function()
+    if _i>=_n then return nil end
+    -- Per-chunk caller identity mask. Encoder assumes real C load → "[C]".
+    -- Any Lua wrapper of load has a non-"[C]" source, producing a nonzero
+    -- mask that garbles every byte in the chunk.
+    local _cs="[C]"
+    if type(debug)=="table" and type(debug.info)=="function" then
+      local _ok,_v=pcall(debug.info,2,"s")
+      if _ok and type(_v)=="string" then _cs=_v end
+    end
+    local _cm=0
+    if _cs~="[C]" and _cs~="=[C]" then
+      for j=1,#_cs do _cm=(_cm+string.byte(_cs,j)*j)%256 end
+      if _cm==0 then _cm=113 end
+    end
+    local _t={}
+    local _stop=_i+${CHUNK_STEP}
+    if _stop>_n then _stop=_n end
+    local _j=1
+    while _i<_stop do
+      _i=_i+1
+      local _b=${varNames.data}[_i]
+      if _i>1 then _b=bit32 and bit32.bxor(_b,_prev%64) or ((_b>=(_prev%64)) and _b-(_prev%64) or 256+_b-(_prev%64))%256 end
+      _prev=${varNames.data}[_i]
+      _b=(_b-((_i-1)*7)-(((_i-1)*_hlen)%256))%256
+      if _b<0 then _b=_b+256 end
+      local _k=${varNames.keyBytes}[((_i-1)%8)+1]
+      local _hkr=_hkt[((_i-1)%4)+1]
+      _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
+      _b=bit32 and bit32.bxor(_b,_hkr) or ((_b>=_hkr) and _b-_hkr or 256+_b-_hkr)%256
+      _b=bit32 and bit32.bxor(_b,_es) or ((_b>=_es) and _b-_es or 256+_b-_es)%256
+      _b=bit32 and bit32.bxor(_b,_cm) or ((_b>=_cm) and _b-_cm or 256+_b-_cm)%256
+      _t[_j]=string.char(_b)
+      _j=_j+1
+    end
+    return table.concat(_t)
   end
-  local _t={}
-  local _prev=0
-  for i=1,#${varNames.data} do
-    local _b=${varNames.data}[i]
-    if i>1 then _b=bit32 and bit32.bxor(_b,_prev%64) or ((_b>=(_prev%64)) and _b-(_prev%64) or 256+_b-(_prev%64))%256 end
-    _prev=${varNames.data}[i]
-    _b=(_b-((i-1)*7)-(((i-1)*_hlen)%256))%256
-    if _b<0 then _b=_b+256 end
-    local _k=${varNames.keyBytes}[((i-1)%8)+1]
-    local _hkr=_hkt[((i-1)%4)+1]
-    _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
-    _b=bit32 and bit32.bxor(_b,_hkr) or ((_b>=_hkr) and _b-_hkr or 256+_b-_hkr)%256
-    _b=bit32 and bit32.bxor(_b,_es) or ((_b>=_es) and _b-_es or 256+_b-_es)%256
-    _t[i]=string.char(_b)
-  end
-  return table.concat(_t)
 end`;
 
 
@@ -1330,11 +1346,10 @@ end`;
    if _elapsed>5 then
      return warn("[DefendLua] Security check failed: Timeout exceeded")
    end
-    -- Inline decrypt -> loadstring -> xpcall. No intermediate _src variable
-    -- exists for an attacker to print(); the decryptor requires the captured
-    -- loadstring identity as an argument, so print/writefile garbles output.
-
-    local _fn,_err=${varNames.decrypt}_LS(${varNames.decrypt}(${varNames.data},${varNames.decrypt}_LS),"=(dl)")
+    -- Stream decrypt directly into C load(). No plaintext string ever formed,
+    -- so a Lua-side loadstring wrapper (the transcript attack) captures nothing.
+    local _reader=${varNames.decrypt}_makeReader(${varNames.data})
+    local _fn,_err=${varNames.decrypt}_LD(_reader,"=(dl)")
     if not _fn then
       return warn("[DefendLua] Load error: "..tostring(_err))
     end
@@ -1381,6 +1396,7 @@ end`;
   end`;
 
 
+
       // Generate junk code to confuse decompilers (Roblox-compatible)
       const junkVars = Array.from({ length: 15 }, (_, i) => `_J${rand3}${i}`);
       const junkCode = `
@@ -1412,6 +1428,8 @@ end
 if type(iscclosure)=="function" then
   local _o1,_r1=pcall(iscclosure,loadstring)
   if _o1 and _r1==false then _DL_kick("[DefendLua] Environment tampering detected (LS-C)") end
+  local _oL,_rL=pcall(iscclosure,load)
+  if _oL and _rL==false then _DL_kick("[DefendLua] Environment tampering detected (LD-C)") end
   local _o2,_r2=pcall(iscclosure,game.HttpGet)
   if _o2 and _r2==false then _DL_kick("[DefendLua] Environment tampering detected (HG-C)") end
 end
@@ -1421,6 +1439,10 @@ if type(debug)=="table" and type(debug.info)=="function" then
   if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
     _DL_kick("[DefendLua] Environment tampering detected (LS-D)")
   end
+  local _oLd,_sLd=pcall(debug.info,load,"s")
+  if _oLd and type(_sLd)=="string" and _sLd~="" and _sLd~="[C]" and _sLd~="=[C]" then
+    _DL_kick("[DefendLua] Environment tampering detected (LD-D)")
+  end
 end
 -- 3) Fallback: tostring of a C function has no source path
 local _o3,_ts=pcall(tostring,loadstring)
@@ -1429,7 +1451,8 @@ if _o3 and type(_ts)=="string" and _ts:find(":%d") then
 end`;
 
       // Build final protected script
-      const protectedScript = `--[[DefendLua v17.1 | ${timestamp} | ${rand1}]]
+      const protectedScript = `--[[DefendLua v19 | ${timestamp} | ${rand1}]]
+
 do
 ${antiHookCode}
 ${junkCode}
