@@ -142,6 +142,7 @@ protectedFunction()`);
       hwid_blacklist: hwidBlacklist,
       public_access: publicAccess,
       show_watermark: showWatermark,
+      cli_protection_mode: cliProtectionMode,
     };
 
     // Only include webhook_url for Pro/Enterprise plans with validation
