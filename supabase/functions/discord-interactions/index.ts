@@ -26,18 +26,6 @@ const ButtonStyle = {
   DANGER: 4,
 };
 
-// Builds a loadstring snippet that shows the Luarmor-style progress bar
-// IMMEDIATELY on execute (before game:HttpGet returns). urlExpr is a raw Lua
-// expression that evaluates to the URL, e.g. '"https://..."' or
-// '"https://...?redeemkey="..Key'.
-function buildDefendLuaLoader(urlExpr: string, prefix = ""): string {
-  // Immediate progress bar. Uses rconsoleprint for smooth single-line updates
-  // when available; always falls back to regular print() so at minimum the user
-  // sees a start line and a final "loaded in Xms" line on ANY executor.
-  return `${prefix}local _DL_t0=tick();local _DL_n="Script";local _e=(getfenv and getfenv()) or _G;local _rp=rawget(_e,"rconsoleprint") or rawget(_e,"printconsole");local _rc=rawget(_e,"rconsoleclear") or rawget(_e,"consoleclear");local _rn=rawget(_e,"rconsolename") or rawget(_e,"consolename") or rawget(_e,"setconsolename");local _hc=type(_rp)=="function" and type(_rc)=="function";if _hc and type(_rn)=="function" then pcall(_rn,"DefendLua") end;local _d=false;local _bw=24;print("[DefendLua] loading "..(_DL_n).."...");local function _bar(p) local fl=math.floor(p/100*_bw+0.5);return string.rep("#",fl)..string.rep("-",_bw-fl) end;local function _pt(p,f) local el=(tick()-_DL_t0)*1000;local ln=string.format("[DefendLua] %s [%s] %3d%% | %.0fms",_DL_n,_bar(p),p,el);if _hc then pcall(_rc);if f then pcall(_rp,"\\27[32m"..ln.." OK\\27[0m\\n") else pcall(_rp,"\\27[33m"..ln.."\\27[0m") end end;if f then print(string.format("[DefendLua] loaded %s in %.0fms",_DL_n,(tick()-_DL_t0)*1000)) end end;task.spawn(function() local p=0;_pt(0,false);while not _d do task.wait(0.03);if p<95 then p=p+(95-p)*0.04+0.3;if p>95 then p=95 end;_pt(math.floor(p),false) else _pt(95,false) end end;_pt(100,true) end);local _s=game:HttpGet(${urlExpr});_d=true;task.wait();loadstring(_s)()`;
-}
-
-
 function hexToUint8Array(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
@@ -825,7 +813,7 @@ Deno.serve(async (req) => {
 
           const loaderUrl = `https://api.defendlua.lol/s/${scriptSlug || keyData.script_id}`;
 
-          const loadstringCode = buildDefendLuaLoader(`"${loaderUrl}?redeemkey="..Key`, `Key = "${safeKey}"\n`);
+          const loadstringCode = `Key = "${safeKey}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             content: loadstringCode,
@@ -870,7 +858,7 @@ Deno.serve(async (req) => {
 
         if (!keyConfig) {
           // No key system — serve script directly
-          const luaLoader = buildDefendLuaLoader(`"${loaderUrl}"`);
+          const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             content: luaLoader,
             ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nHere is your script. Long-press the message above to copy it.`, 0x00ff00),
@@ -889,7 +877,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (existingKey && new Date(existingKey.expires_at) > new Date()) {
-          const luaLoader = buildDefendLuaLoader(`"${loaderUrl}?redeemkey="..Key`, `Key = "${existingKey.key}"\n`);
+          const luaLoader = `Key = "${existingKey.key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             content: luaLoader,
             ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nHere is your script. Long-press the message above to copy it.`, 0x00ff00),
@@ -934,7 +922,7 @@ Deno.serve(async (req) => {
 
         const loaderBase = `https://api.defendlua.lol/s/${script.slug || scriptId}`;
 
-        const redeemCode = buildDefendLuaLoader(`"${loaderBase}?redeemkey="..Key`, `Key = "YOUR-KEY-HERE"\n`);
+        const redeemCode = `Key = "YOUR-KEY-HERE"\nloadstring(game:HttpGet("${loaderBase}?redeemkey="..Key))()`;
         return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
           content: redeemCode,
           ...createEmbed("🔑 Redeem a Key", `**${script.script_name}**\n\nUse \`/redeem key:YOUR-KEY-HERE\` to get your loadstring.\n\nLong-press the message above to copy the template, then replace YOUR-KEY-HERE with your actual key.`, 0x00ff00),
@@ -1532,7 +1520,7 @@ Deno.serve(async (req) => {
           }
 
           const loaderUrl = `https://api.defendlua.lol/s/${script.slug || script.id}`;
-          const loadstringCode = buildDefendLuaLoader(`"${loaderUrl}?redeemkey="..Key`, `Key = "${key}"\n`);
+          const loadstringCode = `Key = "${key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
 
           // DM the target user
           const botToken = Deno.env.get("DISCORD_BOT_TOKEN");

@@ -1516,14 +1516,7 @@ end)
     // Free users: always show watermark. Pro/Enterprise: respect show_watermark setting
     const shouldShowWatermark = ownerPlan === "free" ? true : (script as any).show_watermark !== false;
 
-    // NOTE: The Luarmor-style progress loader now lives in the OUTER loadstring
-    // snippet (see buildDefendLuaLoader in discord-interactions and OwnerPanel).
-    // Moving it out here means the progress bar appears the instant the user
-    // presses "execute" — before game:HttpGet even returns — instead of only
-    // after the HTTP request finishes.
-    const wrappedScript = protectedScript;
-    const finalScript = shouldShowWatermark ? promotionCode + "\n" + wrappedScript : wrappedScript;
-
+    const finalScript = shouldShowWatermark ? promotionCode + "\n" + protectedScript : protectedScript;
 
     return new Response(finalScript, {
       status: 200,
