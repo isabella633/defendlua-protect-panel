@@ -1186,9 +1186,10 @@ local _DL_kick=function(_r)
   _DL_report(_r)
   pcall(function()
     local _plr=game:GetService("Players").LocalPlayer
-    if _plr then _plr:Kick("[DefendLua] "..tostring(_r)) end
+    local _msg="[DefendLua] Tamper detected: "..tostring(_r).."\nThe owner has been notified and been given the following information: Ip, Hwid, discord user id"
+    if _plr then _plr:Kick(_msg) end
   end)
-  error("[DefendLua] "..tostring(_r),0)
+  error("[DefendLua] Tamper detected: "..tostring(_r).."\nThe owner has been notified and been given the following information: Ip, Hwid, discord user id",0)
 end
 -- 1) C-closure check
 if type(iscclosure)=="function" then
