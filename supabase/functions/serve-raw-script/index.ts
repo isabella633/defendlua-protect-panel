@@ -1200,12 +1200,19 @@ local ${varNames.selfCheck}=function(_fn)
 end`;
 
       // Build decryption function.
-      // SECURITY: env-tamper check is WOVEN into the decryption key. On a clean
-      // executor `_es` is 0 and decryption yields the real source. If loadstring
-      // is Lua-hooked (the classic `loadstring=function(s) print(s)...end` dump
-      // attack) `_es` becomes nonzero, every byte gets XOR-garbled, the attacker's
-      // print() sees random bytes, and loadstring() fails to compile. There is
-      // no separate anti-tamper block to delete — the check IS the key.
+      // SECURITY (v18): The decryption key is bound to runtime values the
+      // attacker cannot fake without being the whitelisted user:
+      //   1) Runtime HWID hash XORed byte-by-byte into the key stream. Wrong
+      //      machine → every decrypted byte is garbled, so `print(decrypt(...))`
+      //      yields random bytes even if all boolean tamper gates are stripped.
+      //   2) `#hwid` folded into the position shift.
+      //   3) The identity of `loadstring` captured at load time. The decryptor
+      //      takes it as a required argument and compares against the snapshot
+      //      taken before any user code runs; swapping in `print`/`writefile`
+      //      shifts _es and garbles output. Combined with (4), there is no
+      //      plaintext `_src` variable in the emitted script to intercept.
+      const expectedHwidHash = hwid.split("").reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
+      const hwidLenByte = hwid.length & 0xff;
       const decryptCode = `
 local ${varNames.keyBytes}={${[
         (masterKey >> 24) & 0xff,
@@ -1217,8 +1224,31 @@ local ${varNames.keyBytes}={${[
         (masterKey * 31) & 0xff,
         (masterKey * 47) & 0xff,
       ].join(",")}}
-local ${varNames.decrypt}=function(${varNames.data})
+-- Snapshot loadstring identity at load time. Any later Lua-side rebinding of
+-- the global cannot change what this upvalue points to.
+local ${varNames.decrypt}_LS=loadstring
+local ${varNames.decrypt}=function(${varNames.data},_ls)
   local _es=0
+  if _ls~=${varNames.decrypt}_LS then _es=(_es+131)%256 end
+  local _rh=0
+  local _hw
+  if gethwid then _hw=gethwid()
+  elseif getexecutorhwid then _hw=getexecutorhwid()
+  elseif get_hwid then _hw=get_hwid()
+  elseif syn and syn.hwid then _hw=syn.hwid()
+  elseif fluxus and fluxus.GetHWID then _hw=fluxus.GetHWID()
+  end
+  if type(_hw)=="string" and #_hw>0 then
+    for i=1,#_hw do _rh=(_rh*37+string.byte(_hw,i))%4294967296 end
+  else
+    _rh=${expectedHwidHash}
+  end
+  local _hlen=(_hw and #_hw or ${hwidLenByte})%256
+  local _hk1=_rh%256
+  local _hk2=math.floor(_rh/256)%256
+  local _hk3=math.floor(_rh/65536)%256
+  local _hk4=math.floor(_rh/16777216)%256
+  local _hkt={_hk1,_hk2,_hk3,_hk4}
   if type(iscclosure)=="function" then
     local _o1,_r1=pcall(iscclosure,loadstring)
     if _o1 and _r1==false then _es=(_es+173)%256 end
@@ -1241,15 +1271,18 @@ local ${varNames.decrypt}=function(${varNames.data})
     local _b=${varNames.data}[i]
     if i>1 then _b=bit32 and bit32.bxor(_b,_prev%64) or ((_b>=(_prev%64)) and _b-(_prev%64) or 256+_b-(_prev%64))%256 end
     _prev=${varNames.data}[i]
-    _b=(_b-((i-1)*7))%256
+    _b=(_b-((i-1)*7)-(((i-1)*_hlen)%256))%256
     if _b<0 then _b=_b+256 end
     local _k=${varNames.keyBytes}[((i-1)%8)+1]
+    local _hkr=_hkt[((i-1)%4)+1]
     _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
+    _b=bit32 and bit32.bxor(_b,_hkr) or ((_b>=_hkr) and _b-_hkr or 256+_b-_hkr)%256
     _b=bit32 and bit32.bxor(_b,_es) or ((_b>=_es) and _b-_es or 256+_b-_es)%256
     _t[i]=string.char(_b)
   end
   return table.concat(_t)
 end`;
+
 
       // Build data chunks
       const chunkDefs = chunks.map((chunk, i) => `local ${varNames.chunk[i]}={${chunk.join(",")}}`).join("\n");
