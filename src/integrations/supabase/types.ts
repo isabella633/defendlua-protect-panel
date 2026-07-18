@@ -427,6 +427,7 @@ export type Database = {
       scripts: {
         Row: {
           created_at: string | null
+          disabled: boolean
           hwid_blacklist: string[] | null
           hwid_list: string[] | null
           id: string
@@ -442,6 +443,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          disabled?: boolean
           hwid_blacklist?: string[] | null
           hwid_list?: string[] | null
           id?: string
@@ -457,6 +459,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          disabled?: boolean
           hwid_blacklist?: string[] | null
           hwid_list?: string[] | null
           id?: string
@@ -592,6 +595,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_free_plan_constraints: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       can_create_script: { Args: { user_id_param: string }; Returns: boolean }
       check_rate_limit: {
         Args: { p_key: string; p_limit: number; p_window_ms: number }
