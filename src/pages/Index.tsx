@@ -321,7 +321,7 @@ const Index = () => {
                 name: "Free",
                 price: "$0",
                 period: "forever",
-                features: ["1 protected script", "Up to 5 HWIDs", "Basic analytics", "Community support"]
+                features: ["3 protected scripts", "Up to 1000 HWIDs per script", "Basic analytics", "Community support"]
               },
               {
                 name: "Pro",
