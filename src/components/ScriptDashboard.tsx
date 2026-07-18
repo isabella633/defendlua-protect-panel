@@ -666,9 +666,11 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                           {formatDate(script.created_at)}
                         </CardDescription>
                       </div>
-                      <Badge className="bg-primary/10 text-primary">
-                        Protected
-                      </Badge>
+                      {script.auto_disabled_at ? (
+                        <Badge variant="destructive">Disabled</Badge>
+                      ) : (
+                        <Badge className="bg-primary/10 text-primary">Protected</Badge>
+                      )}
                     </div>
                   </CardHeader>
                   
@@ -689,7 +691,25 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                           <Eye className="w-4 h-4 mr-2" />
                           Manage
                         </Button>
-                        
+
+                        <Button
+                          onClick={() => navigate(`/analytics/${script.id}`)}
+                          variant="outline"
+                          size="sm"
+                          title="Analytics"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                        </Button>
+
+                        <Button
+                          onClick={() => setHistoryScript(script)}
+                          variant="outline"
+                          size="sm"
+                          title="Version history"
+                        >
+                          <History className="w-4 h-4" />
+                        </Button>
+
                         <Button
                           onClick={() => deleteScript(script.id)}
                           variant="outline"
