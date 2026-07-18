@@ -42,7 +42,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import AIChatWidget from "./AIChatWidget";
+import VersionHistoryDialog from "./VersionHistoryDialog";
 import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle, BarChart3, History } from "lucide-react";
 
 interface Script {
   id: string;
@@ -51,6 +54,9 @@ interface Script {
   updated_at: string;
   script_key: string;
   hwid_list: string[];
+  disabled?: boolean;
+  auto_disabled_at?: string | null;
+  auto_disabled_reason?: string | null;
 }
 
 interface ScriptDashboardProps {
