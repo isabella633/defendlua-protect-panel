@@ -90,10 +90,7 @@ const TamperLogsDialog = ({ scriptId, scriptName, open, onOpenChange }: Props) =
           </div>
         </div>
 
-          <div className="ml-auto text-xs text-muted-foreground">
-            {logs.length} event{logs.length === 1 ? "" : "s"}
-          </div>
-        </div>
+
 
         <div className="overflow-y-auto flex-1 space-y-2 pr-1">
           {loading ? (
