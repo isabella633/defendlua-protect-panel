@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import AIChatWidget from "@/components/AIChatWidget";
 import { supabase } from "@/integrations/supabase/client";
+import SEO from "@/components/SEO";
 
 const Contact = () => {
   const [user, setUser] = useState<any>(null);
@@ -29,6 +30,7 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-blue/20 via-white to-soft-purple/20">
+      <SEO title="Contact — DefendLua Support" description="Get in touch with DefendLua for support, sales, or partnership inquiries about our Lua script protection platform." path="/contact" />
       {/* Navigation */}
       <nav className="border-b border-soft-blue/20 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">

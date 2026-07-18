@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Copy, RefreshCw, Unlink, MessageCircle, Bot, ExternalLink } from "lucide-react";
 import logoImage from "@/assets/defendlua-logo.png";
+import SEO from "@/components/SEO";
 
 export default function LinkDiscord() {
   const navigate = useNavigate();
@@ -158,6 +159,7 @@ export default function LinkDiscord() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4">
+      <SEO title="Link Discord — DefendLua" description="Link your Discord account to DefendLua to manage HWID whitelists and scripts from the official Discord bot." path="/link-discord" />
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
