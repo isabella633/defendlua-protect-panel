@@ -697,6 +697,39 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // RUNTIME AUTO-DETECTION: Standalone Luau CLI vs Roblox Luau
+    // Uses positive CLI markers + absence of Roblox globals. Runs against the
+    // stored source so detection is deterministic per-script (not per-request).
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const detectLuauCLI = (source: string): boolean => {
+      const src = source.replace(/--\[\[[\s\S]*?\]\]/g, "").replace(/--[^\n]*/g, "");
+      const cliMarkers = [
+        /\bio\.(write|read|open|stdout|stderr|stdin|lines)\b/,
+        /\bos\.(exit|getenv|execute|remove|rename|tmpname|time|date|clock)\b/,
+        /\barg\s*\[/,
+        /\bpackage\.(path|cpath|loaded)\b/,
+        /\brequire\s*\(\s*["'][^"']+["']\s*\)/,
+        /^#!/,
+      ];
+      const robloxMarkers = [
+        /\bgame\b/,
+        /\bworkspace\b/,
+        /\bInstance\s*\.\s*new\b/,
+        /\bscript\s*\.\s*(Parent|Name|Source)\b/,
+        /:GetService\s*\(/,
+        /\bEnum\s*\.\s*[A-Z]/,
+        /\bUDim2\b|\bColor3\b|\bVector3\b|\bCFrame\b/,
+        /\bRunService\b|\bPlayers\b|\bReplicatedStorage\b/,
+      ];
+      const cliHits = cliMarkers.reduce((n, r) => n + (r.test(src) ? 1 : 0), 0);
+      const robloxHits = robloxMarkers.reduce((n, r) => n + (r.test(src) ? 1 : 0), 0);
+      return cliHits >= 1 && robloxHits === 0;
+    };
+
+    const isLuauCLI = detectLuauCLI(script.script_key);
+    console.log("Runtime detection:", { scriptId, target: isLuauCLI ? "luau-cli" : "roblox" });
+
     const { data: subscription } = await supabaseAdmin
       .from("subscriptions")
       .select("plan")
