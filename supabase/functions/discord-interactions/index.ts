@@ -822,7 +822,7 @@ Deno.serve(async (req) => {
 
           const loaderUrl = `https://api.defendlua.lol/s/${scriptSlug || keyData.script_id}`;
 
-          const loadstringCode = `Key = "${safeKey}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
+          const loadstringCode = buildDefendLuaLoader(`"${loaderUrl}?redeemkey="..Key`, `Key = "${safeKey}"\n`);
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             content: loadstringCode,
