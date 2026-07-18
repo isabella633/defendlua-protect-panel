@@ -1,0 +1,23 @@
+# DefendLua
+
+> Professional Lua script protection with advanced obfuscation, HWID locking, and license key systems for Roblox and Luau developers.
+
+DefendLua lets developers upload Lua scripts and serve them to end users through a protected loader that enforces obfuscation, hardware ID whitelisting, optional license keys, and anti-tamper checks. It supports both Roblox executors and standalone Luau CLI environments.
+
+## Pages
+
+- [Home](/): Product overview, features, and getting started.
+- [Features](/features): Full list of protection features (obfuscation, HWID lock, key systems, analytics).
+- [How It Works](/how-it-works): Step-by-step walkthrough of the protection pipeline.
+- [Pricing](/pricing): Free, Pro, and Enterprise plans with limits and FAQ.
+- [Docs](/docs): Developer documentation and integration guide.
+- [Contact](/contact): Support and business contact.
+
+## Blog
+
+- [Lua Obfuscation vs. Protection](/blog/lua-obfuscation-vs-protection): Why obfuscation alone isn't enough and how DefendLua combines HWID locking and licensing for real script protection.
+
+## Optional
+
+- [Terms of Service](/terms-of-service)
+- [Privacy Policy](/privacy-policy)

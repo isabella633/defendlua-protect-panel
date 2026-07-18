@@ -102,7 +102,7 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Shield className="w-8 h-8 text-primary" />
-              <h1 className="text-2xl font-bold text-foreground">DefendLua</h1>
+              <span className="text-2xl font-bold text-foreground">DefendLua</span>
               <Badge variant="secondary" className="hidden sm:inline-flex">
                 Protect & Monetize
               </Badge>

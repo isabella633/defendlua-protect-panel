@@ -227,6 +227,7 @@ const AIChatWidget = ({ userPlan = 'free', userId }: AIChatWidgetProps) => {
             onClick={sendMessage}
             disabled={isLoading || !input.trim() || messageCount >= limits[userPlan].maxMessages}
             size="icon"
+            aria-label="Send message"
           >
             <Send className="w-4 h-4" />
           </Button>
