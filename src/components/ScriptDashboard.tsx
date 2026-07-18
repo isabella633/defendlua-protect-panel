@@ -76,6 +76,7 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
   const [userEmail, setUserEmail] = useState("");
   const [discordLink, setDiscordLink] = useState<any>(null);
   const [historyScript, setHistoryScript] = useState<Script | null>(null);
+  const [tamperScript, setTamperScript] = useState<Script | null>(null);
   const [dismissedBanner, setDismissedBanner] = useState(
     () => localStorage.getItem("autoDisabledBannerDismissed") === "1",
   );
@@ -711,6 +712,16 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
                         </Button>
 
                         <Button
+                          onClick={() => setTamperScript(script)}
+                          variant="outline"
+                          size="sm"
+                          title="Tamper logs"
+                        >
+                          <ShieldAlert className="w-4 h-4" />
+                        </Button>
+
+
+                        <Button
                           onClick={() => deleteScript(script.id)}
                           variant="outline"
                           size="sm"
@@ -1077,6 +1088,13 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
         open={!!historyScript}
         onOpenChange={(o) => !o && setHistoryScript(null)}
         onRestored={fetchScripts}
+      />
+
+      <TamperLogsDialog
+        scriptId={tamperScript?.id ?? null}
+        scriptName={tamperScript?.script_name}
+        open={!!tamperScript}
+        onOpenChange={(o) => !o && setTamperScript(null)}
       />
     </div>
   );
