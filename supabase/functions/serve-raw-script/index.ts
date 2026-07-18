@@ -1094,8 +1094,11 @@ return ${F}()
 
       // Generate dynamic encryption key based on HWID and timestamp
       const masterKey = hwid.split("").reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), timestamp % 1000);
+      const hwidRuntimeHash = hwid.split("").reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
+      const hwidLen = hwid.length & 0xff;
 
-      // Encrypt the source code with multi-layer XOR cipher
+      // Encrypt the source code with multi-layer XOR cipher. Must mirror the
+      // Lua decrypt loop exactly, including the HWID-derived key rotation.
       const encryptSource = (src: string, key: number): number[] => {
         const result: number[] = [];
         const keyBytes = [
@@ -1108,18 +1111,26 @@ return ${F}()
           (key * 31) & 0xff,
           (key * 47) & 0xff,
         ];
+        const hkt = [
+          hwidRuntimeHash & 0xff,
+          (Math.floor(hwidRuntimeHash / 256)) & 0xff,
+          (Math.floor(hwidRuntimeHash / 65536)) & 0xff,
+          (Math.floor(hwidRuntimeHash / 16777216)) & 0xff,
+        ];
         for (let i = 0; i < src.length; i++) {
           let byte = src.charCodeAt(i);
-          // Layer 1: XOR with rotating key
+          // Inverse of Lua decrypt (applied in reverse order):
+          // Lua does: prev-xor → subtract shift → xor key → xor hkr → xor _es(=0)
+          // So encrypt does: xor hkr → xor key → add shift → prev-xor
+          byte ^= hkt[i % 4];
           byte ^= keyBytes[i % keyBytes.length];
-          // Layer 2: Add position-based shift
-          byte = (byte + i * 7) & 0xff;
-          // Layer 3: XOR with previous byte
+          byte = (byte + i * 7 + ((i * hwidLen) & 0xff)) & 0xff;
           if (i > 0) byte ^= result[i - 1] & 0x3f;
           result.push(byte);
         }
         return result;
       };
+
 
       const encryptedBytes = encryptSource(source, masterKey);
 
