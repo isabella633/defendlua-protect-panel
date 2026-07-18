@@ -750,15 +750,20 @@ Deno.serve(async (req) => {
           });
         }
 
-        // ── /loader (any user: browse all scripts) ──
+        // ── /loader (owner-scoped: only scripts owned by the invoking Discord user) ──
         case "loader": {
+          const invokerUserId = await getUserId(supabase, discordId);
+          if (!invokerUserId) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            createEmbed("🔗 Link Required", "Link your Discord account first with `/link` to use the loader.", 0xffaa00));
+
           const { data: allScripts } = await supabase
             .from("scripts")
-            .select("id, script_name")
+            .select("id, script_name, owner_id")
+            .eq("owner_id", invokerUserId)
             .order("created_at", { ascending: false });
 
           if (!allScripts?.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00));
+            createEmbed("📦 Loader", "You don't own any scripts yet.", 0xffaa00));
 
           const { data: configs } = await supabase
             .from("key_system_configs")
