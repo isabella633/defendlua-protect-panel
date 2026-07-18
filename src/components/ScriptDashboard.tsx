@@ -1070,6 +1070,14 @@ const ScriptDashboard = ({ onNewScript, onViewScript, onLogout, userId }: Script
         userPlan={subscription?.plan || 'free'} 
         userId={userId} 
       />
+
+      <VersionHistoryDialog
+        scriptId={historyScript?.id ?? null}
+        scriptName={historyScript?.script_name}
+        open={!!historyScript}
+        onOpenChange={(o) => !o && setHistoryScript(null)}
+        onRestored={fetchScripts}
+      />
     </div>
   );
 };
