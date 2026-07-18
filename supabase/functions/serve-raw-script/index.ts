@@ -697,6 +697,39 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // RUNTIME AUTO-DETECTION: Standalone Luau CLI vs Roblox Luau
+    // Uses positive CLI markers + absence of Roblox globals. Runs against the
+    // stored source so detection is deterministic per-script (not per-request).
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const detectLuauCLI = (source: string): boolean => {
+      const src = source.replace(/--\[\[[\s\S]*?\]\]/g, "").replace(/--[^\n]*/g, "");
+      const cliMarkers = [
+        /\bio\.(write|read|open|stdout|stderr|stdin|lines)\b/,
+        /\bos\.(exit|getenv|execute|remove|rename|tmpname|time|date|clock)\b/,
+        /\barg\s*\[/,
+        /\bpackage\.(path|cpath|loaded)\b/,
+        /\brequire\s*\(\s*["'][^"']+["']\s*\)/,
+        /^#!/,
+      ];
+      const robloxMarkers = [
+        /\bgame\b/,
+        /\bworkspace\b/,
+        /\bInstance\s*\.\s*new\b/,
+        /\bscript\s*\.\s*(Parent|Name|Source)\b/,
+        /:GetService\s*\(/,
+        /\bEnum\s*\.\s*[A-Z]/,
+        /\bUDim2\b|\bColor3\b|\bVector3\b|\bCFrame\b/,
+        /\bRunService\b|\bPlayers\b|\bReplicatedStorage\b/,
+      ];
+      const cliHits = cliMarkers.reduce((n, r) => n + (r.test(src) ? 1 : 0), 0);
+      const robloxHits = robloxMarkers.reduce((n, r) => n + (r.test(src) ? 1 : 0), 0);
+      return cliHits >= 1 && robloxHits === 0;
+    };
+
+    const isLuauCLI = detectLuauCLI(script.script_key);
+    console.log("Runtime detection:", { scriptId, target: isLuauCLI ? "luau-cli" : "roblox" });
+
     const { data: subscription } = await supabaseAdmin
       .from("subscriptions")
       .select("plan")
@@ -762,6 +795,75 @@ Deno.serve(async (req) => {
         console.error("Failed to send webhook:", webhookError);
       }
     };
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // LUAU CLI BRANCH: emit CLI-safe obfuscated payload (no Roblox APIs, no HWID
+    // whitelist, no anti-tamper stubs that rely on iscclosure/game/Players).
+    // Chosen scope: obfuscate-only. HWID/key gating cannot run in the CLI.
+    // ═══════════════════════════════════════════════════════════════════════════════
+    if (isLuauCLI) {
+      await supabaseAdmin.from("access_logs").insert({
+        script_id: scriptId,
+        hwid: hwid || "cli",
+        ip_address: clientIp,
+        country,
+        status: "granted",
+        reason: "Luau CLI (obfuscate-only)",
+      });
+
+      const obfuscateCLI = (source: string): string => {
+        const key = Math.floor(Math.random() * 200) + 30;
+        const bytes: number[] = [];
+        for (let i = 0; i < source.length; i++) {
+          const k = (key + (i % 251)) & 0xff;
+          bytes.push(source.charCodeAt(i) ^ k);
+        }
+        // Split into chunks so the encrypted blob isn't one giant literal
+        const chunks: string[] = [];
+        const chunkSize = 96;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          chunks.push(bytes.slice(i, i + chunkSize).join(","));
+        }
+        const v1 = "_d" + Math.random().toString(36).slice(2, 7);
+        const v2 = "_d" + Math.random().toString(36).slice(2, 7);
+        const v3 = "_d" + Math.random().toString(36).slice(2, 7);
+        const v4 = "_d" + Math.random().toString(36).slice(2, 7);
+        const loader = (typeof (globalThis as any) === "object" ? "load" : "load");
+        return `--[[DefendLua-CLI v1.0]]
+local ${v1}={${chunks.map((c) => `{${c}}`).join(",")}}
+local ${v2}={}
+for _i=1,#${v1} do for _j=1,#${v1}[_i] do ${v2}[#${v2}+1]=${v1}[_i][_j] end end
+local ${v3}=${key}
+local ${v4}={}
+local _bx=(bit32 and bit32.bxor) or function(a,b) local r,p=0,1 for _=1,8 do local x,y=a%2,b%2 if x~=y then r=r+p end a,b,p=(a-x)/2,(b-y)/2,p*2 end return r end
+for _i=1,#${v2} do
+  local _k=(${v3}+((_i-1)%251))%256
+  ${v4}[_i]=string.char(_bx(${v2}[_i],_k))
+end
+local _src=table.concat(${v4})
+local _fn,_err=${loader}(_src,"=(dlua)")
+if not _fn then error("[DefendLua] payload load failed: "..tostring(_err),0) end
+return _fn()
+`;
+      };
+
+      let cliOut = obfuscateCLI(script.script_key);
+
+      // Free-plan watermark (CLI-safe): stdout banner instead of ScreenGui
+      const { data: ownerSubCli } = await supabaseAdmin
+        .from("subscriptions").select("plan").eq("user_id", script.owner_id).maybeSingle();
+      const cliPlan = ownerSubCli?.plan || "free";
+      const cliShowWatermark = cliPlan === "free" ? true : (script as any).show_watermark !== false;
+      if (cliShowWatermark) {
+        cliOut = `pcall(function() io.write("[DEFENDLUA.LOL] Protected by DefendLua\\n") end)\n` + cliOut;
+      }
+
+      return new Response(cliOut, {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+
 
     if (hwidBlacklist.includes(hwid)) {
       console.log("Access denied - HWID blacklisted:", { scriptId, hwid });
