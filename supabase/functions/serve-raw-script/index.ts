@@ -652,7 +652,7 @@ Deno.serve(async (req) => {
     const { data: script, error } = await supabaseAdmin
       .from("scripts")
       .select(
-        "script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark",
+        "script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark, disabled",
       )
       .eq("id", scriptId)
       .single();
@@ -671,6 +671,20 @@ Deno.serve(async (req) => {
 
       // Return identical response to access denied to prevent script ID enumeration
       return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Key")', {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+
+    if ((script as any).disabled) {
+      await supabaseAdmin.from("access_logs").insert({
+        script_id: scriptId,
+        hwid: hwid || "unknown",
+        ip_address: clientIp,
+        status: "denied",
+        reason: "Script disabled (plan limit)",
+      });
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Script disabled — owner exceeded plan limits")', {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
