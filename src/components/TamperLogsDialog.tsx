@@ -85,16 +85,11 @@ const TamperLogsDialog = ({ scriptId, scriptName, open, onOpenChange }: Props) =
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearAll}
-            disabled={clearing || logs.length === 0}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Clear all
-          </Button>
+          <div className="ml-auto text-xs text-muted-foreground">
+            {logs.length} event{logs.length === 1 ? "" : "s"}
+          </div>
+        </div>
+
           <div className="ml-auto text-xs text-muted-foreground">
             {logs.length} event{logs.length === 1 ? "" : "s"}
           </div>
