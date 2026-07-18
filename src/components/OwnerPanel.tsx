@@ -101,7 +101,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from("scripts")
-      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark")
+      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark, cli_protection_mode")
       .eq("id", scriptId)
       .single();
 
