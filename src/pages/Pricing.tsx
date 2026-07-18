@@ -85,7 +85,21 @@ const Pricing = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-soft-blue/20 via-white to-soft-purple/20">
-      <SEO title="Pricing — DefendLua Lua Script Protection" description="Simple pricing for DefendLua. Free plan with 3 scripts and 1000 HWIDs each, Pro for unlimited, plus Enterprise options." path="/pricing" />
+      <SEO
+        title="Pricing — DefendLua Lua Script Protection"
+        description="Simple pricing for DefendLua. Free plan with 3 scripts and 1000 HWIDs each, Pro for unlimited, plus Enterprise options."
+        path="/pricing"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "Can I change plans later?", acceptedAnswer: { "@type": "Answer", text: "Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately." } },
+            { "@type": "Question", name: "What payment methods do you accept?", acceptedAnswer: { "@type": "Answer", text: "We accept all major credit cards, PayPal, and cryptocurrency payments." } },
+            { "@type": "Question", name: "How do I activate my Pro plan?", acceptedAnswer: { "@type": "Answer", text: "Purchase a Pro activation key from defendlua.mysellauth.com and redeem it in your dashboard to instantly activate Pro." } },
+            { "@type": "Question", name: "What happens if I exceed my HWID limit?", acceptedAnswer: { "@type": "Answer", text: "On Free, you'll receive a notification and can upgrade your plan or remove old HWIDs to add new ones." } },
+          ],
+        }}
+      />
       {/* Navigation */}
       <nav className="border-b border-soft-blue/20 bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-4">
