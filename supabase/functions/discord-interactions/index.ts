@@ -1213,14 +1213,15 @@ Deno.serve(async (req) => {
 
         // ── loader: post PUBLIC control panel embed with buttons ──
         if (action === "loader") {
+          const invokerUserId = await getUserId(supabase, discordId);
           const { data: script } = await supabase
             .from("scripts")
-            .select("id, script_name, slug")
+            .select("id, script_name, slug, owner_id")
             .eq("id", scriptId)
             .single();
 
-          if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("❌ Error", "Script not found.", 0xff0000),
+          if (!script || !invokerUserId || script.owner_id !== invokerUserId) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Not Allowed", "You can only deploy loader panels for scripts you own.", 0xff0000),
             components: [],
           });
 
