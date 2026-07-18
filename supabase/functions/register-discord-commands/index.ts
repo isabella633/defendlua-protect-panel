@@ -36,7 +36,10 @@ const commands = [
     { name: "hwid", description: "HWID to whitelist (manual)", type: 3, required: false },
     { name: "expiry", description: "Key expiry duration (e.g. 24h, 1d, 1w, 1m, 1y, 0 = lifetime)", type: 3, required: false },
   ]},
-  { name: "unwhitelist", description: "Remove HWID from whitelist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
+  { name: "unwhitelist", description: "Remove a user (or HWID) from the whitelist", default_member_permissions: ADMIN_ONLY, options: [
+    { name: "user", description: "Discord user to remove", type: 6, required: false },
+    { name: "hwid", description: "HWID to remove (manual)", type: 3, required: false },
+  ]},
   { name: "blacklist", description: "Add HWID to blacklist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to blacklist", type: 3, required: true }] },
   { name: "unblacklist", description: "Remove HWID from blacklist", default_member_permissions: ADMIN_ONLY, options: [{ name: "hwid", description: "HWID to remove", type: 3, required: true }] },
   { name: "rename", description: "Rename a script", default_member_permissions: ADMIN_ONLY, options: [{ name: "name", description: "New script name", type: 3, required: true }] },
