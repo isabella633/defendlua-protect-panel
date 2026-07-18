@@ -13,7 +13,8 @@ const Pricing = () => {
       description: "Perfect for testing and small projects",
       features: [
         "Up to 3 protected scripts",
-        "Up to 10 HWIDs per script",
+        "Up to 1000 HWIDs per script (3000 total)",
+        "Public access mode enabled",
         "Basic access logs",
         "HWID whitelist management",
         "IP whitelist management",
