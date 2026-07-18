@@ -886,7 +886,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (existingKey && new Date(existingKey.expires_at) > new Date()) {
-          const luaLoader = `Key = "${existingKey.key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
+          const luaLoader = buildDefendLuaLoader(`"${loaderUrl}?redeemkey="..Key`, `Key = "${existingKey.key}"\n`);
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             content: luaLoader,
             ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nHere is your script. Long-press the message above to copy it.`, 0x00ff00),
