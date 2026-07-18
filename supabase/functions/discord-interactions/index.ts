@@ -504,11 +504,12 @@ Deno.serve(async (req) => {
             `HWID: \`${hwid!.substring(0, 40)}\`\nSelect the script below.`, hwid!);
         }
 
-        // ── HWID commands with select menu ──
+        // ── /blacklist and /unblacklist (by user or HWID) ──
         case "blacklist":
         case "unblacklist": {
+          const targetUser = getOpt("user");
           const hwid = getOpt("hwid");
-          if (!hwid) return errReply("Please provide an HWID.");
+          if (!targetUser && !hwid) return errReply("Please provide a Discord `user` or an `hwid`.");
 
           const memberRolesHWID = interaction.member?.roles || [];
           const guildIdHWID = interaction.guild_id;
@@ -521,12 +522,20 @@ Deno.serve(async (req) => {
           const scripts = await getUserScripts(supabase, userId);
           if (!scripts.length) return errReply("No scripts found.");
 
+          if (targetUser) {
+            const userAction = name === "blacklist" ? "blacklist_user" : "unblacklist_user";
+            const label = name === "blacklist"
+              ? "🚫 Select a script to blacklist user"
+              : "♻️ Select a script to unblacklist user";
+            return scriptSelectMenu(userAction, scripts, label,
+              `User: <@${targetUser}>\nSelect the script below.`, targetUser);
+          }
+
           const actionLabels: Record<string, string> = {
             blacklist: "🚫 Select a script to blacklist HWID",
             unblacklist: "♻️ Select a script to unblacklist HWID",
           };
-
-          return scriptSelectMenu(name, scripts, actionLabels[name], `HWID: \`${hwid.substring(0, 40)}\`\nSelect the script below.`, hwid);
+          return scriptSelectMenu(name, scripts, actionLabels[name], `HWID: \`${hwid!.substring(0, 40)}\`\nSelect the script below.`, hwid!);
         }
 
         // ── /rename (needs new name + select menu) ──
@@ -741,18 +750,32 @@ Deno.serve(async (req) => {
           });
         }
 
-        // ── /loader (any user: browse scripts with key systems) ──
+        // ── /loader (any user: browse all scripts) ──
         case "loader": {
-          const keyScripts = await getKeySystemScripts(supabase);
+          const { data: allScripts } = await supabase
+            .from("scripts")
+            .select("id, script_name")
+            .order("created_at", { ascending: false });
 
-          if (!keyScripts.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          if (!allScripts?.length) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             createEmbed("📦 Loader", "No scripts are available right now.", 0xffaa00));
 
-          const options = keyScripts.slice(0, 25).map((ks: any) => ({
-            label: ks.scripts?.script_name?.substring(0, 100) || "Unknown",
-            description: `${ks.provider} | ${formatDuration(ks.key_expiry_hours)} keys | ${ks.redeem_action}`,
-            value: `loader:${ks.script_id}`,
-          }));
+          const { data: configs } = await supabase
+            .from("key_system_configs")
+            .select("script_id, provider, key_expiry_hours, redeem_action")
+            .eq("enabled", true);
+          const configMap = new Map((configs || []).map((c: any) => [c.script_id, c]));
+
+          const options = allScripts.slice(0, 25).map((s: any) => {
+            const cfg: any = configMap.get(s.id);
+            return {
+              label: s.script_name?.substring(0, 100) || "Unknown",
+              description: cfg
+                ? `${cfg.provider} | ${formatDuration(cfg.key_expiry_hours)} keys | ${cfg.redeem_action}`.substring(0, 100)
+                : "Direct script — no key required",
+              value: `loader:${s.id}`,
+            };
+          });
 
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("📦 Script Loader", "Select a script to view options.", 0x5865f2),
@@ -823,7 +846,27 @@ Deno.serve(async (req) => {
         const { data: script } = await supabase.from("scripts").select("script_name, slug").eq("id", scriptId).single();
         if (!script) return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, { ...createEmbed("❌ Error", "Script not found.", 0xff0000), flags: 64 });
 
-        // Check if user has a valid (redeemed or unredeemed) key for this script
+        // Check if this script has a key system enabled
+        const { data: keyConfig } = await supabase
+          .from("key_system_configs")
+          .select("script_id")
+          .eq("script_id", scriptId)
+          .eq("enabled", true)
+          .maybeSingle();
+
+        const loaderUrl = `https://api.defendlua.lol/s/${script.slug}`;
+
+        if (!keyConfig) {
+          // No key system — serve script directly
+          const luaLoader = `loadstring(game:HttpGet("${loaderUrl}"))()`;
+          return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
+            content: luaLoader,
+            ...createEmbed("📜 Get Script", `**${script.script_name}**\n\nHere is your script. Long-press the message above to copy it.`, 0x00ff00),
+            flags: 64,
+          });
+        }
+
+        // Key system enabled — check if user has a valid key for this script
         const { data: existingKey } = await supabase
           .from("generated_keys")
           .select("key, redeemed, expires_at")
@@ -831,12 +874,9 @@ Deno.serve(async (req) => {
           .eq("discord_id", discordId)
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
-
-        const loaderUrl = `https://api.defendlua.lol/s/${script.slug}`;
+          .maybeSingle();
 
         if (existingKey && new Date(existingKey.expires_at) > new Date()) {
-          // User has a valid key — show the key-based loadstring
           const luaLoader = `Key = "${existingKey.key}"\nloadstring(game:HttpGet("${loaderUrl}?redeemkey="..Key))()`;
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             content: luaLoader,
@@ -844,7 +884,6 @@ Deno.serve(async (req) => {
             flags: 64,
           });
         } else {
-          // No valid key — tell them to get one
           return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
             ...createEmbed("📜 Get Script", `**${script.script_name}**\n\n⚠️ You don't have a valid key yet.\n\nUse the **Get Key** button to obtain a key first, then come back here to get your script.`, 0xffaa00),
             flags: 64,
@@ -1169,66 +1208,74 @@ Deno.serve(async (req) => {
 
         // ── loader: post PUBLIC control panel embed with buttons ──
         if (action === "loader") {
-          const { data: config } = await supabase
-            .from("key_system_configs")
-            .select("*, scripts:script_id(id, script_name, slug)")
-            .eq("script_id", scriptId)
-            .eq("enabled", true)
+          const { data: script } = await supabase
+            .from("scripts")
+            .select("id, script_name, slug")
+            .eq("id", scriptId)
             .single();
 
-          if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("❌ Error", "Script not found or key system disabled.", 0xff0000),
+          if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Script not found.", 0xff0000),
             components: [],
           });
 
-          const scriptName = config.scripts?.script_name || "Unknown";
+          const { data: config } = await supabase
+            .from("key_system_configs")
+            .select("script_id")
+            .eq("script_id", scriptId)
+            .eq("enabled", true)
+            .maybeSingle();
 
-          // Remove the select menu message (update it to empty)
-          // Then send a NEW public message with the control panel
-          // First, clear the admin's select menu
+          const scriptName = script.script_name || "Unknown";
+          const hasKeySystem = !!config;
+
           const clearResponse = reply(InteractionResponseType.UPDATE_MESSAGE, {
             ...createEmbed("✅ Control Panel Deployed", `Control panel for **${scriptName}** has been posted below.`, 0x00ff00),
             components: [],
           });
 
-          // Now we need to send a follow-up public message using the webhook
-          const followupUrl = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
+          const componentRows = hasKeySystem
+            ? [
+                {
+                  type: ComponentType.ACTION_ROW,
+                  components: [
+                    { type: ComponentType.BUTTON, style: ButtonStyle.DANGER, label: "Redeem Key", custom_id: `loader_redeem:${scriptId}`, emoji: { name: "🔑" } },
+                    { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "Get Script", custom_id: `loader_getscript:${scriptId}`, emoji: { name: "📜" } },
+                    { type: ComponentType.BUTTON, style: ButtonStyle.PRIMARY, label: "Get Key", custom_id: `loader_getkey:${scriptId}`, emoji: { name: "🔗" } },
+                  ],
+                },
+                {
+                  type: ComponentType.ACTION_ROW,
+                  components: [
+                    { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Reset HWID", custom_id: `loader_resethwid:${scriptId}`, emoji: { name: "⚙️" } },
+                    { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Get Stats", custom_id: `loader_stats:${scriptId}`, emoji: { name: "📊" } },
+                  ],
+                },
+              ]
+            : [
+                {
+                  type: ComponentType.ACTION_ROW,
+                  components: [
+                    { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "Get Script", custom_id: `loader_getscript:${scriptId}`, emoji: { name: "📜" } },
+                  ],
+                },
+              ];
 
-          // We'll use UPDATE_MESSAGE to clear the admin menu, then send a followup
-          // Actually, Discord interactions: we update the original, then POST a followup
-          const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
-
-          // Send the public control panel as a followup (not ephemeral)
           const followupBody = {
             embeds: [{
               title: `${scriptName} Control Panel`,
-              description: `This control panel is for the project: **${scriptName}**\nIf you're a buyer, click on the buttons below to redeem your key, get the script or get your stats`,
+              description: hasKeySystem
+                ? `This control panel is for the project: **${scriptName}**\nIf you're a buyer, click on the buttons below to redeem your key, get the script or get your stats`
+                : `This control panel is for the project: **${scriptName}**\nClick **Get Script** to grab the loadstring — no key required.`,
               color: 0x5865f2,
               footer: {
                 text: `DefendLua • Sent by ${discordUsername}`,
               },
               timestamp: new Date().toISOString(),
             }],
-            components: [
-              {
-                type: ComponentType.ACTION_ROW,
-                components: [
-                  { type: ComponentType.BUTTON, style: ButtonStyle.DANGER, label: "Redeem Key", custom_id: `loader_redeem:${scriptId}`, emoji: { name: "🔑" } },
-                  { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "Get Script", custom_id: `loader_getscript:${scriptId}`, emoji: { name: "📜" } },
-                  { type: ComponentType.BUTTON, style: ButtonStyle.PRIMARY, label: "Get Key", custom_id: `loader_getkey:${scriptId}`, emoji: { name: "🔗" } },
-                ],
-              },
-              {
-                type: ComponentType.ACTION_ROW,
-                components: [
-                  { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Reset HWID", custom_id: `loader_resethwid:${scriptId}`, emoji: { name: "⚙️" } },
-                  { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Get Stats", custom_id: `loader_stats:${scriptId}`, emoji: { name: "📊" } },
-                ],
-              },
-            ],
+            components: componentRows,
           };
 
-          // Send followup message (public, visible to everyone)
           fetch(`https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1237,6 +1284,7 @@ Deno.serve(async (req) => {
 
           return clearResponse;
         }
+
 
         // ── getkey: special handling (doesn't require ownership) ──
         if (action === "getkey") {
@@ -1347,6 +1395,78 @@ Deno.serve(async (req) => {
             components: [],
           });
         }
+
+        // ── blacklist_user / unblacklist_user: (un)blacklist all HWIDs bound to a Discord user's keys ──
+        if (action === "blacklist_user" || action === "unblacklist_user") {
+          const targetUserId = extraData;
+          if (!targetUserId) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "No user provided.", 0xff0000),
+              components: [],
+            });
+          }
+
+          const { data: script } = await supabase
+            .from("scripts")
+            .select("id, script_name, hwid_list, hwid_blacklist")
+            .eq("id", scriptId)
+            .eq("owner_id", userId)
+            .single();
+
+          if (!script) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("❌ Error", "Script not found or you don't own it.", 0xff0000),
+              components: [],
+            });
+          }
+
+          const { data: keys } = await supabase
+            .from("generated_keys")
+            .select("redeemed_hwid")
+            .eq("script_id", script.id)
+            .eq("discord_id", targetUserId)
+            .not("redeemed_hwid", "is", null);
+
+          const userHwids: string[] = Array.from(new Set((keys || []).map((k: any) => k.redeemed_hwid).filter(Boolean)));
+
+          if (!userHwids.length) {
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("⚠️ No HWIDs Found", `<@${targetUserId}> has no redeemed HWIDs on **${script.script_name}**.`, 0xffaa00),
+              components: [],
+            });
+          }
+
+          const currentBL: string[] = script.hwid_blacklist || [];
+          const currentWL: string[] = script.hwid_list || [];
+
+          if (action === "blacklist_user") {
+            const toAdd = userHwids.filter((h: string) => !currentBL.includes(h));
+            const newBL = [...currentBL, ...toAdd];
+            const newWL = currentWL.filter((h: string) => !userHwids.includes(h));
+            const { error } = await supabase.from("scripts").update({ hwid_blacklist: newBL, hwid_list: newWL }).eq("id", script.id);
+            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to update blacklist.", 0xff0000), components: [] });
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("🚫 User Blacklisted", `Blacklisted **${toAdd.length}** HWID${toAdd.length === 1 ? "" : "s"} for <@${targetUserId}> on **${script.script_name}**.`, 0xff0000),
+              components: [],
+            });
+          } else {
+            const toRemove = userHwids.filter((h: string) => currentBL.includes(h));
+            if (!toRemove.length) {
+              return reply(InteractionResponseType.UPDATE_MESSAGE, {
+                ...createEmbed("⚠️ Nothing to Remove", `<@${targetUserId}> has no HWIDs on the blacklist for **${script.script_name}**.`, 0xffaa00),
+                components: [],
+              });
+            }
+            const newBL = currentBL.filter((h: string) => !toRemove.includes(h));
+            const { error } = await supabase.from("scripts").update({ hwid_blacklist: newBL }).eq("id", script.id);
+            if (error) return reply(InteractionResponseType.UPDATE_MESSAGE, { ...createEmbed("❌ Error", "Failed to update blacklist.", 0xff0000), components: [] });
+            return reply(InteractionResponseType.UPDATE_MESSAGE, {
+              ...createEmbed("♻️ User Unblacklisted", `Removed **${toRemove.length}** HWID${toRemove.length === 1 ? "" : "s"} for <@${targetUserId}> from the blacklist of **${script.script_name}**.`, 0x00ff00),
+              components: [],
+            });
+          }
+        }
+
 
 
         if (action === "whitelist_user") {
