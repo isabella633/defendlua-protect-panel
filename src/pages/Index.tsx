@@ -11,6 +11,7 @@ import ScriptDashboard from "@/components/ScriptDashboard";
 import ScriptProtector from "@/components/ScriptProtector";
 import OwnerPanel from "@/components/OwnerPanel";
 import ConsentDialog from "@/components/ConsentDialog";
+import SEO from "@/components/SEO";
 
 type View = 'landing' | 'auth' | 'dashboard' | 'protect' | 'owner';
 
@@ -96,6 +97,11 @@ const Index = () => {
   // Landing page
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+      <SEO
+        title="DefendLua — Professional Lua Script Protection & Monetization"
+        description="Protect and monetize Lua and Roblox scripts with HWID locks, obfuscation, key systems, and real-time analytics. Free plan available."
+        path="/"
+      />
       {/* Navigation */}
       <nav className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
