@@ -1192,66 +1192,74 @@ Deno.serve(async (req) => {
 
         // ── loader: post PUBLIC control panel embed with buttons ──
         if (action === "loader") {
-          const { data: config } = await supabase
-            .from("key_system_configs")
-            .select("*, scripts:script_id(id, script_name, slug)")
-            .eq("script_id", scriptId)
-            .eq("enabled", true)
+          const { data: script } = await supabase
+            .from("scripts")
+            .select("id, script_name, slug")
+            .eq("id", scriptId)
             .single();
 
-          if (!config) return reply(InteractionResponseType.UPDATE_MESSAGE, {
-            ...createEmbed("❌ Error", "Script not found or key system disabled.", 0xff0000),
+          if (!script) return reply(InteractionResponseType.UPDATE_MESSAGE, {
+            ...createEmbed("❌ Error", "Script not found.", 0xff0000),
             components: [],
           });
 
-          const scriptName = config.scripts?.script_name || "Unknown";
+          const { data: config } = await supabase
+            .from("key_system_configs")
+            .select("script_id")
+            .eq("script_id", scriptId)
+            .eq("enabled", true)
+            .maybeSingle();
 
-          // Remove the select menu message (update it to empty)
-          // Then send a NEW public message with the control panel
-          // First, clear the admin's select menu
+          const scriptName = script.script_name || "Unknown";
+          const hasKeySystem = !!config;
+
           const clearResponse = reply(InteractionResponseType.UPDATE_MESSAGE, {
             ...createEmbed("✅ Control Panel Deployed", `Control panel for **${scriptName}** has been posted below.`, 0x00ff00),
             components: [],
           });
 
-          // Now we need to send a follow-up public message using the webhook
-          const followupUrl = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
+          const componentRows = hasKeySystem
+            ? [
+                {
+                  type: ComponentType.ACTION_ROW,
+                  components: [
+                    { type: ComponentType.BUTTON, style: ButtonStyle.DANGER, label: "Redeem Key", custom_id: `loader_redeem:${scriptId}`, emoji: { name: "🔑" } },
+                    { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "Get Script", custom_id: `loader_getscript:${scriptId}`, emoji: { name: "📜" } },
+                    { type: ComponentType.BUTTON, style: ButtonStyle.PRIMARY, label: "Get Key", custom_id: `loader_getkey:${scriptId}`, emoji: { name: "🔗" } },
+                  ],
+                },
+                {
+                  type: ComponentType.ACTION_ROW,
+                  components: [
+                    { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Reset HWID", custom_id: `loader_resethwid:${scriptId}`, emoji: { name: "⚙️" } },
+                    { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Get Stats", custom_id: `loader_stats:${scriptId}`, emoji: { name: "📊" } },
+                  ],
+                },
+              ]
+            : [
+                {
+                  type: ComponentType.ACTION_ROW,
+                  components: [
+                    { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "Get Script", custom_id: `loader_getscript:${scriptId}`, emoji: { name: "📜" } },
+                  ],
+                },
+              ];
 
-          // We'll use UPDATE_MESSAGE to clear the admin menu, then send a followup
-          // Actually, Discord interactions: we update the original, then POST a followup
-          const botToken = Deno.env.get("DISCORD_BOT_TOKEN");
-
-          // Send the public control panel as a followup (not ephemeral)
           const followupBody = {
             embeds: [{
               title: `${scriptName} Control Panel`,
-              description: `This control panel is for the project: **${scriptName}**\nIf you're a buyer, click on the buttons below to redeem your key, get the script or get your stats`,
+              description: hasKeySystem
+                ? `This control panel is for the project: **${scriptName}**\nIf you're a buyer, click on the buttons below to redeem your key, get the script or get your stats`
+                : `This control panel is for the project: **${scriptName}**\nClick **Get Script** to grab the loadstring — no key required.`,
               color: 0x5865f2,
               footer: {
                 text: `DefendLua • Sent by ${discordUsername}`,
               },
               timestamp: new Date().toISOString(),
             }],
-            components: [
-              {
-                type: ComponentType.ACTION_ROW,
-                components: [
-                  { type: ComponentType.BUTTON, style: ButtonStyle.DANGER, label: "Redeem Key", custom_id: `loader_redeem:${scriptId}`, emoji: { name: "🔑" } },
-                  { type: ComponentType.BUTTON, style: ButtonStyle.SUCCESS, label: "Get Script", custom_id: `loader_getscript:${scriptId}`, emoji: { name: "📜" } },
-                  { type: ComponentType.BUTTON, style: ButtonStyle.PRIMARY, label: "Get Key", custom_id: `loader_getkey:${scriptId}`, emoji: { name: "🔗" } },
-                ],
-              },
-              {
-                type: ComponentType.ACTION_ROW,
-                components: [
-                  { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Reset HWID", custom_id: `loader_resethwid:${scriptId}`, emoji: { name: "⚙️" } },
-                  { type: ComponentType.BUTTON, style: ButtonStyle.SECONDARY, label: "Get Stats", custom_id: `loader_stats:${scriptId}`, emoji: { name: "📊" } },
-                ],
-              },
-            ],
+            components: componentRows,
           };
 
-          // Send followup message (public, visible to everyone)
           fetch(`https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1260,6 +1268,7 @@ Deno.serve(async (req) => {
 
           return clearResponse;
         }
+
 
         // ── getkey: special handling (doesn't require ownership) ──
         if (action === "getkey") {
