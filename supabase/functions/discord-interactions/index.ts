@@ -931,7 +931,7 @@ Deno.serve(async (req) => {
 
         const loaderBase = `https://api.defendlua.lol/s/${script.slug || scriptId}`;
 
-        const redeemCode = `Key = "YOUR-KEY-HERE"\nloadstring(game:HttpGet("${loaderBase}?redeemkey="..Key))()`;
+        const redeemCode = buildDefendLuaLoader(`"${loaderBase}?redeemkey="..Key`, `Key = "YOUR-KEY-HERE"\n`);
         return reply(InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, {
           content: redeemCode,
           ...createEmbed("🔑 Redeem a Key", `**${script.script_name}**\n\nUse \`/redeem key:YOUR-KEY-HERE\` to get your loadstring.\n\nLong-press the message above to copy the template, then replace YOUR-KEY-HERE with your actual key.`, 0x00ff00),
