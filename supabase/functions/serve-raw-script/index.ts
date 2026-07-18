@@ -1094,8 +1094,11 @@ return ${F}()
 
       // Generate dynamic encryption key based on HWID and timestamp
       const masterKey = hwid.split("").reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), timestamp % 1000);
+      const hwidRuntimeHash = hwid.split("").reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
+      const hwidLen = hwid.length & 0xff;
 
-      // Encrypt the source code with multi-layer XOR cipher
+      // Encrypt the source code with multi-layer XOR cipher. Must mirror the
+      // Lua decrypt loop exactly, including the HWID-derived key rotation.
       const encryptSource = (src: string, key: number): number[] => {
         const result: number[] = [];
         const keyBytes = [
@@ -1108,18 +1111,26 @@ return ${F}()
           (key * 31) & 0xff,
           (key * 47) & 0xff,
         ];
+        const hkt = [
+          hwidRuntimeHash & 0xff,
+          (Math.floor(hwidRuntimeHash / 256)) & 0xff,
+          (Math.floor(hwidRuntimeHash / 65536)) & 0xff,
+          (Math.floor(hwidRuntimeHash / 16777216)) & 0xff,
+        ];
         for (let i = 0; i < src.length; i++) {
           let byte = src.charCodeAt(i);
-          // Layer 1: XOR with rotating key
+          // Inverse of Lua decrypt (applied in reverse order):
+          // Lua does: prev-xor → subtract shift → xor key → xor hkr → xor _es(=0)
+          // So encrypt does: xor hkr → xor key → add shift → prev-xor
+          byte ^= hkt[i % 4];
           byte ^= keyBytes[i % keyBytes.length];
-          // Layer 2: Add position-based shift
-          byte = (byte + i * 7) & 0xff;
-          // Layer 3: XOR with previous byte
+          byte = (byte + i * 7 + ((i * hwidLen) & 0xff)) & 0xff;
           if (i > 0) byte ^= result[i - 1] & 0x3f;
           result.push(byte);
         }
         return result;
       };
+
 
       const encryptedBytes = encryptSource(source, masterKey);
 
@@ -1200,12 +1211,19 @@ local ${varNames.selfCheck}=function(_fn)
 end`;
 
       // Build decryption function.
-      // SECURITY: env-tamper check is WOVEN into the decryption key. On a clean
-      // executor `_es` is 0 and decryption yields the real source. If loadstring
-      // is Lua-hooked (the classic `loadstring=function(s) print(s)...end` dump
-      // attack) `_es` becomes nonzero, every byte gets XOR-garbled, the attacker's
-      // print() sees random bytes, and loadstring() fails to compile. There is
-      // no separate anti-tamper block to delete — the check IS the key.
+      // SECURITY (v18): The decryption key is bound to runtime values the
+      // attacker cannot fake without being the whitelisted user:
+      //   1) Runtime HWID hash XORed byte-by-byte into the key stream. Wrong
+      //      machine → every decrypted byte is garbled, so `print(decrypt(...))`
+      //      yields random bytes even if all boolean tamper gates are stripped.
+      //   2) `#hwid` folded into the position shift.
+      //   3) The identity of `loadstring` captured at load time. The decryptor
+      //      takes it as a required argument and compares against the snapshot
+      //      taken before any user code runs; swapping in `print`/`writefile`
+      //      shifts _es and garbles output. Combined with (4), there is no
+      //      plaintext `_src` variable in the emitted script to intercept.
+      const expectedHwidHash = hwid.split("").reduce((acc, c, i) => (acc * 37 + c.charCodeAt(0)) >>> 0, 0);
+      const hwidLenByte = hwid.length & 0xff;
       const decryptCode = `
 local ${varNames.keyBytes}={${[
         (masterKey >> 24) & 0xff,
@@ -1217,8 +1235,31 @@ local ${varNames.keyBytes}={${[
         (masterKey * 31) & 0xff,
         (masterKey * 47) & 0xff,
       ].join(",")}}
-local ${varNames.decrypt}=function(${varNames.data})
+-- Snapshot loadstring identity at load time. Any later Lua-side rebinding of
+-- the global cannot change what this upvalue points to.
+local ${varNames.decrypt}_LS=loadstring
+local ${varNames.decrypt}=function(${varNames.data},_ls)
   local _es=0
+  if _ls~=${varNames.decrypt}_LS then _es=(_es+131)%256 end
+  local _rh=0
+  local _hw
+  if gethwid then _hw=gethwid()
+  elseif getexecutorhwid then _hw=getexecutorhwid()
+  elseif get_hwid then _hw=get_hwid()
+  elseif syn and syn.hwid then _hw=syn.hwid()
+  elseif fluxus and fluxus.GetHWID then _hw=fluxus.GetHWID()
+  end
+  if type(_hw)=="string" and #_hw>0 then
+    for i=1,#_hw do _rh=(_rh*37+string.byte(_hw,i))%4294967296 end
+  else
+    _rh=${expectedHwidHash}
+  end
+  local _hlen=(_hw and #_hw or ${hwidLenByte})%256
+  local _hk1=_rh%256
+  local _hk2=math.floor(_rh/256)%256
+  local _hk3=math.floor(_rh/65536)%256
+  local _hk4=math.floor(_rh/16777216)%256
+  local _hkt={_hk1,_hk2,_hk3,_hk4}
   if type(iscclosure)=="function" then
     local _o1,_r1=pcall(iscclosure,loadstring)
     if _o1 and _r1==false then _es=(_es+173)%256 end
@@ -1241,15 +1282,18 @@ local ${varNames.decrypt}=function(${varNames.data})
     local _b=${varNames.data}[i]
     if i>1 then _b=bit32 and bit32.bxor(_b,_prev%64) or ((_b>=(_prev%64)) and _b-(_prev%64) or 256+_b-(_prev%64))%256 end
     _prev=${varNames.data}[i]
-    _b=(_b-((i-1)*7))%256
+    _b=(_b-((i-1)*7)-(((i-1)*_hlen)%256))%256
     if _b<0 then _b=_b+256 end
     local _k=${varNames.keyBytes}[((i-1)%8)+1]
+    local _hkr=_hkt[((i-1)%4)+1]
     _b=bit32 and bit32.bxor(_b,_k) or ((_b>=_k) and _b-_k or 256+_b-_k)%256
+    _b=bit32 and bit32.bxor(_b,_hkr) or ((_b>=_hkr) and _b-_hkr or 256+_b-_hkr)%256
     _b=bit32 and bit32.bxor(_b,_es) or ((_b>=_es) and _b-_es or 256+_b-_es)%256
     _t[i]=string.char(_b)
   end
   return table.concat(_t)
 end`;
+
 
       // Build data chunks
       const chunkDefs = chunks.map((chunk, i) => `local ${varNames.chunk[i]}={${chunk.join(",")}}`).join("\n");
@@ -1286,55 +1330,56 @@ end`;
    if _elapsed>5 then
      return warn("[DefendLua] Security check failed: Timeout exceeded")
    end
-   local _src=${varNames.decrypt}(${varNames.data})
-   if not _src or #_src<5 then
-     return warn("[DefendLua] Decryption failed")
-   end
-   local _fn,_err=loadstring(_src)
-   if not _fn then
-     return warn("[DefendLua] Load error: "..tostring(_err))
-   end
-   if not ${varNames.selfCheck}(_fn) then
-     return warn("[DefendLua] Security check failed: Function tampered")
-   end
+    -- Inline decrypt -> loadstring -> xpcall. No intermediate _src variable
+    -- exists for an attacker to print(); the decryptor requires the captured
+    -- loadstring identity as an argument, so print/writefile garbles output.
 
-   -- Safe JSON sanitizer (available globally for user scripts)
-   pcall(function()
-     if not _G._DL_SAN then
-       _G._DL_SAN=function(v,depth)
-         depth=depth or 0
-         if depth>4 then return tostring(v) end
-         local t=type(v)
-         if t=="nil" or t=="string" or t=="boolean" then return v end
-         if t=="number" then
-           if v~=v or v==math.huge or v==-math.huge then return 0 end
-           return v
-         end
-         if t=="table" then
-           local o={}
-           for k,val in pairs(v) do
-             local kk=(type(k)=="string" or type(k)=="number") and k or tostring(k)
-             local vv=_G._DL_SAN(val,depth+1)
-             if vv~=nil then o[kk]=vv end
-           end
-           return o
-         end
-         return tostring(v)
-       end
-     end
-   end)
+    local _fn,_err=${varNames.decrypt}_LS(${varNames.decrypt}(${varNames.data},${varNames.decrypt}_LS),"=(dl)")
+    if not _fn then
+      return warn("[DefendLua] Load error: "..tostring(_err))
+    end
+    if not ${varNames.selfCheck}(_fn) then
+      return warn("[DefendLua] Security check failed: Function tampered")
+    end
 
-   local _handler=function(e)
-     if debug and debug.traceback then
-       return debug.traceback(e,2)
-     end
-     return tostring(e)
-   end
-   local _ok,_runErr=xpcall(_fn,_handler)
-   if not _ok then
-     warn("[DefendLua] Runtime error: "..tostring(_runErr))
-   end
- end`;
+    -- Safe JSON sanitizer (available globally for user scripts)
+    pcall(function()
+      if not _G._DL_SAN then
+        _G._DL_SAN=function(v,depth)
+          depth=depth or 0
+          if depth>4 then return tostring(v) end
+          local t=type(v)
+          if t=="nil" or t=="string" or t=="boolean" then return v end
+          if t=="number" then
+            if v~=v or v==math.huge or v==-math.huge then return 0 end
+            return v
+          end
+          if t=="table" then
+            local o={}
+            for k,val in pairs(v) do
+              local kk=(type(k)=="string" or type(k)=="number") and k or tostring(k)
+              local vv=_G._DL_SAN(val,depth+1)
+              if vv~=nil then o[kk]=vv end
+            end
+            return o
+          end
+          return tostring(v)
+        end
+      end
+    end)
+
+    local _handler=function(e)
+      if debug and debug.traceback then
+        return debug.traceback(e,2)
+      end
+      return tostring(e)
+    end
+    local _ok,_runErr=xpcall(_fn,_handler)
+    if not _ok then
+      warn("[DefendLua] Runtime error: "..tostring(_runErr))
+    end
+  end`;
+
 
       // Generate junk code to confuse decompilers (Roblox-compatible)
       const junkVars = Array.from({ length: 15 }, (_, i) => `_J${rand3}${i}`);
