@@ -676,6 +676,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    if ((script as any).disabled) {
+      await supabaseAdmin.from("access_logs").insert({
+        script_id: scriptId,
+        hwid: hwid || "unknown",
+        ip_address: clientIp,
+        status: "denied",
+        reason: "Script disabled (plan limit)",
+      });
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Script disabled — owner exceeded plan limits")', {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+
     const { data: subscription } = await supabaseAdmin
       .from("subscriptions")
       .select("plan")
