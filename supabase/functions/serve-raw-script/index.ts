@@ -835,9 +835,10 @@ local ${v2}={}
 for _i=1,#${v1} do for _j=1,#${v1}[_i] do ${v2}[#${v2}+1]=${v1}[_i][_j] end end
 local ${v3}=${key}
 local ${v4}={}
+local _bx=(bit32 and bit32.bxor) or function(a,b) local r,p=0,1 for _=1,8 do local x,y=a%2,b%2 if x~=y then r=r+p end a,b,p=(a-x)/2,(b-y)/2,p*2 end return r end
 for _i=1,#${v2} do
   local _k=(${v3}+((_i-1)%251))%256
-  ${v4}[_i]=string.char((${v2}[_i]~_k)%256)
+  ${v4}[_i]=string.char(_bx(${v2}[_i],_k))
 end
 local _src=table.concat(${v4})
 local _fn,_err=${loader}(_src,"=(dlua)")
