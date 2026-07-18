@@ -509,7 +509,48 @@ protectedFunction()`);
                       onCheckedChange={setShowWatermark} 
                       disabled={userPlan === "free"}
                     />
+                </div>
+
+                {/* Luau CLI protection mode */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Luau CLI Protection</label>
+                  <div className="bg-muted/50 p-3 rounded border border-border/50 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Applies only when auto-detection identifies your script as standalone Luau CLI (no Roblox globals). Roblox scripts always use the full protection pipeline.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCliProtectionMode("obfuscate")}
+                        className={`text-left p-3 rounded border transition ${
+                          cliProtectionMode === "obfuscate"
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-border"
+                        }`}
+                      >
+                        <p className="text-sm font-medium">Plain obfuscation</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Fast XOR + chunked payload. Small size, minimal runtime overhead.
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCliProtectionMode("vm")}
+                        className={`text-left p-3 rounded border transition ${
+                          cliProtectionMode === "vm"
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-border"
+                        }`}
+                      >
+                        <p className="text-sm font-medium">VM-style (stronger)</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Multi-layer decrypt, reversed chunks, integrity check, and closure wrapping. Larger payload, harder to dump.
+                        </p>
+                      </button>
+                    </div>
                   </div>
+                </div>
+
                 </div>
 
                 {(userPlan === "pro" || userPlan === "enterprise") && (
