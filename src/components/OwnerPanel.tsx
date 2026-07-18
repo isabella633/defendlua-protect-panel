@@ -711,8 +711,11 @@ protectedFunction()`);
                           size="lg"
                           onClick={() => {
                             const baseUrl = rawLink.replace("?key=YOUR_HWID", "");
-                            const simpleLoader = `loadstring(game:HttpGet("${baseUrl}"))()`;
+                            // Progress-bar loader shows the Luarmor-style bar the instant
+                            // the user presses execute (before game:HttpGet returns).
+                            const simpleLoader = `local _DL_t0=tick();local _DL_n="Script";local _e=(getfenv and getfenv()) or _G;local _rp=rawget(_e,"rconsoleprint") or rawget(_e,"printconsole");local _rc=rawget(_e,"rconsoleclear") or rawget(_e,"consoleclear");local _rn=rawget(_e,"rconsolename") or rawget(_e,"consolename") or rawget(_e,"setconsolename");local _hc=type(_rp)=="function" and type(_rc)=="function";if _hc and type(_rn)=="function" then pcall(_rn,"DefendLua") end;local _d=false;local _bw=24;local function _pt(p,f) local el=(tick()-_DL_t0)*1000;local fl=math.floor(p/100*_bw+0.5);local b=string.rep("#",fl)..string.rep("-",_bw-fl);local ln=string.format("[DefendLua] %s [%s] %3d%% | %.0fms",_DL_n,b,p,el);if _hc then pcall(_rc);if f then pcall(_rp,"@@GREEN@@");pcall(_rp,ln.." \\226\\156\\147\\n");pcall(_rp,"@@WHITE@@") else pcall(_rp,"@@YELLOW@@");pcall(_rp,ln);pcall(_rp,"@@WHITE@@") end elseif f then print(ln.." OK") end end;task.spawn(function() local p=0;_pt(0,false);while not _d do task.wait(0.03);if p<95 then p=p+(95-p)*0.04+0.3;if p>95 then p=95 end;_pt(math.floor(p),false) else _pt(95,false) end end;_pt(100,true) end);local _s=game:HttpGet("${baseUrl}");_d=true;task.wait();loadstring(_s)()`;
                             copyToClipboardFn(simpleLoader, "Loader script");
+
                           }}
                           className="w-full"
                         >
