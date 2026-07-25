@@ -1389,10 +1389,18 @@ end`;
    if _elapsed>5 then
      return warn("[DefendLua] Security check failed: Timeout exceeded")
    end
-    -- Stream decrypt directly into C load(). No plaintext string ever formed,
-    -- so a Lua-side loadstring wrapper (the transcript attack) captures nothing.
+    -- Stream decrypt then hand assembled source to loadstring. Roblox
+    -- executors reliably support loadstring(string); load(reader) is spotty.
     local _reader=${varNames.decrypt}_makeReader(${varNames.data})
-    local _fn,_err=${varNames.decrypt}_LD(_reader,"=(dl)")
+    local _parts={}
+    while true do
+      local _c=_reader()
+      if _c==nil or _c=="" then break end
+      _parts[#_parts+1]=_c
+    end
+    local _src=table.concat(_parts)
+    local _loader=loadstring or ${varNames.decrypt}_LD
+    local _fn,_err=_loader(_src,"=(dl)")
     if not _fn then
       return warn("[DefendLua] Load error: "..tostring(_err))
     end
