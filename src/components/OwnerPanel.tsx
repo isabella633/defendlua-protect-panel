@@ -102,7 +102,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from("scripts")
-      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark, cli_protection_mode")
+      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark, cli_protection_mode, obfuscation_preset")
       .eq("id", scriptId)
       .single();
 
@@ -116,6 +116,7 @@ protectedFunction()`);
       setShowWatermark((data as any).show_watermark !== false);
       setWebhookUrl((data as any).webhook_url || "");
       setCliProtectionMode(((data as any).cli_protection_mode as "obfuscate" | "vm") || "obfuscate");
+      setObfuscationPreset((((data as any).obfuscation_preset as string) || "medium") as any);
       setRawLink(`https://api.defendlua.lol/s/${data.slug}`);
     }
 
@@ -144,6 +145,7 @@ protectedFunction()`);
       public_access: publicAccess,
       show_watermark: showWatermark,
       cli_protection_mode: cliProtectionMode,
+      obfuscation_preset: obfuscationPreset,
     };
 
     // Only include webhook_url for Pro/Enterprise plans with validation
