@@ -560,6 +560,47 @@ protectedFunction()`);
                   </div>
                 </div>
 
+                {/* Obfuscation preset */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Obfuscation Strength</label>
+                  <div className="bg-muted/50 p-3 rounded border border-border/50 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Layered on top of the HWID-bound XOR stream. Higher levels encrypt strings, obfuscate numbers, inject junk code, and add anti-debug hooks. Applies to both Roblox and Luau CLI outputs.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {([
+                        { key: "light",  title: "Light",  desc: "Strings + anti-debug. Smallest overhead." },
+                        { key: "medium", title: "Medium", desc: "Strings, numbers, 10% junk. Default." },
+                        { key: "heavy",  title: "Heavy",  desc: "All layers, 25% junk. Noticeable size." },
+                        { key: "insane", title: "Insane", desc: "All layers, 40% junk. Pro/Enterprise only." },
+                      ] as const).map((opt) => {
+                        const locked = opt.key === "insane" && userPlan === "free";
+                        const active = obfuscationPreset === opt.key;
+                        return (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            disabled={locked}
+                            onClick={() => setObfuscationPreset(opt.key)}
+                            className={`text-left p-3 rounded border transition ${
+                              active
+                                ? "border-primary bg-primary/10"
+                                : "border-border/50 hover:border-border"
+                            } ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
+                          >
+                            <p className="text-sm font-medium flex items-center gap-1">
+                              {opt.title}
+                              {locked && <span className="text-[10px] text-muted-foreground">(Pro)</span>}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+
                 </div>
 
                 {(userPlan === "pro" || userPlan === "enterprise") && (
