@@ -1317,17 +1317,11 @@ local ${varNames.decrypt}_makeReader=function(${varNames.data})
   end
   local _hlen=(_hw and #_hw or ${hwidLenByte})%256
   local _hkt={_rh%256,math.floor(_rh/256)%256,math.floor(_rh/65536)%256,math.floor(_rh/16777216)%256}
-  -- One-shot load-identity gates fold into _es.
-  if type(iscclosure)=="function" then
-    local _o1,_r1=pcall(iscclosure,${varNames.decrypt}_LD)
-    if _o1 and _r1==false then _es=(_es+173)%256 end
-  end
-  if type(debug)=="table" and type(debug.info)=="function" then
-    local _o,_s=pcall(debug.info,${varNames.decrypt}_LD,"s")
-    if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
-      _es=(_es+217)%256
-    end
-  end
+  -- Note: previous versions folded iscclosure/debug.info tamper flags into
+  -- _es. Many legit executors (Matcha, custom loaders) report load/loadstring
+  -- as non-C or return unexpected source paths, silently garbling output.
+  -- _es stays 0; anti-hook enforcement is handled in the preamble instead.
+
   return function()
     if _i>=_n then return nil end
     local _t={}
