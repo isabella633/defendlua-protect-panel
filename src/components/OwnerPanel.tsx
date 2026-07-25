@@ -136,6 +136,12 @@ protectedFunction()`);
   const handleSave = async () => {
     setIsSaving(true);
 
+    // Gate: Insane preset is Pro/Enterprise only. Clamp silently to heavy.
+    const safePreset =
+      obfuscationPreset === "insane" && userPlan === "free" ? "heavy" : obfuscationPreset;
+    if (safePreset !== obfuscationPreset) setObfuscationPreset(safePreset);
+
+
     const updateData: any = {
       script_name: scriptName,
       script_key: sourceCode,
@@ -145,7 +151,7 @@ protectedFunction()`);
       public_access: publicAccess,
       show_watermark: showWatermark,
       cli_protection_mode: cliProtectionMode,
-      obfuscation_preset: obfuscationPreset,
+      obfuscation_preset: safePreset,
     };
 
     // Only include webhook_url for Pro/Enterprise plans with validation
