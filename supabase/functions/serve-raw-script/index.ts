@@ -381,21 +381,21 @@ const generateCollectorScript = async (scriptId: string, scriptSlug?: string, re
  pcall(function()
  if game and game.HttpGet then
   local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
-  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local _FULL=_URL.._HW.."${tokenQuery}"..(_RK~="" and "&redeemkey=".._RK or "")
   _RS=game:HttpGet(_FULL)
   elseif syn and syn.request then
   local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
-  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local _FULL=_URL.._HW.."${tokenQuery}"..(_RK~="" and "&redeemkey=".._RK or "")
   local r=syn.request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
   elseif request then
   local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
-  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local _FULL=_URL.._HW.."${tokenQuery}"..(_RK~="" and "&redeemkey=".._RK or "")
   local r=request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
   elseif http_request then
   local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
-  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local _FULL=_URL.._HW.."${tokenQuery}"..(_RK~="" and "&redeemkey=".._RK or "")
   local r=http_request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
  end
