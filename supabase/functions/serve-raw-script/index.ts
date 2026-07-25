@@ -311,9 +311,39 @@ ${constPool}
 --[[END_DL16]]`;
 };
 
+// HMAC-SHA256 signed short-lived fetch token. Binds a payload request to a
+// stage-1 collector fetch so pasting the raw URL in a browser / sharing the
+// link / curling with a made-up HWID cannot return the real source.
+async function signFetchToken(scriptId: string, ts: number): Promise<string> {
+  const secret = Deno.env.get("SCRIPT_FETCH_SECRET") || "";
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC", key, new TextEncoder().encode(`${scriptId}|${ts}`),
+  );
+  // base64url, first 22 chars (≈128 bits) — short enough for Roblox URLs
+  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").slice(0, 22);
+}
+async function verifyFetchToken(scriptId: string, ts: number, token: string): Promise<boolean> {
+  if (!token || !ts) return false;
+  const age = Date.now() - ts;
+  if (age < 0 || age > 60_000) return false; // 60s window
+  const expected = await signFetchToken(scriptId, ts);
+  if (expected.length !== token.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ token.charCodeAt(i);
+  return diff === 0;
+}
+
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
-const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKey?: string): string => {
+const generateCollectorScript = async (scriptId: string, scriptSlug?: string, redeemKey?: string): Promise<string> => {
   const redeemParam = redeemKey ? `&redeemkey=${encodeURIComponent(redeemKey)}` : "";
+  const tokenTs = Date.now();
+  const fetchToken = await signFetchToken(scriptId, tokenTs);
+  const tokenQuery = `&t=${tokenTs}&n=${fetchToken}`;
   const baseUrl = `https://api.defendlua.lol/s/${scriptSlug || scriptId}?key=`;
 
   // Generate unique random identifiers
@@ -351,21 +381,21 @@ const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKe
  pcall(function()
  if game and game.HttpGet then
   local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
-  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local _FULL=_URL.._HW.."${tokenQuery}"..(_RK~="" and "&redeemkey=".._RK or "")
   _RS=game:HttpGet(_FULL)
   elseif syn and syn.request then
   local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
-  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local _FULL=_URL.._HW.."${tokenQuery}"..(_RK~="" and "&redeemkey=".._RK or "")
   local r=syn.request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
   elseif request then
   local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
-  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local _FULL=_URL.._HW.."${tokenQuery}"..(_RK~="" and "&redeemkey=".._RK or "")
   local r=request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
   elseif http_request then
   local _RK="${redeemKey ? redeemKey.replace(/"/g, '\\"') : ""}"
-  local _FULL=_URL.._HW..(_RK~="" and "&redeemkey=".._RK or "")
+  local _FULL=_URL.._HW.."${tokenQuery}"..(_RK~="" and "&redeemkey=".._RK or "")
   local r=http_request({Url=_FULL,Method="GET"})
   if r and r.Body then _RS=r.Body end
  end
@@ -563,6 +593,8 @@ Deno.serve(async (req) => {
     const scriptSlug = url.searchParams.get("slug");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
     const redeemKey = url.searchParams.get("redeemkey");
+    const fetchTs = parseInt(url.searchParams.get("t") || "0", 10);
+    const fetchNonce = url.searchParams.get("n") || "";
 
     // Get client IP for rate limiting
     const clientIp =
@@ -635,14 +667,39 @@ Deno.serve(async (req) => {
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
 
-      const collectorScript = generateCollectorScript(scriptId, lookupSlug || undefined, redeemKey || undefined);
+      const collectorScript = await generateCollectorScript(scriptId, lookupSlug || undefined, redeemKey || undefined);
       return new Response(collectorScript, {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
     }
 
+    // ── Signed one-time fetch token gate ──────────────────────────────────────
+    // A payload request is only honoured if it carries a fresh HMAC token that
+    // this server issued during stage 1, and that token has not been used yet.
+    // Pasting the URL in a browser, sharing the link, or curling it with a
+    // hand-made HWID has no valid token and therefore never sees the source.
+    const tokenValid = await verifyFetchToken(scriptId!, fetchTs, fetchNonce);
+    if (!tokenValid) {
+      console.warn("Stage 2 rejected - invalid or expired fetch token:", { scriptId });
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+
+    // Single-use: the same token cannot be replayed to re-download the payload.
+    const nonceUse = await checkRateLimitDB(rateLimitClient, `nonce:${scriptId}:${fetchNonce}`, 1, 120000);
+    if (!nonceUse.allowed) {
+      console.warn("Stage 2 rejected - fetch token replay:", { scriptId });
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+
     console.log("Stage 2 - Validating access:", { scriptId, hwid: "provided" });
+
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
