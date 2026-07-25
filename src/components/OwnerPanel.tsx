@@ -55,6 +55,7 @@ protectedFunction()`);
   const [publicAccess, setPublicAccess] = useState(false);
   const [showWatermark, setShowWatermark] = useState(true);
   const [cliProtectionMode, setCliProtectionMode] = useState<"obfuscate" | "vm">("obfuscate");
+  const [obfuscationPreset, setObfuscationPreset] = useState<"light" | "medium" | "heavy" | "insane">("medium");
   const [accessLogs, setAccessLogs] = useState<any[]>([]);
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "enterprise">("free");
   const [userId, setUserId] = useState<string>("");
@@ -101,7 +102,7 @@ protectedFunction()`);
   const loadScriptData = async () => {
     const { data, error } = await supabase
       .from("scripts")
-      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark, cli_protection_mode")
+      .select("script_name, script_key, hwid_list, ip_list, hwid_blacklist, public_access, webhook_url, slug, show_watermark, cli_protection_mode, obfuscation_preset")
       .eq("id", scriptId)
       .single();
 
@@ -115,6 +116,7 @@ protectedFunction()`);
       setShowWatermark((data as any).show_watermark !== false);
       setWebhookUrl((data as any).webhook_url || "");
       setCliProtectionMode(((data as any).cli_protection_mode as "obfuscate" | "vm") || "obfuscate");
+      setObfuscationPreset((((data as any).obfuscation_preset as string) || "medium") as any);
       setRawLink(`https://api.defendlua.lol/s/${data.slug}`);
     }
 
@@ -134,6 +136,12 @@ protectedFunction()`);
   const handleSave = async () => {
     setIsSaving(true);
 
+    // Gate: Insane preset is Pro/Enterprise only. Clamp silently to heavy.
+    const safePreset =
+      obfuscationPreset === "insane" && userPlan === "free" ? "heavy" : obfuscationPreset;
+    if (safePreset !== obfuscationPreset) setObfuscationPreset(safePreset);
+
+
     const updateData: any = {
       script_name: scriptName,
       script_key: sourceCode,
@@ -143,6 +151,7 @@ protectedFunction()`);
       public_access: publicAccess,
       show_watermark: showWatermark,
       cli_protection_mode: cliProtectionMode,
+      obfuscation_preset: safePreset,
     };
 
     // Only include webhook_url for Pro/Enterprise plans with validation
@@ -550,6 +559,47 @@ protectedFunction()`);
                     </div>
                   </div>
                 </div>
+
+                {/* Obfuscation preset */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Obfuscation Strength</label>
+                  <div className="bg-muted/50 p-3 rounded border border-border/50 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Layered on top of the HWID-bound XOR stream. Higher levels encrypt strings, obfuscate numbers, inject junk code, and add anti-debug hooks. Applies to both Roblox and Luau CLI outputs.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {([
+                        { key: "light",  title: "Light",  desc: "Strings + anti-debug. Smallest overhead." },
+                        { key: "medium", title: "Medium", desc: "Strings, numbers, 10% junk. Default." },
+                        { key: "heavy",  title: "Heavy",  desc: "All layers, 25% junk. Noticeable size." },
+                        { key: "insane", title: "Insane", desc: "All layers, 40% junk. Pro/Enterprise only." },
+                      ] as const).map((opt) => {
+                        const locked = opt.key === "insane" && userPlan === "free";
+                        const active = obfuscationPreset === opt.key;
+                        return (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            disabled={locked}
+                            onClick={() => setObfuscationPreset(opt.key)}
+                            className={`text-left p-3 rounded border transition ${
+                              active
+                                ? "border-primary bg-primary/10"
+                                : "border-border/50 hover:border-border"
+                            } ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
+                          >
+                            <p className="text-sm font-medium flex items-center gap-1">
+                              {opt.title}
+                              {locked && <span className="text-[10px] text-muted-foreground">(Pro)</span>}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
 
                 </div>
 

@@ -714,7 +714,7 @@ Deno.serve(async (req) => {
     const { data: script, error } = await supabaseAdmin
       .from("scripts")
       .select(
-        "script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark, disabled, cli_protection_mode",
+        "script_key, hwid_list, ip_list, hwid_blacklist, public_access, script_name, owner_id, webhook_url, show_watermark, disabled, cli_protection_mode, obfuscation_preset",
       )
       .eq("id", scriptId)
       .single();
@@ -1142,6 +1142,208 @@ return ${F}()
     // OBFUSCATION ENGINE - Multi-layer protection for served scripts
     // ═══════════════════════════════════════════════════════════════════════════════
 
+    // ── Phase 1 source-level obfuscation ──────────────────────────────────────────
+    // Applied BEFORE the outer XOR/stream pipeline. Gives layered protection so that
+    // even if the outer decrypt is reversed, the recovered "source" still has:
+    //   - all string literals swapped for _S(idx) decoder calls
+    //   - integer literals rewritten as (a+b) expressions
+    //   - junk locals sprinkled between statements
+    //   - anti-debug entropy fold (silently garbles output if getgc/getrenv/etc. present)
+    //
+    // Preset dial: light | medium | heavy | insane. Free plan is capped at heavy in
+    // the UI; edge function still honors whatever the DB has.
+    type ObfPreset = "light" | "medium" | "heavy" | "insane";
+    const applyObfuscation = (rawSource: string, preset: ObfPreset): string => {
+      const cfg = {
+        light:  { strings: true,  numbers: false, junkDensity: 0.00, antiDebug: true },
+        medium: { strings: true,  numbers: true,  junkDensity: 0.10, antiDebug: true },
+        heavy:  { strings: true,  numbers: true,  junkDensity: 0.25, antiDebug: true },
+        insane: { strings: true,  numbers: true,  junkDensity: 0.40, antiDebug: true },
+      }[preset];
+
+      // 1) Strip comments (safe removal — also serves as "dead code removal" for
+      //    commented-out blocks). Block comments first, then line comments.
+      let src = rawSource
+        .replace(/--\[\[[\s\S]*?\]\]/g, "")
+        .replace(/--\[=+\[[\s\S]*?\]=+\]/g, "")
+        .replace(/(^|[^-])--[^\n\r]*/g, "$1");
+
+      // 2) String literal extraction. Walk char-by-char so we correctly skip
+      //    strings inside strings and don't miss escapes. Collects into an array
+      //    and replaces with __DL_S_<idx>__ placeholder to keep later regex passes
+      //    from touching string interiors.
+      const strings: string[] = [];
+      const placeholder = (i: number) => `__DL_STR_${i}__`;
+      if (cfg.strings) {
+        let out = "";
+        let i = 0;
+        const n = src.length;
+        while (i < n) {
+          const c = src[i];
+          // Long string [[...]] / [=[...]=]
+          if (c === "[") {
+            const m = /^\[(=*)\[/.exec(src.slice(i));
+            if (m) {
+              const eqs = m[1];
+              const close = `]${eqs}]`;
+              const end = src.indexOf(close, i + m[0].length);
+              if (end !== -1) {
+                const body = src.slice(i + m[0].length, end);
+                strings.push(body);
+                out += placeholder(strings.length - 1);
+                i = end + close.length;
+                continue;
+              }
+            }
+          }
+          if (c === '"' || c === "'") {
+            const quote = c;
+            let j = i + 1;
+            while (j < n) {
+              const cj = src[j];
+              if (cj === "\\") { j += 2; continue; }
+              if (cj === quote) break;
+              if (cj === "\n") break; // malformed — bail out safely
+              j++;
+            }
+            if (j < n && src[j] === quote) {
+              // Parse escapes into raw bytes for XOR encoding.
+              const literal = src.slice(i + 1, j);
+              const decoded = literal
+                .replace(/\\n/g, "\n")
+                .replace(/\\r/g, "\r")
+                .replace(/\\t/g, "\t")
+                .replace(/\\"/g, '"')
+                .replace(/\\'/g, "'")
+                .replace(/\\\\/g, "\\");
+              strings.push(decoded);
+              out += placeholder(strings.length - 1);
+              i = j + 1;
+              continue;
+            }
+          }
+          out += c;
+          i++;
+        }
+        src = out;
+      }
+
+      // 3) Number obfuscation. Replace bare integer literals (>= 2) with (a+b).
+      //    Guarded by lookarounds: skip hex (0x…), decimals (.5, 3.14), and
+      //    identifiers (v2). Placeholders __DL_STR_N__ contain digits — the
+      //    surrounding underscores make the lookbehind fail, so they're safe.
+      if (cfg.numbers) {
+        src = src.replace(/(?<![\w.xX])(\d+)(?![\w.])/g, (m) => {
+          const v = parseInt(m, 10);
+          if (!Number.isFinite(v) || v < 2 || v > 2147483000) return m;
+          const a = Math.floor(Math.random() * (v - 1)) + 1;
+          const b = v - a;
+          return `(${a}+${b})`;
+        });
+      }
+
+      // 4) Junk code injection. Insert `local _jX = <int>` between statements.
+      //    Only inserted before lines that begin a new statement at the start of
+      //    a line — skip continuation lines and control terminators.
+      if (cfg.junkDensity > 0) {
+        const junkVar = () =>
+          "_j" + Math.random().toString(36).slice(2, 8);
+        const safeStarts = /^(\s*)(local |function |if |for |while |do\b|repeat\b|return\b)/;
+        const skipStarts = /^\s*(else\b|elseif\b|end\b|until\b|\)|\}|,)/;
+        const lines = src.split("\n");
+        const out: string[] = [];
+        for (const line of lines) {
+          if (safeStarts.test(line) && !skipStarts.test(line) && Math.random() < cfg.junkDensity) {
+            const indent = /^\s*/.exec(line)?.[0] ?? "";
+            const a = Math.floor(Math.random() * 90) + 10;
+            const b = Math.floor(Math.random() * 90) + 10;
+            out.push(`${indent}local ${junkVar()}=(${a}*${b})`);
+          }
+          out.push(line);
+        }
+        src = out.join("\n");
+      }
+
+      // Shared poison var so anti-debug detection actually corrupts the string
+      // decoder output when a suspicious environment is present. If cfg.antiDebug
+      // is off we emit `local <poison>=0` unconditionally so the decoder still
+      // references a valid local.
+      const poisonName = "_dlAD" + Math.random().toString(36).slice(2, 6);
+
+      // 5) String decoder preamble. XOR-encode each captured string with a random
+      //    per-script key, ship as byte tables, decode on demand and cache.
+      if (cfg.strings && strings.length > 0) {
+        const key = 1 + Math.floor(Math.random() * 254);
+        const tableName = "_dlS" + Math.random().toString(36).slice(2, 8);
+        const decName = "_S" + Math.random().toString(36).slice(2, 6);
+        const cacheName = "_dlC" + Math.random().toString(36).slice(2, 8);
+
+        // Build encoded byte tables (Lua-safe: 8-bit unsigned).
+        const encoded = strings.map((s) => {
+          const bytes: number[] = [];
+          for (let k = 0; k < s.length; k++) {
+            const b = s.charCodeAt(k) & 0xff;
+            bytes.push(b ^ ((key + k) & 0xff));
+          }
+          return "{" + bytes.join(",") + "}";
+        });
+
+        // Lua 5.1 lacks ~ bitwise; use bit32.bxor when available with a fallback.
+        // Fold poison into the XOR key so anti-debug detections silently garble
+        // decrypted strings instead of raising or freezing.
+        const preamble51Safe =
+          `local ${tableName}={${encoded.join(",")}}\n` +
+          `local ${cacheName}={}\n` +
+          `local _dlXor=(bit32 and bit32.bxor) or (bit and bit.bxor) or function(a,b)\n` +
+          `  local r,p=0,1\n` +
+          `  for _=1,8 do\n` +
+          `    local aa,bb=a%2,b%2\n` +
+          `    if aa~=bb then r=r+p end\n` +
+          `    a=(a-aa)/2; b=(b-bb)/2; p=p*2\n` +
+          `  end\n` +
+          `  return r\n` +
+          `end\n` +
+          `local function ${decName}(i)\n` +
+          `  local c=${cacheName}[i]\n` +
+          `  if c then return c end\n` +
+          `  local t=${tableName}[i]\n` +
+          `  local chars={}\n` +
+          `  for k=1,#t do chars[k]=string.char(_dlXor(t[k],(${key}+k-1+${poisonName})%256)%256) end\n` +
+          `  local o=table.concat(chars)\n` +
+          `  ${cacheName}[i]=o\n` +
+          `  return o\n` +
+          `end\n`;
+
+        // Replace placeholders with decoder calls. Use 1-based Lua indices.
+        for (let idx = 0; idx < strings.length; idx++) {
+          src = src.split(placeholder(idx)).join(`${decName}(${idx + 1})`);
+        }
+
+        src = preamble51Safe + src;
+      }
+
+      // 6) Anti-debug entropy fold. Runs at load time before the string decoder.
+      //    Presence of getgc, getrenv, getsenv, or a Lua-hooked loadstring bumps
+      //    the poison local, which is folded into the string decoder XOR key —
+      //    detected environments get garbled strings instead of a hard crash.
+      //    Always emit `local <poison>=0` so the decoder reference resolves even
+      //    when antiDebug is off.
+      const antiDebug = cfg.antiDebug
+        ? `local ${poisonName}=0\n` +
+          `if type(getgc)=="function" then ${poisonName}=${poisonName}+1 end\n` +
+          `if type(getrenv)=="function" then ${poisonName}=${poisonName}+1 end\n` +
+          `if type(getsenv)=="function" then ${poisonName}=${poisonName}+1 end\n` +
+          `if type(debug)=="table" and type(debug.getinfo)=="function" then\n` +
+          `  local ok,info=pcall(debug.getinfo,loadstring or load,"S")\n` +
+          `  if ok and type(info)=="table" and info.what=="Lua" then ${poisonName}=${poisonName}+1 end\n` +
+          `end\n`
+        : `local ${poisonName}=0\n`;
+      src = antiDebug + src;
+
+
+      return src;
+    };
+
     const obfuscateScript = (source: string, hwid: string): string => {
       const timestamp = Date.now();
       const rand1 = Math.random().toString(36).slice(2, 10);
@@ -1512,10 +1714,21 @@ end
       return protectedScript;
     };
 
+    // Apply source-level obfuscation pass (strings/numbers/junk/anti-debug) BEFORE
+    // the outer HWID-bound XOR stream. Layered protection.
+    const preset = (((script as any).obfuscation_preset as string) || "medium") as
+      | "light" | "medium" | "heavy" | "insane";
+    let preparedSource = script.script_key;
+    try {
+      preparedSource = applyObfuscation(script.script_key, preset);
+    } catch (e) {
+      console.error("applyObfuscation failed, falling back to raw source:", e);
+    }
+
     // Obfuscation ENABLED — streams decrypted bytes directly into load() so
     // a loadstring/load Lua-wrapper hook captures only ciphertext, plus HWID-
     // bound key + anti-hook preamble that freezes on tamper.
-    const protectedScript = obfuscateScript(script.script_key, hwid);
+    const protectedScript = obfuscateScript(preparedSource, hwid);
 
     // Check owner's subscription plan for promotional watermark
     let ownerPlan = "free";
