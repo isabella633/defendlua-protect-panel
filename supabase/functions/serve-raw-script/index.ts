@@ -1394,7 +1394,8 @@ end`;
     end
     local _src=table.concat(_parts)
     local _loader=loadstring or ${varNames.decrypt}_LD
-    local _fn,_err=_loader(_src,"=(dl)")
+    local _fn,_err=_loader(_src)
+
     if not _fn then
       return warn("[DefendLua] Load error: "..tostring(_err))
     end
