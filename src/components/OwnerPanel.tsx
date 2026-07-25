@@ -55,6 +55,7 @@ protectedFunction()`);
   const [publicAccess, setPublicAccess] = useState(false);
   const [showWatermark, setShowWatermark] = useState(true);
   const [cliProtectionMode, setCliProtectionMode] = useState<"obfuscate" | "vm">("obfuscate");
+  const [obfuscationPreset, setObfuscationPreset] = useState<"light" | "medium" | "heavy" | "insane">("medium");
   const [accessLogs, setAccessLogs] = useState<any[]>([]);
   const [userPlan, setUserPlan] = useState<"free" | "pro" | "enterprise">("free");
   const [userId, setUserId] = useState<string>("");
