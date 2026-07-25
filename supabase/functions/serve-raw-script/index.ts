@@ -593,6 +593,8 @@ Deno.serve(async (req) => {
     const scriptSlug = url.searchParams.get("slug");
     const hwid = url.searchParams.get("key") || url.searchParams.get("hwid");
     const redeemKey = url.searchParams.get("redeemkey");
+    const fetchTs = parseInt(url.searchParams.get("t") || "0", 10);
+    const fetchNonce = url.searchParams.get("n") || "";
 
     // Get client IP for rate limiting
     const clientIp =
