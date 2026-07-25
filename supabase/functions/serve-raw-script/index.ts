@@ -311,9 +311,39 @@ ${constPool}
 --[[END_DL16]]`;
 };
 
+// HMAC-SHA256 signed short-lived fetch token. Binds a payload request to a
+// stage-1 collector fetch so pasting the raw URL in a browser / sharing the
+// link / curling with a made-up HWID cannot return the real source.
+async function signFetchToken(scriptId: string, ts: number): Promise<string> {
+  const secret = Deno.env.get("SCRIPT_FETCH_SECRET") || "";
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC", key, new TextEncoder().encode(`${scriptId}|${ts}`),
+  );
+  // base64url, first 22 chars (≈128 bits) — short enough for Roblox URLs
+  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").slice(0, 22);
+}
+async function verifyFetchToken(scriptId: string, ts: number, token: string): Promise<boolean> {
+  if (!token || !ts) return false;
+  const age = Date.now() - ts;
+  if (age < 0 || age > 60_000) return false; // 60s window
+  const expected = await signFetchToken(scriptId, ts);
+  if (expected.length !== token.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ token.charCodeAt(i);
+  return diff === 0;
+}
+
 // Main collector script generator - FULLY OBFUSCATED (simplified but reliable)
-const generateCollectorScript = (scriptId: string, scriptSlug?: string, redeemKey?: string): string => {
+const generateCollectorScript = async (scriptId: string, scriptSlug?: string, redeemKey?: string): Promise<string> => {
   const redeemParam = redeemKey ? `&redeemkey=${encodeURIComponent(redeemKey)}` : "";
+  const tokenTs = Date.now();
+  const fetchToken = await signFetchToken(scriptId, tokenTs);
+  const tokenQuery = `&t=${tokenTs}&n=${fetchToken}`;
   const baseUrl = `https://api.defendlua.lol/s/${scriptSlug || scriptId}?key=`;
 
   // Generate unique random identifiers
