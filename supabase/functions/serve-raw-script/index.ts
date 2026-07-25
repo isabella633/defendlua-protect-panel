@@ -667,14 +667,39 @@ Deno.serve(async (req) => {
     if (!hwid) {
       console.log("Stage 1 - Serving HWID collector:", { scriptId });
 
-      const collectorScript = generateCollectorScript(scriptId, lookupSlug || undefined, redeemKey || undefined);
+      const collectorScript = await generateCollectorScript(scriptId, lookupSlug || undefined, redeemKey || undefined);
       return new Response(collectorScript, {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
       });
     }
 
+    // ── Signed one-time fetch token gate ──────────────────────────────────────
+    // A payload request is only honoured if it carries a fresh HMAC token that
+    // this server issued during stage 1, and that token has not been used yet.
+    // Pasting the URL in a browser, sharing the link, or curling it with a
+    // hand-made HWID has no valid token and therefore never sees the source.
+    const tokenValid = await verifyFetchToken(scriptId!, fetchTs, fetchNonce);
+    if (!tokenValid) {
+      console.warn("Stage 2 rejected - invalid or expired fetch token:", { scriptId });
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+
+    // Single-use: the same token cannot be replayed to re-download the payload.
+    const nonceUse = await checkRateLimitDB(rateLimitClient, `nonce:${scriptId}:${fetchNonce}`, 1, 120000);
+    if (!nonceUse.allowed) {
+      console.warn("Stage 2 rejected - fetch token replay:", { scriptId });
+      return new Response('local player = game.Players.LocalPlayer\nplayer:Kick("Invalid Hwid.")', {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      });
+    }
+
     console.log("Stage 2 - Validating access:", { scriptId, hwid: "provided" });
+
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
