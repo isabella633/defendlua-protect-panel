@@ -1264,6 +1264,12 @@ return ${F}()
         src = out.join("\n");
       }
 
+      // Shared poison var so anti-debug detection actually corrupts the string
+      // decoder output when a suspicious environment is present. If cfg.antiDebug
+      // is off we emit `local <poison>=0` unconditionally so the decoder still
+      // references a valid local.
+      const poisonName = "_dlAD" + Math.random().toString(36).slice(2, 6);
+
       // 5) String decoder preamble. XOR-encode each captured string with a random
       //    per-script key, ship as byte tables, decode on demand and cache.
       if (cfg.strings && strings.length > 0) {
@@ -1282,21 +1288,9 @@ return ${F}()
           return "{" + bytes.join(",") + "}";
         });
 
-        const preamble =
-          `local ${tableName}={${encoded.join(",")}}\n` +
-          `local ${cacheName}={}\n` +
-          `local function ${decName}(i)\n` +
-          `  local c=${cacheName}[i]\n` +
-          `  if c then return c end\n` +
-          `  local t=${tableName}[i]\n` +
-          `  local o=""\n` +
-          `  for k=1,#t do o=o..string.char((t[k]~((${key}+k-1)%256))%256) end\n` +
-          `  ${cacheName}[i]=o\n` +
-          `  return o\n` +
-          `end\n`;
-
-        // Note: Lua 5.1 lacks bitwise ~. Roblox Luau supports bit32/bit ops but
-        // not ~ operator on older executors. Use bit32.bxor when available.
+        // Lua 5.1 lacks ~ bitwise; use bit32.bxor when available with a fallback.
+        // Fold poison into the XOR key so anti-debug detections silently garble
+        // decrypted strings instead of raising or freezing.
         const preamble51Safe =
           `local ${tableName}={${encoded.join(",")}}\n` +
           `local ${cacheName}={}\n` +
@@ -1314,7 +1308,7 @@ return ${F}()
           `  if c then return c end\n` +
           `  local t=${tableName}[i]\n` +
           `  local chars={}\n` +
-          `  for k=1,#t do chars[k]=string.char(_dlXor(t[k],(${key}+k-1)%256)%256) end\n` +
+          `  for k=1,#t do chars[k]=string.char(_dlXor(t[k],(${key}+k-1+${poisonName})%256)%256) end\n` +
           `  local o=table.concat(chars)\n` +
           `  ${cacheName}[i]=o\n` +
           `  return o\n` +
@@ -1328,23 +1322,24 @@ return ${F}()
         src = preamble51Safe + src;
       }
 
-      // 6) Anti-debug entropy fold. Runs at load time. Presence of getgc, getrenv,
-      //    getsenv, or a Lua-hooked loadstring silently corrupts a poison local —
-      //    scripts that don't reference it are unaffected, so this is safe by
-      //    default. Layered protection lives in the outer XOR pipeline.
-      if (cfg.antiDebug) {
-        const poisonName = "_dlAD" + Math.random().toString(36).slice(2, 6);
-        const antiDebug =
-          `local ${poisonName}=0\n` +
+      // 6) Anti-debug entropy fold. Runs at load time before the string decoder.
+      //    Presence of getgc, getrenv, getsenv, or a Lua-hooked loadstring bumps
+      //    the poison local, which is folded into the string decoder XOR key —
+      //    detected environments get garbled strings instead of a hard crash.
+      //    Always emit `local <poison>=0` so the decoder reference resolves even
+      //    when antiDebug is off.
+      const antiDebug = cfg.antiDebug
+        ? `local ${poisonName}=0\n` +
           `if type(getgc)=="function" then ${poisonName}=${poisonName}+1 end\n` +
           `if type(getrenv)=="function" then ${poisonName}=${poisonName}+1 end\n` +
           `if type(getsenv)=="function" then ${poisonName}=${poisonName}+1 end\n` +
           `if type(debug)=="table" and type(debug.getinfo)=="function" then\n` +
           `  local ok,info=pcall(debug.getinfo,loadstring or load,"S")\n` +
           `  if ok and type(info)=="table" and info.what=="Lua" then ${poisonName}=${poisonName}+1 end\n` +
-          `end\n`;
-        src = antiDebug + src;
-      }
+          `end\n`
+        : `local ${poisonName}=0\n`;
+      src = antiDebug + src;
+
 
       return src;
     };
