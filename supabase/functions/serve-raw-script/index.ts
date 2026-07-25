@@ -1463,8 +1463,10 @@ end
       return protectedScript;
     };
 
-    // Obfuscation disabled — serving raw script per owner request
-    const protectedScript = script.script_key;
+    // Obfuscation ENABLED — streams decrypted bytes directly into load() so
+    // a loadstring/load Lua-wrapper hook captures only ciphertext, plus HWID-
+    // bound key + anti-hook preamble that freezes on tamper.
+    const protectedScript = obfuscateScript(script.script_key, hwid);
 
     // Check owner's subscription plan for promotional watermark
     let ownerPlan = "free";
