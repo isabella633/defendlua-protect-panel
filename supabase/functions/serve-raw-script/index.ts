@@ -1481,22 +1481,11 @@ if type(iscclosure)=="function" then
   local _o2,_r2=pcall(iscclosure,game.HttpGet)
   if _o2 and _r2==false then _DL_kick("[DefendLua] Environment tampering detected (HG-C)") end
 end
--- 2) debug.info source check (hooked Lua wrappers report a script path, not "[C]")
-if type(debug)=="table" and type(debug.info)=="function" then
-  local _o,_s=pcall(debug.info,loadstring,"s")
-  if _o and type(_s)=="string" and _s~="" and _s~="[C]" and _s~="=[C]" then
-    _DL_kick("[DefendLua] Environment tampering detected (LS-D)")
-  end
-  local _oLd,_sLd=pcall(debug.info,load,"s")
-  if _oLd and type(_sLd)=="string" and _sLd~="" and _sLd~="[C]" and _sLd~="=[C]" then
-    _DL_kick("[DefendLua] Environment tampering detected (LD-D)")
-  end
-end
--- 3) Fallback: tostring of a C function has no source path
-local _o3,_ts=pcall(tostring,loadstring)
-if _o3 and type(_ts)=="string" and _ts:find(":%d") then
-  _DL_kick("[DefendLua] Environment tampering detected (LS-T)")
-end`;
+-- 2) debug.info / tostring checks removed: executors legitimately return
+-- non-"[C]" source paths for their custom load/loadstring implementations,
+-- so those signals produced false positives that froze real users.
+`;
+
 
       // Build final protected script
       const protectedScript = `--[[DefendLua v19 | ${timestamp} | ${rand1}]]
