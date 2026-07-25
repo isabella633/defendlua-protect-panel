@@ -1719,10 +1719,21 @@ end
       return protectedScript;
     };
 
+    // Apply source-level obfuscation pass (strings/numbers/junk/anti-debug) BEFORE
+    // the outer HWID-bound XOR stream. Layered protection.
+    const preset = (((script as any).obfuscation_preset as string) || "medium") as
+      | "light" | "medium" | "heavy" | "insane";
+    let preparedSource = script.script_key;
+    try {
+      preparedSource = applyObfuscation(script.script_key, preset);
+    } catch (e) {
+      console.error("applyObfuscation failed, falling back to raw source:", e);
+    }
+
     // Obfuscation ENABLED — streams decrypted bytes directly into load() so
     // a loadstring/load Lua-wrapper hook captures only ciphertext, plus HWID-
     // bound key + anti-hook preamble that freezes on tamper.
-    const protectedScript = obfuscateScript(script.script_key, hwid);
+    const protectedScript = obfuscateScript(preparedSource, hwid);
 
     // Check owner's subscription plan for promotional watermark
     let ownerPlan = "free";
