@@ -467,6 +467,7 @@ export type Database = {
           hwid_list: string[] | null
           id: string
           ip_list: string[] | null
+          obfuscation_preset: string
           owner_id: string
           public_access: boolean | null
           script_key: string
@@ -486,6 +487,7 @@ export type Database = {
           hwid_list?: string[] | null
           id?: string
           ip_list?: string[] | null
+          obfuscation_preset?: string
           owner_id: string
           public_access?: boolean | null
           script_key: string
@@ -505,6 +507,7 @@ export type Database = {
           hwid_list?: string[] | null
           id?: string
           ip_list?: string[] | null
+          obfuscation_preset?: string
           owner_id?: string
           public_access?: boolean | null
           script_key?: string
