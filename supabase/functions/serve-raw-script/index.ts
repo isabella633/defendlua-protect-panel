@@ -800,6 +800,44 @@ Deno.serve(async (req) => {
     const publicAccess = script.public_access || false;
     const webhookUrl = (script as any).webhook_url;
 
+    // Resolve Discord user for the executing player via generated_keys (key → discord_id,
+    // falling back to redeemed_hwid → discord_id for whitelist-mode executions).
+    const resolveDiscordUser = async (): Promise<{ id: string; username: string | null } | null> => {
+      try {
+        if (redeemKey) {
+          const { data: k } = await supabaseAdmin
+            .from("generated_keys")
+            .select("discord_id")
+            .eq("key", redeemKey.toUpperCase().trim())
+            .eq("script_id", scriptId)
+            .maybeSingle();
+          if (k?.discord_id) {
+            const { data: link } = await supabaseAdmin
+              .from("discord_links").select("discord_username").eq("discord_id", k.discord_id).maybeSingle();
+            return { id: k.discord_id, username: link?.discord_username ?? null };
+          }
+        }
+        if (hwid) {
+          const { data: k } = await supabaseAdmin
+            .from("generated_keys")
+            .select("discord_id")
+            .eq("redeemed_hwid", hwid)
+            .eq("script_id", scriptId)
+            .order("redeemed_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (k?.discord_id) {
+            const { data: link } = await supabaseAdmin
+              .from("discord_links").select("discord_username").eq("discord_id", k.discord_id).maybeSingle();
+            return { id: k.discord_id, username: link?.discord_username ?? null };
+          }
+        }
+      } catch (e) {
+        console.warn("resolveDiscordUser failed:", e);
+      }
+      return null;
+    };
+
     const sendDiscordWebhook = async (status: string, reason: string, color: number) => {
       if (!webhookUrl || (userPlan !== "pro" && userPlan !== "enterprise")) return;
 
@@ -809,6 +847,11 @@ Deno.serve(async (req) => {
         return;
       }
 
+      const discordUser = await resolveDiscordUser();
+      const discordFieldValue = discordUser
+        ? (discordUser.username ? `${discordUser.username} (<@${discordUser.id}> · \`${discordUser.id}\`)` : `<@${discordUser.id}> · \`${discordUser.id}\``)
+        : "Unknown";
+
       try {
         const embed = {
           title: `DefendLua Access Log`,
@@ -817,6 +860,7 @@ Deno.serve(async (req) => {
           fields: [
             { name: "Status", value: status, inline: true },
             { name: "Reason", value: reason, inline: true },
+            { name: "Discord User", value: discordFieldValue, inline: false },
             { name: "HWID", value: `\`${hwid}\``, inline: false },
             { name: "IP Address", value: `\`${clientIp}\``, inline: true },
             { name: "Script ID", value: `\`${scriptId}\``, inline: true },
@@ -1125,6 +1169,7 @@ return ${F}()
       });
     }
 
+    const grantedDiscordUser = await resolveDiscordUser();
     await supabaseAdmin.from("access_logs").insert({
       script_id: scriptId,
       hwid: hwid,
@@ -1132,6 +1177,8 @@ return ${F}()
         country,
       status: "granted",
       reason: publicAccess ? "Public access" : "Whitelisted",
+      discord_id: grantedDiscordUser?.id ?? null,
+      discord_username: grantedDiscordUser?.username ?? null,
     });
 
     await sendDiscordWebhook("Granted", publicAccess ? "Public Access" : "Whitelisted", 0x00ff00);
