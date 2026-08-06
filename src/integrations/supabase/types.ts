@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           accessed_at: string | null
           country: string | null
+          discord_id: string | null
+          discord_username: string | null
           hwid: string
           id: string
           ip_address: string | null
@@ -28,6 +30,8 @@ export type Database = {
         Insert: {
           accessed_at?: string | null
           country?: string | null
+          discord_id?: string | null
+          discord_username?: string | null
           hwid: string
           id?: string
           ip_address?: string | null
@@ -38,6 +42,8 @@ export type Database = {
         Update: {
           accessed_at?: string | null
           country?: string | null
+          discord_id?: string | null
+          discord_username?: string | null
           hwid?: string
           id?: string
           ip_address?: string | null
