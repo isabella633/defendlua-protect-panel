@@ -800,6 +800,44 @@ Deno.serve(async (req) => {
     const publicAccess = script.public_access || false;
     const webhookUrl = (script as any).webhook_url;
 
+    // Resolve Discord user for the executing player via generated_keys (key → discord_id,
+    // falling back to redeemed_hwid → discord_id for whitelist-mode executions).
+    const resolveDiscordUser = async (): Promise<{ id: string; username: string | null } | null> => {
+      try {
+        if (redeemKey) {
+          const { data: k } = await supabaseAdmin
+            .from("generated_keys")
+            .select("discord_id")
+            .eq("key", redeemKey.toUpperCase().trim())
+            .eq("script_id", scriptId)
+            .maybeSingle();
+          if (k?.discord_id) {
+            const { data: link } = await supabaseAdmin
+              .from("discord_links").select("discord_username").eq("discord_id", k.discord_id).maybeSingle();
+            return { id: k.discord_id, username: link?.discord_username ?? null };
+          }
+        }
+        if (hwid) {
+          const { data: k } = await supabaseAdmin
+            .from("generated_keys")
+            .select("discord_id")
+            .eq("redeemed_hwid", hwid)
+            .eq("script_id", scriptId)
+            .order("redeemed_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (k?.discord_id) {
+            const { data: link } = await supabaseAdmin
+              .from("discord_links").select("discord_username").eq("discord_id", k.discord_id).maybeSingle();
+            return { id: k.discord_id, username: link?.discord_username ?? null };
+          }
+        }
+      } catch (e) {
+        console.warn("resolveDiscordUser failed:", e);
+      }
+      return null;
+    };
+
     const sendDiscordWebhook = async (status: string, reason: string, color: number) => {
       if (!webhookUrl || (userPlan !== "pro" && userPlan !== "enterprise")) return;
 
