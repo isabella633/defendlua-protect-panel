@@ -847,6 +847,11 @@ Deno.serve(async (req) => {
         return;
       }
 
+      const discordUser = await resolveDiscordUser();
+      const discordFieldValue = discordUser
+        ? (discordUser.username ? `${discordUser.username} (<@${discordUser.id}> · \`${discordUser.id}\`)` : `<@${discordUser.id}> · \`${discordUser.id}\``)
+        : "Unknown";
+
       try {
         const embed = {
           title: `DefendLua Access Log`,
@@ -855,6 +860,7 @@ Deno.serve(async (req) => {
           fields: [
             { name: "Status", value: status, inline: true },
             { name: "Reason", value: reason, inline: true },
+            { name: "Discord User", value: discordFieldValue, inline: false },
             { name: "HWID", value: `\`${hwid}\``, inline: false },
             { name: "IP Address", value: `\`${clientIp}\``, inline: true },
             { name: "Script ID", value: `\`${scriptId}\``, inline: true },
