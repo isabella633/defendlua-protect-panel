@@ -1169,6 +1169,7 @@ return ${F}()
       });
     }
 
+    const grantedDiscordUser = await resolveDiscordUser();
     await supabaseAdmin.from("access_logs").insert({
       script_id: scriptId,
       hwid: hwid,
@@ -1176,6 +1177,8 @@ return ${F}()
         country,
       status: "granted",
       reason: publicAccess ? "Public access" : "Whitelisted",
+      discord_id: grantedDiscordUser?.id ?? null,
+      discord_username: grantedDiscordUser?.username ?? null,
     });
 
     await sendDiscordWebhook("Granted", publicAccess ? "Public Access" : "Whitelisted", 0x00ff00);
