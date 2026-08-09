@@ -481,6 +481,7 @@ export type Database = {
           show_watermark: boolean
           slug: string
           updated_at: string | null
+          vm_protection_mode: string
           webhook_url: string | null
         }
         Insert: {
@@ -501,6 +502,7 @@ export type Database = {
           show_watermark?: boolean
           slug?: string
           updated_at?: string | null
+          vm_protection_mode?: string
           webhook_url?: string | null
         }
         Update: {
@@ -521,6 +523,7 @@ export type Database = {
           show_watermark?: boolean
           slug?: string
           updated_at?: string | null
+          vm_protection_mode?: string
           webhook_url?: string | null
         }
         Relationships: [
