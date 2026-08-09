@@ -60,7 +60,7 @@ local function __dl_vm(PROTO, ARGS)
       if varargs.n < 0 then varargs.n = 0 end
     end
 
-    local evalExpr, evalList, execBlock, execStmt
+    local evalExpr, evalList, execBlock, execStmt, evalMulti
 
     evalExpr = function(e)
       local op = e[1]
