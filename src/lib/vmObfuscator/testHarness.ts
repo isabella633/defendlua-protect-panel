@@ -88,7 +88,7 @@ export interface VerifyResult {
 export function verify(source: string): VerifyResult {
   const orig = runLua(source);
   const p = protect(source);
-  if (!p.ok) return { ok: false, reason: `protect failed: ${p.reason}`, original: orig };
+  if (!p.ok) return { ok: false, reason: `protect failed: ${(p as { reason: string }).reason}`, original: orig };
   const prot = runLua(p.code);
 
   const same =
