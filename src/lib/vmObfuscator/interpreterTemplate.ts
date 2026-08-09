@@ -170,7 +170,7 @@ local function __dl_vm(PROTO, ARGS)
     end
 
     -- Evaluate an expression that may produce multiple values (CALL/METHODCALL/VARARG).
-    function evalMulti(e)
+    evalMulti = function(e)
       local op = e[1]
       if op == CALL then
         local f = evalExpr(e[2])
