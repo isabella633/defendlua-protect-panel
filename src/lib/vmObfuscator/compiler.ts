@@ -95,7 +95,7 @@ function compileExpr(scope: FuncScope, node: any): any[] {
     case "NilLiteral": return [OP.NIL];
     case "BooleanLiteral": return [node.value ? OP.TRUE : OP.FALSE];
     case "NumericLiteral": return [OP.NUMBER, node.value];
-    case "StringLiteral": return [OP.STRING, node.value];
+    case "StringLiteral": return [OP.STRING, parseStringLiteral(node.raw)];
     case "VarargLiteral":
       if (!scope.isVararg) throw new Error("... used in non-vararg function");
       return [OP.VARARG];
