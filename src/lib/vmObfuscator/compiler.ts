@@ -4,6 +4,52 @@
 import { OP } from "./opcodes";
 import type { LuaAst } from "./parser";
 
+// luaparse leaves StringLiteral.value = null; parse the .raw field ourselves.
+function parseStringLiteral(raw: string): string {
+  if (!raw) return "";
+  if (raw.startsWith("[")) {
+    // Long bracket: [[ ... ]] or [=[ ... ]=] etc.
+    const m = /^\[(=*)\[([\s\S]*?)\]\1\]$/.exec(raw);
+    if (m) {
+      let body = m[2];
+      // Long strings ignore a single leading newline.
+      if (body.startsWith("\r\n")) body = body.slice(2);
+      else if (body.startsWith("\n") || body.startsWith("\r")) body = body.slice(1);
+      return body;
+    }
+    return raw;
+  }
+  const quote = raw[0];
+  const inner = raw.slice(1, -1);
+  let out = "";
+  for (let i = 0; i < inner.length; i++) {
+    const c = inner[i];
+    if (c === "\\") {
+      const n = inner[++i];
+      if (n === "a") out += "\x07";
+      else if (n === "b") out += "\b";
+      else if (n === "f") out += "\f";
+      else if (n === "n") out += "\n";
+      else if (n === "r") out += "\r";
+      else if (n === "t") out += "\t";
+      else if (n === "v") out += "\v";
+      else if (n === "\\") out += "\\";
+      else if (n === '"') out += '"';
+      else if (n === "'") out += "'";
+      else if (n === "\n") out += "\n";
+      else if (/[0-9]/.test(n)) {
+        let num = n;
+        while (num.length < 3 && /[0-9]/.test(inner[i + 1])) num += inner[++i];
+        out += String.fromCharCode(parseInt(num, 10));
+      } else out += n;
+    } else {
+      out += c;
+    }
+  }
+  return out;
+}
+
+
 export interface UpvalDesc {
   kind: "local" | "upval";
   index: number;
